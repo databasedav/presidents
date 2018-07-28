@@ -17,7 +17,12 @@ export default new Vuex.Store({
       [],
       []
     ],
-    current_hands_desc: 'fuck',
+    current_hands_desc: [
+      'fuck',
+      null,
+      null,
+      null
+    ],
     stored_hands: [
       [],
       [],
@@ -29,17 +34,19 @@ export default new Vuex.Store({
     cards_in_spot: (state) => (spot) => {
       return state.cards[spot]
     },
-    // hand_desc_in_spot (state) {
-    //   return state.current_hands_desc
-    // },
+    hand_desc_in_spot: (state) => (spot) => {
+      return state.current_hands_desc[spot]
+    },
   },
   mutations: {
     add_card_to_spot (state, payload) {
       state.cards[payload.spot].push(payload.card)
     },
-    // WHY WONT THIS WORK
-    SOCKET_HEY(state, payload) {
-      state.current_hands_desc = payload.desc
+    SOCKET_DEAL_CARDS (state, payload) {
+      state.cards.splice(payload.spot, 1, payload.cards)
     },
+    SOCKET_UPDATE_HAND_DESC (state, payload) {
+      state.current_hands_desc.splice(payload.spot, 1, payload.desc)
+    }
   }
 })

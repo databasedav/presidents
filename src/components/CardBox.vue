@@ -3,6 +3,7 @@
     <span>{{ hand_desc }}</span><br>
     <input v-model.number='card_to_add' placeholder='card'>
     <button @click='add_card'>add card</button>
+    <button @click='deal_cards'>deal cards</button>
     <Card
       v-for='card in cards'
       :key='card'
@@ -30,7 +31,7 @@ export default {
       return this.$store.getters.cards_in_spot(this.spot)
     },
     hand_desc () {
-      return this.$store.state.current_hands_desc
+      return this.$store.getters.hand_desc_in_spot(this.spot)
     }
   },
   methods: {
@@ -41,6 +42,9 @@ export default {
         spot: this.spot,
         card: this.card_to_add
       })
+    },
+    deal_cards () {
+      this.$socket.emit('deal_cards')
     }
   }
 }
