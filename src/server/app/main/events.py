@@ -29,6 +29,7 @@ from bidict import bidict
 # TODO: fix prepending cards
 # TODO: when passing hands around when it is safe to pass the main
 #       current hand (which is cleared afterwards) or requiring a copy
+# TODO: change data to payload
 
 # TODO: where to put these
 current_hand_dict: Dict[str, Hand] = dict()

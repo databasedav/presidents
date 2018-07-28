@@ -1,5 +1,6 @@
 <template>
   <div>
+    <span>{{ hand_desc }}</span><br>
     <input v-model.number='card_to_add' placeholder='card'>
     <button @click='add_card'>add card</button>
     <Card
@@ -27,10 +28,14 @@ export default {
   computed: {
     cards () {
       return this.$store.getters.cards_in_spot(this.spot)
+    },
+    hand_desc () {
+      return this.$store.state.current_hands_desc
     }
   },
   methods: {
     add_card () {
+      this.$socket.emit('add_card', this.card_to_add)
       this.$store.commit({
         type: 'add_card_to_spot',
         spot: this.spot,

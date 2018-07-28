@@ -48,5 +48,5 @@ button {
   margin: 2px;
   position: relative;
 }
-/* TODO: only allow hover on mouseover in non mobile browsers */
+/* TODO: only allow hover on mouseover in non mobile browsers (maybe?) */
 </style>
