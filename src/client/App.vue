@@ -2,7 +2,9 @@
   <div id="app">
     <img src="./assets/logo.png">
     <HelloWorld msg="Welcome to Your Vue.js App"/>
+    <ButtonBox/>
     <CardBox/>
+    
   </div>
 </template>
 
@@ -10,13 +12,15 @@
 import HelloWorld from './components/HelloWorld.vue'
 import Card from './components/Card'
 import CardBox from './components/CardBox'
+import ButtonBox from './components/ButtonBox'
 
 export default {
   name: 'app',
   components: {
     HelloWorld,
     Card,
-    CardBox
+    CardBox,
+    ButtonBox
   }
 }
 </script>

@@ -9,13 +9,17 @@ socketio = SocketIO(app)
 
 hand = Hand()
 
-@socketio.on('deal_cards')
+@socketio.on('deal cards')
 def deal_cards():
     deck = np.arange(1, 53)
     np.random.shuffle(deck)
     decks = deck.reshape(4, 13)
     decks.sort(axis=1)
     emit('deal_cards', {'spot': 0, 'cards': list(map(int, decks[0]))})
+
+@socketio.on('clear current hand')
+def clear_current_hand():
+    
 
 @socketio.on('add_card')
 def add_card(card):

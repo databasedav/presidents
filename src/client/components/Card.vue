@@ -13,7 +13,6 @@
 </template>
 
 <script>
-// import Vue from 'vue'
 const values = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2']
 const suites = ['♣', '♦', '♥', '♠']
 
@@ -32,6 +31,7 @@ export default {
   methods: {
     clickCard () {
       this.isClicked = !this.isClicked
+      
     }
   }
 }
