@@ -1,0 +1,17 @@
+name: pres
+dependencies:
+  - python=3.6
+  - flask
+  - flask-socketio
+  - flask-wtf
+  - wtforms
+  - numpy
+  - mypy_extensions
+  - gunicorn
+  - gevent
+  - gevent-websocket
+  - pytables
+  - pip:
+    - bidict==0.17.2
+    - llist==0.6
+    - deepdish==0.3.6
