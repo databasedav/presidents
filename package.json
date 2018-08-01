@@ -16,7 +16,7 @@
   "devDependencies": {
     "@vue/cli-plugin-babel": "^3.0.0-rc.8",
     "@vue/cli-plugin-eslint": "^3.0.0-rc.8",
-    "@vue/cli-service": "^3.0.0-rc.8",
+    "@vue/cli-service": "^3.0.0-rc.10",
     "vue-template-compiler": "^2.5.16",
     "webpack-chain": "^4.8.0"
   },

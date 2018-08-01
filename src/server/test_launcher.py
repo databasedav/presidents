@@ -19,7 +19,7 @@ def deal_cards():
 
 @socketio.on('clear current hand')
 def clear_current_hand():
-    
+    pass
 
 @socketio.on('add_card')
 def add_card(card):
