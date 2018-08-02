@@ -1,8 +1,8 @@
 <template>
   <button
-    @click='clickCard'
+    @click='trySelect'
     :style="{
-              top: isClicked ? '-10px' : '0px',
+              top: isSelected ? '-10px' : '0px',
               color: [1, 2].includes((this.card - 1) % 4) ? '#ff0000' : '#000000'
             }"
   >
@@ -19,19 +19,27 @@ const suites = ['♣', '♦', '♥', '♠']
 export default {
   name: 'Card',
   props: {
-    card: Number
+    card: Number,
+    isSelected: Boolean
   },
   data () {
     return {
       value: values[~~((this.card - 1) / 4)],
       suite: suites[(this.card - 1) % 4],
-      isClicked: false
+      
     }
   },
   methods: {
-    clickCard () {
+    trySelect () {
+      this.$socket.emit('card click', {'card': this.card})
+      if (this.isClicked) {
+        this.$socket.emit('remove card', {'card': this.card})
+      } else if (this.$store.getters.current_hand_in_spot(this.spot).length === 5) {
+        return
+      } else {
+        this.$socket.emit('add card', {'card': this.card})
+      }
       this.isClicked = !this.isClicked
-      
     }
   }
 }

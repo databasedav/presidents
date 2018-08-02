@@ -7,11 +7,11 @@ dependencies:
   - wtforms
   - numpy
   - mypy_extensions
-  - gunicorn
   - gevent
   - gevent-websocket
   - pytables
   - pip:
+    - gunicorn==19.9.0
     - bidict==0.17.2
     - llist==0.6
     - deepdish==0.3.6

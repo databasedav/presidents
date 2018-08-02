@@ -4,7 +4,6 @@
     <HelloWorld msg="Welcome to Your Vue.js App"/>
     <ButtonBox/>
     <CardBox/>
-    
   </div>
 </template>
 

@@ -1,13 +1,15 @@
 <template>
   <div>
     <span>{{ hand_desc }}</span><br>
-    <!-- <input v-model.number='card_to_add' placeholder='card'> -->
-    <!-- <button @click='add_card'>add card</button> -->
+    <input v-model.number='card_to_add' placeholder='card'>
+    <button @click='add_card'>add card</button>
     <!-- <button @click='deal_cards'>deal cards</button> -->
     <Card
       v-for='card in cards'
       :key='card' 
       :card='card'
+      :
+      :spot='spot'
     ></Card>
   </div>
 </template>
@@ -35,6 +37,7 @@ export default {
     }
   },
   methods: {
+    
     add_card () {
       this.$socket.emit('add_card', this.card_to_add)
       this.$store.commit({
