@@ -60,15 +60,16 @@ export default new Vuex.Store({
       })
     },
     SOCKET_SELECT_HAND (state, payload) {
-      i = state.stored_hands.map(o => o.cards).indexOf(payload.cards)
+      i = state.stored_hands.map(hand => hand.cards.map(card => card.value)).indexOf(payload.cards)
       state.stored_hands.splice(i, 1, {
         'cards': stored_hands[i].cards,
         'is_selected': true
       })
     },
     SOCKET_DESELECT_HAND (state, payload) {
-      state.stored_hands.splice(state.stored_hands.map(o => o.cards).indexOf(payload.cards), 1, {
-        'cards': payload.cards,
+      i = state.stored_hands.map(hand => hand.cards.map(card => card.value)).indexOf(payload.cards)
+      state.stored_hands.splice(i, 1, {
+        'cards': stored_hands[i].cards,
         'is_selected': false
       })
     },

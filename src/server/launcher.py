@@ -62,7 +62,6 @@ def card_click(payload):
 
 @socketio.on('hand click')
 def select_hand(payload):
-    print(payload['cards'])
     for card in payload['cards']:
         card_click({'card': card})
 
