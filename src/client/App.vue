@@ -1,7 +1,6 @@
 <template>
   <div id="app">
-    <img src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+    <StoredHandBox/>
     <ButtonBox/>
     <CardBox/>
   </div>
@@ -12,14 +11,17 @@ import HelloWorld from './components/HelloWorld.vue'
 import Card from './components/Card'
 import CardBox from './components/CardBox'
 import ButtonBox from './components/ButtonBox'
+import Hand from './components/Hand'
+import StoredHandBox from './components/StoredHandBox'
 
 export default {
   name: 'app',
   components: {
-    HelloWorld,
     Card,
     CardBox,
-    ButtonBox
+    ButtonBox,
+    Hand,
+    StoredHandBox
   }
 }
 </script>

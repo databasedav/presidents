@@ -1,20 +1,19 @@
 <template>
   <div>
-    <span>{{ hand_desc }}</span><br>
-    <input v-model.number='card_to_add' placeholder='card'>
-    <button @click='add_card'>add card</button>
-    <!-- <button @click='deal_cards'>deal cards</button> -->
+    <span>{{ current_hand_desc }}</span><br><br>
     <Card
       v-for='card in cards'
-      :key='card' 
-      :card='card'
-      :
-      :spot='spot'
+      v-on:card_click='try_select(card.value)'
+      :key='card.id'
+      :card='card.value'
+      :is_selected='card.is_selected'
+      :functional='true'
     ></Card>
   </div>
 </template>
 
 <script>
+import { mapGetters } from 'vuex'
 import Card from './Card.vue'
 
 export default {
@@ -22,33 +21,8 @@ export default {
   components: {
     Card
   },
-  data () {
-    return {
-      spot: 0,
-      card_to_add: ''
-    }
-  },
   computed: {
-    cards () {
-      return this.$store.getters.cards_in_spot(this.spot)
-    },
-    hand_desc () {
-      return this.$store.getters.hand_desc_in_spot(this.spot)
-    }
+    ...mapGetters(['cards', 'current_hand_desc'])
   },
-  methods: {
-    
-    add_card () {
-      this.$socket.emit('add_card', this.card_to_add)
-      this.$store.commit({
-        type: 'add_card_to_spot',
-        spot: this.spot,
-        card: this.card_to_add
-      })
-    },
-    deal_cards () {
-      this.$socket.emit('deal cards')
-    }
-  }
 }
 </script>

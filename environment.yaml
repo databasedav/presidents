@@ -1,17 +1,16 @@
 name: pres
 dependencies:
-  - python=3.6
+  - python=3.7
   - flask
   - flask-socketio
-  - flask-wtf
-  - wtforms
   - numpy
   - mypy_extensions
-  - gevent
-  - gevent-websocket
   - pytables
   - pip:
-    - gunicorn==19.9.0
-    - bidict==0.17.2
-    - llist==0.6
-    - deepdish==0.3.6
+    - gunicorn
+    - bidict
+    - llist
+    - deepdish
+    - xxhash
+    - eventlet
+  

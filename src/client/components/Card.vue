@@ -1,10 +1,8 @@
 <template>
   <button
-    @click='trySelect'
-    :style="{
-              top: isSelected ? '-10px' : '0px',
-              color: [1, 2].includes((this.card - 1) % 4) ? '#ff0000' : '#000000'
-            }"
+    :class="functional ? 'selectable' : 'unselectable'"
+    v-on="functional ? { click: try_select } : {}"
+    :style='[style_object, selected_style]'
   >
     {{ value }}
     <br>
@@ -20,39 +18,51 @@ export default {
   name: 'Card',
   props: {
     card: Number,
-    isSelected: Boolean
+    is_selected: Boolean,
+    functional: Boolean
   },
   data () {
     return {
       value: values[~~((this.card - 1) / 4)],
       suite: suites[(this.card - 1) % 4],
-      
+      style_object: {
+        color: [1, 2].includes((this.card - 1) % 4) ? '#ff0000' : '#000000'
+      }
+    }
+  },
+  computed: {
+    selected_style () {
+      return {
+        top: this.is_selected ? '-10px' : '0px'
+      }
     }
   },
   methods: {
-    trySelect () {
+    try_select () {
       this.$socket.emit('card click', {'card': this.card})
-      if (this.isClicked) {
-        this.$socket.emit('remove card', {'card': this.card})
-      } else if (this.$store.getters.current_hand_in_spot(this.spot).length === 5) {
-        return
-      } else {
-        this.$socket.emit('add card', {'card': this.card})
-      }
-      this.isClicked = !this.isClicked
     }
   }
 }
 </script>
 
 <style scoped>
-button {
+button.selectable {
   text-align: center;
   text-decoration: none;
   display: inline-block;
   border: none;
   border-radius: 4px;
   font-size: 25px;
+  margin: 2px;
+  position: relative;
+}
+button.unselectable {
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  border: none;
+  border-radius: 4px;
+  font-size: 15px;
   margin: 2px;
   position: relative;
 }

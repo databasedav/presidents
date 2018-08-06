@@ -12,11 +12,12 @@
 #       be compared
 # TODO: wrtie tests
 
+from __future__ import annotations
 import numpy as np
 import deepdish as dd
 
 from utils.utils import hand_hash
-from typing import Dict, Union
+from typing import List, Dict, Union
 from json import dumps, loads
 from mypy_extensions import NoReturn
 
@@ -30,7 +31,10 @@ card_names = [
 ]
 
 # hash table for identifying hands
-hand_table = dd.io.load("hand_table.h5")
+try:
+    hand_table = dd.io.load("./src/server/hand_table.h5")
+except OSError:
+    hand_table = dd.io.load("hand_table.h5")
 
 # TODO: should this be in the class?
 id_desc_dict = {
@@ -114,7 +118,7 @@ class Hand(object):
         return cls(hd['_cards'], hd['_id'], hd['_insertion_index'])
 
     @classmethod
-    def copy(cls, hand: "Hand") -> "Hand":
+    def copy(cls, hand: Hand) -> Hand:
         return cls(hand._cards, hand._id, hand._insertion_index)
 
     def __getitem__(self, key: Union[int, slice]) -> int:
@@ -141,6 +145,9 @@ class Hand(object):
         # TODO: how to multiline f string plz
         return f"cards: {str(self._cards)}; id: {self._id}; ii: " + \
                f"{self._insertion_index}"
+
+    def __len__(self) -> int:
+        return self._number_of_cards
 
     def __eq__(self, other: object) -> bool:
         return (np.array_equal(self._cards, other._cards) and  # type: ignore
@@ -254,7 +261,10 @@ class Hand(object):
     def to_json(self) -> str:
         return dumps(self.__dict__, default=lambda x: x.tolist())
 
-    def _is_comparable(self, other: "Hand") -> bool:
+    def to_list(self) -> List:
+        return list(map(int, self.__iter__()))
+
+    def _is_comparable(self, other: Hand) -> bool:
         assert self.is_valid and other.is_valid, \
             "Bug: attempting to compare 1 or more invalid hands."
         # TODO: this case is specifically to show that one cannot

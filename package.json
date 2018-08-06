@@ -3,11 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "flask": "venv/bin/python src/server/test_launcher.py",
+    "flask": "venv/bin/python src/server/launcher.py",
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint",
-    "start": "npm run flask & npm run serve"
+    "start": "npm run flask & npm run serve",
+    "setup": "python -m venv venv && venv/bin/pip install -r requirements.txt && npm install"
   },
   "dependencies": {
     "socket.io": "^2.1.1",

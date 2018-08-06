@@ -1,6 +1,7 @@
 <template>
   <div>
-    <button @click='deal_cards'>deal cards</button>
+    <button @click='deal_cards'>deal cards</button><br>
+    <button @click='store_current_hand'>store current hand</button>
   </div>
 </template>
 
@@ -10,6 +11,9 @@ export default {
   methods: {
     deal_cards () {
       this.$socket.emit('deal cards')
+    },
+    store_current_hand () {
+      this.$socket.emit('store current hand')
     }
   }
 }
