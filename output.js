@@ -12,7 +12,7 @@
     child_process: 'empty'
   },
   output: {
-    path: '/mnt/c/Users/avi/OneDrive/presidents/presidents/src/server/app/static',
+    path: '/mnt/c/Users/avi/OneDrive/presidents/presidents/src/server',
     filename: '[name].js',
     publicPath: '/'
   },
@@ -53,7 +53,7 @@
             loader: 'cache-loader',
             options: {
               cacheDirectory: '/mnt/c/Users/avi/OneDrive/presidents/presidents/node_modules/.cache/vue-loader',
-              cacheIdentifier: '41171889'
+              cacheIdentifier: '211a10f6'
             }
           },
           /* config.module.rule('vue').use('vue-loader') */
@@ -64,7 +64,7 @@
                 preserveWhitespace: false
               },
               cacheDirectory: '/mnt/c/Users/avi/OneDrive/presidents/presidents/node_modules/.cache/vue-loader',
-              cacheIdentifier: '41171889'
+              cacheIdentifier: '211a10f6'
             }
           }
         ]
@@ -78,7 +78,7 @@
             loader: 'url-loader',
             options: {
               limit: 4096,
-              name: 'img/[name].[hash:8].[ext]'
+              name: 'static/img/[name].[hash:8].[ext]'
             }
           }
         ]
@@ -91,7 +91,7 @@
           {
             loader: 'file-loader',
             options: {
-              name: 'img/[name].[hash:8].[ext]'
+              name: 'static/img/[name].[hash:8].[ext]'
             }
           }
         ]
@@ -105,7 +105,7 @@
             loader: 'url-loader',
             options: {
               limit: 4096,
-              name: 'media/[name].[hash:8].[ext]'
+              name: 'static/media/[name].[hash:8].[ext]'
             }
           }
         ]
@@ -119,7 +119,7 @@
             loader: 'url-loader',
             options: {
               limit: 4096,
-              name: 'fonts/[name].[hash:8].[ext]'
+              name: 'static/fonts/[name].[hash:8].[ext]'
             }
           }
         ]
@@ -1016,7 +1016,7 @@
             loader: 'cache-loader',
             options: {
               cacheDirectory: '/mnt/c/Users/avi/OneDrive/presidents/presidents/node_modules/.cache/babel-loader',
-              cacheIdentifier: '47d7bda6'
+              cacheIdentifier: 'd9993528'
             }
           },
           /* config.module.rule('js').use('babel-loader') */
@@ -1044,7 +1044,7 @@
                 '.vue'
               ],
               cache: true,
-              cacheIdentifier: '5566b832',
+              cacheIdentifier: 'c44a30f4',
               emitWarning: true,
               formatter: function () { /* omitted long function */ }
             }
@@ -1088,7 +1088,7 @@
     new HtmlWebpackPlugin(
       {
         templateParameters: function () { /* omitted long function */ },
-        filename: 'index.html',
+        filename: 'templates/index.html',
         template: '/mnt/c/Users/avi/OneDrive/presidents/presidents/public/index.html'
       }
     ),
@@ -1115,7 +1115,7 @@
       [
         {
           from: '/mnt/c/Users/avi/OneDrive/presidents/presidents/public',
-          to: '/mnt/c/Users/avi/OneDrive/presidents/presidents/src/server/app/static',
+          to: '/mnt/c/Users/avi/OneDrive/presidents/presidents/src/server',
           ignore: [
             'index.html',
             '.DS_Store'

@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 import numpy as np
 from hand import Hand, DuplicateCardError, FullHandError
@@ -14,6 +14,11 @@ socketio = SocketIO(app)
 
 hand = Hand()
 chamber = Chamber()
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def catch_all(path):
+    return render_template('index.html')
 
 
 @socketio.on('deal cards')

@@ -4,9 +4,7 @@
     v-on="functional ? { click: try_select } : {}"
     :style='[style_object, selected_style]'
   >
-    {{ value }}
-    <br>
-    {{ suite }}
+    {{ value }}<br>{{ suite }}
   </button>
 </template>
 
