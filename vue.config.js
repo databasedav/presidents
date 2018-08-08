@@ -8,7 +8,9 @@ module.exports = {
       },
     },
   },
-  outputDir: './src/server/app/static',
+  outputDir: './src/server/',
+  assetsDir: 'static',
+  indexPath: 'templates/index.html',
   chainWebpack: config => {
     config
       .entry('app')

@@ -5,7 +5,7 @@
   "scripts": {
     "flask": "venv/bin/python src/server/launcher.py",
     "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build",
+    "build": "vue-cli-service build --no-clean",
     "lint": "vue-cli-service lint",
     "start": "npm run flask & npm run serve",
     "setup": "python -m venv venv && venv/bin/pip install -r requirements.txt && npm install"

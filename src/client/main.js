@@ -8,6 +8,7 @@ Vue.config.productionTip = false
 Vue.use(VueSocketio, io(`//${window.location.host}`), { store })
 
 new Vue({
+  router,
   store,
   render: h => h(App)
 }).$mount('#app')
