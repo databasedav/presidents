@@ -1044,7 +1044,7 @@
                 '.vue'
               ],
               cache: true,
-              cacheIdentifier: 'c44a30f4',
+              cacheIdentifier: 'bd19d03e',
               emitWarning: true,
               formatter: function () { /* omitted long function */ }
             }

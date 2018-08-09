@@ -26,8 +26,12 @@ class CardNotInChamberError(RuntimeError):
 
 class Chamber:
     """
-    storage for cards and hands specifically designed for fast runtimes
-    in context of front end interaction
+    Storage for cards and hands specifically designed for fast runtimes
+    in context of front end interaction. Emits events containing hashes
+    that can identify and modify vue components quickly.
+
+    (note the hash functionality described will only be added once vue
+    starts supporting maps officially)
     """
     def __init__(self, cards: np.ndarray = None) -> None:
         self._num_cards = 0

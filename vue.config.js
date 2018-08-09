@@ -8,9 +8,15 @@ module.exports = {
       },
     },
   },
-  outputDir: './src/server/',
-  assetsDir: 'static',
-  indexPath: 'templates/index.html',
+  outputDir: process.env.NODE_ENV === 'production'
+    ? './src/server/'
+    : '.',
+  assetsDir: process.env.NODE_ENV === 'production'
+    ? 'static'
+    : '.',
+  indexPath: process.env.NODE_ENV === 'production'
+    ? 'templates/index.html'
+    : 'index.html',
   chainWebpack: config => {
     config
       .entry('app')
