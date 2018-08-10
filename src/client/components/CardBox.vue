@@ -3,7 +3,6 @@
     <span>{{ current_hand_desc }}</span><br><br>
     <Card
       v-for='card in cards'
-      v-on:card_click='try_select(card.value)'
       :key='card.id'
       :card='card.value'
       :is_selected='card.is_selected'

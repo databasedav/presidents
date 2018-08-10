@@ -1,18 +1,17 @@
 <template>
   <v-btn
-    min-width='0'
+    class="functional ? selectable : unselectable"
     depressed
     v-on="functional ? { click: try_select } : {}"
     :style='[style_object, selected_style]'
   >
-    {{ value }}<br>{{ suite }}
+    {{ value }}<br>{{ suit }}
   </v-btn>
 </template>
 
 <script>
-// class="functional ? 'selectable' : 'unselectable'"
 const values = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2']
-const suites = ['♣', '♦', '♥', '♠']
+const suits = ['♣', '♦', '♥', '♠']
 
 export default {
   name: 'Card',
@@ -24,7 +23,7 @@ export default {
   data () {
     return {
       value: values[~~((this.card - 1) / 4)],
-      suite: suites[(this.card - 1) % 4],
+      suit: suits[(this.card - 1) % 4],
       style_object: {
         color: [1, 2].includes((this.card - 1) % 4) ? '#ff0000' : '#000000'
       }
@@ -45,35 +44,26 @@ export default {
 }
 </script>
 
-<style scoped>
-v.btn__content {
-  min-width: 0px;
+<style>
+.selectable {
+  height: auto;
+  width: auto;
+  margin: 6px;
   padding: 0px;
+  padding-left: 20px;
+  padding-right: 20px;
+  min-width: 0;
+  font-size: 35px;
 }
 
-/* .selectable {
-  width: 0px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  border: none;
-  border-radius: 4px;
-  font-size: 5px;
-  margin: 2px;
-  position: relative;
-} */
-/* div.btn__content {
+/* .unselectable {
+  height: auto;
+  width: auto;
+  margin: 6px;
   padding: 0px;
-}
-btn.unselectable {
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  border: none;
-  border-radius: 4px;
+  padding-left: 20px;
+  padding-right: 20px;
+  min-width: 0;
   font-size: 15px;
-  margin: 2px;
-  position: relative;
 } */
-/* TODO: only allow hover on mouseover in non mobile browsers (maybe?) */
 </style>
