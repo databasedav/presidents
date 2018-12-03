@@ -1,7 +1,7 @@
 from __future__ import annotations
 import numpy as np
 from llist import sllist, sllistnode, dllist, dllistnode
-from typing import List, Union, Generator
+from typing import List, Union, Generator, Dict, Any
 from hand import Hand
 from flask_socketio import emit
 import xxhash
@@ -18,7 +18,7 @@ import xxhash
 #       or just keep it this way; if I keep the emits in the class
 #       how do I write test that ignore the emits
 # TODO: too many int calls
-
+# TODO: better way to test without emitting (currently using debug in constructor)
 
 class CardNotInChamberError(RuntimeError):
     pass
@@ -32,8 +32,11 @@ class Chamber:
 
     (note the hash functionality described will only be added once vue
     starts supporting maps officially)
+
+    debug True allows testing of the functionality without being connected
+    to flask (TODO better way to do this?)
     """
-    def __init__(self, cards: np.ndarray = None) -> None:
+    def __init__(self, cards: np.ndarray = None, debug=False) -> None:
         self._num_cards = 0
         self._cards = np.empty(shape=53, dtype=np.object)
         if cards:
@@ -41,6 +44,18 @@ class Chamber:
                 self._cards[card] = HandPointerDLList()
                 self._num_cards += 1
         self._hands: dllist = dllist()  # a dllist of HandNodes
+        self._sid = None
+        self._debug = debug
+    
+    def set_sid(sid: str) -> None:
+        self._sid = sid
+    
+    def _emit(self, event: str, payload: Dict[str, Any]):
+        emit(event, payload, room=self._sid)
+
+    @property
+    def is_empty(self):
+        return np.all(self._cards == None)
 
     def reset(self):
         self._num_cards = 0
@@ -50,13 +65,16 @@ class Chamber:
     def add_card(self, card: int) -> None:
         self._cards[card] = HandPointerDLList()
         self._num_cards += 1
-        emit('add_card', {'id': xxhash.xxh64().intdigest(), 'value': card, 'is_selected': False})
+        if not self._debug:
+            self._emit('add_card', {'id': card, 'value': card})
 
     def add_cards(self, cards: np.ndarray) -> None:
         for card in cards:
             self.add_card(int(card))
 
     def remove_card(self, card: int) -> None:
+        if not self._debug:
+            emit('deselect_card', {'card': card})
         for base_hand_pointer_node in self._cards[card].iter_nodes():
             hand_node = base_hand_pointer_node.value
             for hand_pointer_node in hand_node.value:
@@ -67,20 +85,25 @@ class Chamber:
             hand_node.owner().remove(hand_node)
         self._cards[card] = None
         self._num_cards -= 1
+    
+    def remove_cards(self, cards):
+        for card in cards:
+            self.remove_card(card)
 
     def add_hand(self, hand: Hand) -> None:
         hand_pointer_nodes: List[HandPointerNode] = list()
         cards: List[int] = list() # TODO: replace with uuid once vue adds map support
         for card in hand:
             self.deselect_card(int(card))
-        hand_node: HandNode = HandNode(hand_pointer_nodes, cards)
+        hand_node: HandNode = HandNode(hand_pointer_nodes, cards, debug=self._debug)
         for card in hand:
             hand_pointer_node: HandPointerNode = HandPointerNode(hand_node)
             hand_pointer_nodes.append(hand_pointer_node)
             cards.append(int(card))
             self._cards[card].appendnode(hand_pointer_node)
         self._hands.appendnode(hand_node)
-        emit('store_hand', {'cards': [{'id': id, 'value': int(value)} for id, value in zip([xxhash.xxh64().intdigest() for _ in range(len(hand))], hand)]})
+        if not self._debug:
+            emit('store_hand', {'cards': [{'id': id, 'value': int(value)} for id, value in zip([xxhash.xxh64().intdigest() for _ in range(len(hand))], hand)]})
         # emit('deselect_all_hands')
 
     def select_card(self, card: int):
@@ -88,14 +111,16 @@ class Chamber:
             raise CardNotInChamberError('The desired card is not in the chamber; possible DOM modification.')
         for hand_node in self._cards[card]:
             hand_node.increment_num_selected_cards()
-        emit('select_card', {'card': card})
+        if not self._debug:
+            self._emit('select_card', {'card': card})
 
     def deselect_card(self, card: int):
         if self._cards[card] is None:
             raise CardNotInChamberError('The desired card is not in the chamber; possible DOM modification.')
         for hand_node in self._cards[card]:
             hand_node.decrement_num_selected_cards()
-        emit('deselect_card', {'card': card})
+        if not self._debug:
+            self._emit('deselect_card', {'card': card})
 
     def clear_hands(self) -> None:
         for hand_node in self._hands:
@@ -153,10 +178,18 @@ class HandNode(dllistnode):
     .value is the list of HandPointerNodes corresponding to the cards in the hand
     will be uuid after vue supports maps
     """
-    def __init__(self, hand_pointer_nodes: List[HandPointerNode], cards: List[int]):
+    def __init__(self, hand_pointer_nodes: List[HandPointerNode], cards: List[int], debug=False):
         super().__init__(hand_pointer_nodes)
         self._num_cards_selected = 0
         self._cards = cards
+        self._id = None  # random number or string (which one is better?)
+        self._sid = None
+
+    def set_sid(self, sid: str) -> None:
+        self._sid = sid
+
+    def _emit(self, event, paylaod) -> None:
+        emit(event, payload, room=self._sid)
 
     def __repr__(self):
         return 'HandNode'
@@ -164,9 +197,11 @@ class HandNode(dllistnode):
     def increment_num_selected_cards(self) -> None:
         self._num_cards_selected += 1
         if self._num_cards_selected == 1:
-            emit('select_hand', {'cards': self._cards})
+            if not self._debug:
+                self._emit('select_hand', {'cards': self._cards})
 
     def decrement_num_selected_cards(self) -> None:
         self._num_cards_selected -= 1
         if self._num_cards_selected == 0:
-            emit('deselect_hand', {'cards': self._cards})
+            if not self._debug:
+                self._emit('deselect_hand', {'cards': self._cards})

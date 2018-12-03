@@ -9,6 +9,7 @@ export default new Vuex.Store({
     current_hand: Array,
     current_hand_desc: '',
     stored_hands: [],
+    play_unlocked: false
   },
   getters: {
     cards (state) {
@@ -22,9 +23,21 @@ export default new Vuex.Store({
     },
     stored_hands (state) {
       return state.stored_hands
+    },
+    play_unlocked (state) {
+      return state.unlocked
     }
   },
   mutations: {
+    SOCKET_ASSIGN_CARDS (state, payload) {
+      
+    },
+    SOCKET_UNLOCK_PLAY (state, payload) {
+      state.play_unlocked = true
+    },
+    SOCKET_LOCK_PLAY (state, payload) {
+      state.play_unlocked = false
+    },
     SOCKET_SET_CARDS_WITH_SELECTION (state, payload) {
       state.cards = payload.cards
     },
@@ -35,13 +48,17 @@ export default new Vuex.Store({
       state.current_hand_desc = payload.desc
     },
     SOCKET_ADD_CARD (state, payload) {
+      // state.cards.set(payload.card, false) // for map support
       state.cards.push({
         'id': payload.id,
         'value': payload.value,
-        'is_selected': payload.is_selected
+        'is_selected': false
       })
     },
     SOCKET_SELECT_CARD (state, payload) {
+      // Vue.$snackbar.show('fuck', {
+      //   flushAll: true
+      // })
       state.cards.splice(state.cards.map(o => o.value).indexOf(payload.card), 1, {
         'value': payload.card,
         'is_selected': true

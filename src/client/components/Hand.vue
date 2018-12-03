@@ -1,18 +1,15 @@
 <template>
-  <button
+  <v-btn
     class='hand'
     :style='selected_style'
     @click='try_select'
   >
     <Card
       v-for='card in cards'
-      :class='{unselectable: true}'
       :key='card.id'
       :card='card.value'
-      :is_selected='false'
-      :functional='false'
     ></Card>
-  </button>
+  </v-btn>
 </template>
 
 <script>
@@ -48,6 +45,16 @@ export default {
 </script>
 
 <style scoped>
+.unselectable {
+  height: auto;
+  width: auto;
+  margin: 2px;
+  padding: 0px;
+  padding-left: 10px;
+  padding-right: 10px;
+  min-width: 0;
+  font-size: 15px;
+}
 button.hand {
   text-align: center;
   text-decoration: none;

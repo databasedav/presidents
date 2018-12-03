@@ -1,12 +1,11 @@
 <template>
   <div>
-    <span>{{ current_hand_desc }}</span><br><br>
+    <br><span>{{ current_hand_desc }}</span><br><br>
     <Card
       v-for='card in cards'
       :key='card.id'
       :card='card.value'
       :is_selected='card.is_selected'
-      :functional='true'
     ></Card>
   </div>
 </template>

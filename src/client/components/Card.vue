@@ -1,12 +1,10 @@
 <template>
-  <v-btn
-    class="functional ? selectable : unselectable"
-    depressed
-    v-on="functional ? { click: try_select } : {}"
+  <button
+    @click='try_select'
     :style='[style_object, selected_style]'
   >
     {{ value }}<br>{{ suit }}
-  </v-btn>
+  </button>
 </template>
 
 <script>
@@ -18,7 +16,6 @@ export default {
   props: {
     card: Number,
     is_selected: Boolean,
-    functional: Boolean
   },
   data () {
     return {
@@ -44,26 +41,19 @@ export default {
 }
 </script>
 
-<style>
-.selectable {
-  height: auto;
-  width: auto;
-  margin: 6px;
+<style scoped>
+button {
   padding: 0px;
-  padding-left: 20px;
-  padding-right: 20px;
-  min-width: 0;
-  font-size: 35px;
+  padding-left: 10px;
+  padding-right: 10px;
+  margin: 4px;
+  font-size: 20px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  background: lightgray;
+  border: none;
+  border-radius: 4px;
+  position: relative;
 }
-
-/* .unselectable {
-  height: auto;
-  width: auto;
-  margin: 6px;
-  padding: 0px;
-  padding-left: 20px;
-  padding-right: 20px;
-  min-width: 0;
-  font-size: 15px;
-} */
 </style>
