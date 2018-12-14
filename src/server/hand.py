@@ -1,20 +1,17 @@
-# TODO: remove string annotations after getting python 3.7
 # TODO: test hand trie instead vs. hand hash table
 # TODO: where to put this file and general path design stuff
 # TODO: evaluate necessity of asserts
 # TODO: decide what exactly should be a runtime error and whether or not
 #       ingame notifications should be through error messages
-# TODO: is using uint8's even worth it?
 # TODO: normalize use of double or single quotes
-# TODO: change all uint8's to python ints?
 # TODO: assertions should be things that I assume will never happen
 #       because I check for them beforehand, e.g. invalid hands cannot
 #       be compared
-# TODO: wrtie tests
+# TODO: wrtie tests  # keeping this typo cuz I love irony
 
 from __future__ import annotations
 import numpy as np
-import deepdish as dd
+import pickle
 
 from utils.utils import hand_hash
 from typing import List, Dict, Union
@@ -32,9 +29,12 @@ card_names = [
 
 # hash table for identifying hands
 try:
-    hand_table = dd.io.load("./src/server/hand_table.h5")
-except OSError:
-    hand_table = dd.io.load("hand_table.h5")
+    with open('./src/server/hand_table.pkl', 'rb') as file:
+        hand_table = pickle.load(file)
+except FileNotFoundError:
+    with open('hand_table.pkl', 'rb') as file:
+        hand_table = pickle.load(file)
+
 
 # TODO: should this be in the class?
 id_desc_dict = {
@@ -91,12 +91,12 @@ class Hand(object):
                  _id: int=None,
                  _insertion_index: int=None) -> None:
         if _cards is None:  # default empty hand
-            self._cards = np.zeros(shape=5, dtype=np.uint8)
+            self._cards = np.zeros(shape=5, dtype=int)
             self._id = 0
             self._insertion_index = 4
         else:
             assert len(_cards) == 5
-            self._cards = np.array(_cards, dtype=np.uint8)
+            self._cards = np.array(_cards, dtype=int)
             if _id is not None and _insertion_index is not None:
                 self._id = _id
                 self._insertion_index = _insertion_index
@@ -149,16 +149,16 @@ class Hand(object):
     def __len__(self) -> int:
         return self._number_of_cards
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: Hand) -> bool:
         return (np.array_equal(self._cards, other._cards) and  # type: ignore
                 self._id == other._id and  # type: ignore
                 (self._insertion_index
                     == other._insertion_index))  # type: ignore
 
-    def __ne__(self, other: object) -> bool:
+    def __ne__(self, other: Hand) -> bool:
         return not self == other
 
-    def __lt__(self, other: "Hand") -> bool:
+    def __lt__(self, other: Hand) -> bool:
         if not self._is_comparable(other):
             # TODO: should this be a runtime error?
             raise RuntimeError(
@@ -176,7 +176,7 @@ class Hand(object):
         else:
             raise AssertionError("Bug: unidentified hand.")
 
-    def __gt__(self, other: "Hand") -> bool:
+    def __gt__(self, other: Hand) -> bool:
         if not self._is_comparable(other):
             raise RuntimeError(
                 f"A {self.id_desc} cannot be played on a {other.id_desc}.")
@@ -193,10 +193,10 @@ class Hand(object):
         else:
             raise AssertionError("Bug: unidentified hand.")
 
-    def __le__(self, other: "Hand") -> NoReturn:
+    def __le__(self, other: Hand) -> NoReturn:
         raise AssertionError('A <= call was made by a Hand.')
 
-    def __ge__(self, other: "Hand") -> NoReturn:
+    def __ge__(self, other: Hand) -> NoReturn:
         raise AssertionError('A >= call was made by a Hand.')
 
     @property
@@ -247,11 +247,12 @@ class Hand(object):
         return id_desc_dict[self._id]
 
     def reset(self) -> None:
-        self._cards = np.zeros(shape=5, dtype=np.uint8)
+        self._cards = np.zeros(shape=5, dtype=int)
         self._id = 0
         self._insertion_index = 4
 
-    def intersects(self, other: "Hand") -> bool:  # TODO: refine this
+    # TODO: why do I need this?
+    def intersects(self, other: Hand) -> bool:  # TODO: refine this
         for card1 in self:
             for card2 in other:
                 if card1 == card2:

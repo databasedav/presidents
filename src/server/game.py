@@ -1,5 +1,5 @@
 from hand import Hand, DuplicateCardError, FullHandError
-from typing import List
+from typing import List, Dict, Any
 from chamber import Chamber
 from flask_socketio import emit
 import numpy as np
@@ -44,6 +44,20 @@ class Game:
         self._open_spots = {0, 1, 2, 3}
         self.num_players = 0
         self.num_spectators = 0
+    
+    # TODO: only for testing not in final game
+    def restart(self, sid: str) -> None:
+        self.clear_players()
+        self.add_player(sid, 'fuck')
+        chamber = self._get_chamber(sid)
+        chamber.reset()
+        self._start_round()
+
+    
+    # TODO: make Any type more specific
+    def _emit(self, event: str, payload: Dict[str, Any], sid: str):
+        emit(event, payload, room=sid)
+
 
     def start_game(self):
         if self.num_players == 1:
@@ -72,9 +86,15 @@ class Game:
         self._open_spots.add(self._get_spot(sid))
         self._sid_spot_dict.pop(sid)
         self.num_players -=1
+    
+    def clear_players(self) -> None:
+        self._sid_spot_dict.clear()
+        self._names = [None, None, None, None]
+        self.num_players = 0
+        self._open_spots = {0, 1, 2, 3}
 
     def _start_round(self):
-        deck = np.arange(1, 53)  # deck of cards 1-52
+        deck = np.arange(1, 53, dtype=np.int32)  # deck of cards 1-52
         np.random.shuffle(deck)  # shuffles deck inplace
         decks = deck.reshape(4, 13)  # splits deck into 4 decks of 13
         decks.sort(axis=1)  # sorts individual decks
@@ -184,7 +204,6 @@ class Game:
         except Exception as e:
             print("Bug: probably the card hand chamber freaking out.")
             raise e
-
 
     def _get_spot(self, sid: str) -> int:
         """

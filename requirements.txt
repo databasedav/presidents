@@ -1,10 +1,11 @@
+ipython
 flask
 flask_socketio
 numpy
 llist
+bidict
 mypy_extensions
 gunicorn
 eventlet
-deepdish
 tables
 xxhash

@@ -1,7 +1,7 @@
 <template>
   <div>
-    <button @click='join_game'>join game</button><br>
-    <button @click='store_current_hand'>store current hand</button>
+    <button @click='restart'>restart</button>
+    
   </div>
 </template>
 
@@ -12,8 +12,13 @@ export default {
     join_game () {
       this.$socket.emit('join game')
     },
+
     store_current_hand () {
       this.$socket.emit('store current hand')
+    },
+
+    restart () {
+      this.$socket.emit('restart')
     }
   }
 }

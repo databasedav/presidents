@@ -3,7 +3,8 @@ import sys
 import numpy as np
 from itertools import accumulate, repeat, chain
 
-
+# TODO: 53 might not be necessary to guarantee unique hashes;
+#       empirically minimize
 def hand_hash(hand: np.ndarray) -> int:
     return int(sum([hand[i] * (53 ** (5 - i))  # type: ignore
                 for i in range(5)]))
@@ -15,7 +16,7 @@ def cartesian_product_pp(arrays):
     """
     la = len(arrays)
     L = *map(len, arrays), la
-    arr = np.empty(L, dtype=np.uint8)
+    arr = np.empty(L, dtype=int)
     arrs = *accumulate(chain((arr,), repeat(0, la-1)), np.ndarray.__getitem__),
     idx = slice(None), *repeat(None, la-1)
     for i in range(la-1, 0, -1):

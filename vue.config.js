@@ -23,5 +23,8 @@ module.exports = {
         .clear()
         .add('./src/client/main.js')
         .end()
+  },
+  configureWebpack: {
+    devtool: 'source-map'
   }
 };

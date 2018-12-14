@@ -42,6 +42,7 @@ export default {
 </script>
 
 <style scoped>
+/* TODO: 10's are fatter than the other cards */
 button {
   padding: 0px;
   padding-left: 10px;

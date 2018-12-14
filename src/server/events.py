@@ -1,14 +1,15 @@
+import eventlet
+# eventlet.monkey_patch()
+from json import dumps
+from game import Game
 from flask import request, session
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 import numpy as np
 from hand import Hand, DuplicateCardError, FullHandError
 from chamber import Chamber
-import eventlet
-from json import dumps
-from game import Game
+from utils.utils import main
 
-eventlet.monkey_patch()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -45,5 +46,11 @@ def card_click(payload):
     card = payload['card']
     game.add_or_remove_card(sid, card)
 
-if __name__ == '__main__':
+@socketio.on('restart')
+def restart():
+    sid = get_sid()
+    game.restart(sid)
+
+@main
+def main():
     socketio.run(app, host='0.0.0.0', debug=True)

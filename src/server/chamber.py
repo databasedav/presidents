@@ -19,6 +19,8 @@ import xxhash
 #       how do I write test that ignore the emits
 # TODO: too many int calls
 # TODO: better way to test without emitting (currently using debug in constructor)
+# TODO: make visual, interactive chamber
+# TODO: make high quality representation of what is going on
 
 class CardNotInChamberError(RuntimeError):
     pass
@@ -30,15 +32,17 @@ class Chamber:
     in context of front end interaction. Emits events containing hashes
     that can identify and modify vue components quickly.
 
+    Uses doubly linked list because node removal is constant time.
+
     (note the hash functionality described will only be added once vue
     starts supporting maps officially)
 
     debug True allows testing of the functionality without being connected
     to flask (TODO better way to do this?)
     """
-    def __init__(self, cards: np.ndarray = None, debug=False) -> None:
-        self._num_cards = 0
-        self._cards = np.empty(shape=53, dtype=np.object)
+    def __init__(self, cards: np.ndarray=None, debug=False) -> None:
+        self._num_cards: int = 0
+        self._cards: np.ndarray = np.empty(shape=53, dtype=np.object)
         if cards:
             for card in cards:
                 self._cards[card] = HandPointerDLList()
@@ -50,31 +54,32 @@ class Chamber:
     def set_sid(sid: str) -> None:
         self._sid = sid
     
-    def _emit(self, event: str, payload: Dict[str, Any]):
+    def _emit(self, event: str, payload: Dict[str, Any]=None):
         emit(event, payload, room=self._sid)
 
     @property
-    def is_empty(self):
+    def is_empty(self) -> bool:
         return np.all(self._cards == None)
 
-    def reset(self):
+    def reset(self) -> None:
+        self._emit('clear_cards')
         self._num_cards = 0
         self._cards = np.empty(shape=53, dtype=np.object)
         self._hands: dllist = dllist()
 
-    def add_card(self, card: int) -> None:
+    def add_card(self, card: np.int32) -> None:
         self._cards[card] = HandPointerDLList()
         self._num_cards += 1
         if not self._debug:
-            self._emit('add_card', {'id': card, 'value': card})
+            self._emit('add_card', {'card': card})
 
     def add_cards(self, cards: np.ndarray) -> None:
         for card in cards:
-            self.add_card(int(card))
+            self.add_card(card)
 
     def remove_card(self, card: int) -> None:
-        if not self._debug:
-            emit('deselect_card', {'card': card})
+        # if not self._debug:
+        #     emit('deselect_card', {'card': card})
         for base_hand_pointer_node in self._cards[card].iter_nodes():
             hand_node = base_hand_pointer_node.value
             for hand_pointer_node in hand_node.value:
@@ -91,15 +96,15 @@ class Chamber:
             self.remove_card(card)
 
     def add_hand(self, hand: Hand) -> None:
-        hand_pointer_nodes: List[HandPointerNode] = list()
-        cards: List[int] = list() # TODO: replace with uuid once vue adds map support
         for card in hand:
-            self.deselect_card(int(card))
+            self.deselect_card(card)
+        hand_pointer_nodes: List[HandPointerNode] = list()
+        cards: List[int] = list()
         hand_node: HandNode = HandNode(hand_pointer_nodes, cards, debug=self._debug)
         for card in hand:
             hand_pointer_node: HandPointerNode = HandPointerNode(hand_node)
             hand_pointer_nodes.append(hand_pointer_node)
-            cards.append(int(card))
+            cards.append(card)
             self._cards[card].appendnode(hand_pointer_node)
         self._hands.appendnode(hand_node)
         if not self._debug:
@@ -107,8 +112,13 @@ class Chamber:
         # emit('deselect_all_hands')
 
     def select_card(self, card: int):
+        # TODO: is this required?
         if self._cards[card] is None:
             raise CardNotInChamberError('The desired card is not in the chamber; possible DOM modification.')
+        # self._cards[card] is a HandPointerDLList; iterating through
+        # it, via the class' own __iter__ (which iterates through the
+        # values, not the nodes) gives us each HandNode which contains
+        # card passed to the function
         for hand_node in self._cards[card]:
             hand_node.increment_num_selected_cards()
         if not self._debug:
@@ -150,6 +160,8 @@ class Chamber:
 class HandPointerDLList(dllist):
     """
     Wrapper for dllist with an iter_nodes method.
+
+    Uses doubly linked list because node removal is constant time.
     """
     def iter_nodes(self):
         assert self.first, "Bug: attempting to iterate through empty HandPointerDLList."
@@ -176,12 +188,12 @@ class HandPointerNode(dllistnode):
 class HandNode(dllistnode):
     """
     .value is the list of HandPointerNodes corresponding to the cards in the hand
-    will be uuid after vue supports maps
     """
     def __init__(self, hand_pointer_nodes: List[HandPointerNode], cards: List[int], debug=False):
         super().__init__(hand_pointer_nodes)
         self._num_cards_selected = 0
         self._cards = cards
+        # TODO: add for Vue map support
         self._id = None  # random number or string (which one is better?)
         self._sid = None
 
@@ -205,3 +217,4 @@ class HandNode(dllistnode):
         if self._num_cards_selected == 0:
             if not self._debug:
                 self._emit('deselect_hand', {'cards': self._cards})
+

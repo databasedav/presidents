@@ -1,12 +1,12 @@
 import numpy as np
-import deepdish as dd
+import pickle
 
 from itertools import combinations as comb
 from typing import Dict
 from utils.utils import hand_hash, cartesian_product_pp, main
 
 
-cards = np.arange(1, 53, dtype=np.uint8)
+cards = np.arange(1, 53, dtype=int)
 suits = cards.reshape(13, 4)
 
 
@@ -15,7 +15,8 @@ hand_table: Dict[int, int] = {}
 
 
 def _save_hand_table() -> None:
-    dd.io.save("hand_table.h5", hand_table)
+    with open('hand_table.pkl', 'wb') as file:
+        pickle.dump(hand_table, file, pickle.HIGHEST_PROTOCOL)
 
 
 def _add_to_hand_table(hand, id: int) -> None:
@@ -40,7 +41,7 @@ def _add_singles() -> None:
     """
     adds all singles to the hand hash table
     """
-    singles = np.zeros(shape=(52, 5), dtype=np.uint8)
+    singles = np.zeros(shape=(52, 5), dtype=int)
     singles[:, 4] = range(1, 53)
     _add_to_hand_table_iter(singles, 11)
 
@@ -49,7 +50,7 @@ def _add_doubles() -> None:
     """
     adds all doubles to the hand hash table
     """
-    doubles = np.zeros(shape=(6, 5), dtype=np.uint8)  # (4 C 2) = 6
+    doubles = np.zeros(shape=(6, 5), dtype=int)  # (4 C 2) = 6
     for suit in suits:
         doubles[:, 3:5] = list(comb(suit, 2))
         _add_to_hand_table_iter(doubles, 21)
@@ -59,7 +60,7 @@ def _add_triples() -> None:
     """
     adds all triples to the hand hash table
     """
-    triples = np.zeros(shape=(4, 5), dtype=np.uint8)  # (4 C 3) = 4
+    triples = np.zeros(shape=(4, 5), dtype=int)  # (4 C 3) = 4
     for suit in suits:
         triples[:, 2:5] = list(comb(suit, 3))
         _add_to_hand_table_iter(triples, 31)
@@ -69,7 +70,7 @@ def _add_fullhouses() -> None:
     """
     adds all fullhouses to the hand hash table
     """
-    fullhouses = np.zeros(shape=(6, 5), dtype=np.uint8)
+    fullhouses = np.zeros(shape=(6, 5), dtype=int)
     for suit1, suit2 in comb(suits, 2):
         # double triples, e.g. [1, 2, 50, 51, 52]
         doubles = list(comb(suit1, 2))
@@ -102,7 +103,7 @@ def _add_bombs() -> None:
     """
     adds all bombs to the hand hash table
     """
-    bombs = np.zeros(shape=(4, 5), dtype=np.uint8)
+    bombs = np.zeros(shape=(4, 5), dtype=int)
     for suit1, suit2 in comb(suits, 2):
         # single quads, e.g. [1, 49, 50, 51, 52]
         bombs[:, 0] = suit1
