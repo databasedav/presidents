@@ -1,10 +1,18 @@
 <template>
   <div id="app">
+<<<<<<< HEAD
     <v-app>
       <StoredHandBox/>
       <ButtonBox/>
       <CardBox/>
     </v-app>
+=======
+    <!-- <AlertSnackBar/> -->
+    <StoredHandBox/>
+    <ButtonBox/>
+    <CurrentHandBox/>
+    <CardBox/>
+>>>>>>> 862b65305567d81fa5982ca1bcdd8b9d67c091c0
   </div>
 </template>
 
@@ -15,6 +23,8 @@ import CardBox from './components/CardBox'
 import ButtonBox from './components/ButtonBox'
 import Hand from './components/Hand'
 import StoredHandBox from './components/StoredHandBox'
+import CurrentHandBox from './components/CurrentHandBox'
+// import AlertSnackBar from './components/AlertSnackBar'
 
 export default {
   name: 'app',
@@ -23,7 +33,9 @@ export default {
     CardBox,
     ButtonBox,
     Hand,
-    StoredHandBox
+    StoredHandBox,
+    CurrentHandBox,
+    // AlertSnackBar
   }
 }
 </script>

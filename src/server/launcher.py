@@ -32,6 +32,7 @@ def deal_cards():
     chamber.reset()
     chamber.add_cards(deck)
     emit('update_current_hand_desc', {'desc': hand.id_desc})
+    emit('update_current_hand_str', {'str': str(hand)})
     # the following emit can be used to load saved states (e.g. when the dom has been modified)
     # emit('set_cards_with_selection', {'cards': [{'value': card, 'is_selected': is_selected} for (card, is_selected) in zip(decks[0].tolist(), np.full(13, False).tolist())]})
 
@@ -63,6 +64,7 @@ def card_click(payload):
         raise e
     finally:
         emit('update_current_hand_desc', {'desc': hand.id_desc})
+        emit('update_current_hand_str', {'str': str(hand)})
 
 
 @socketio.on('hand click')
@@ -73,9 +75,21 @@ def select_hand(payload):
 
 @socketio.on('store current hand')
 def store_current_hand():
-    chamber.add_hand(hand)
-    hand.reset()
-    emit('update_current_hand_desc', {'desc': hand.id_desc})
+    if not hand.is_valid:
+        emit_alert('thats not a hand dumbass')
+        return
+    elif hand.is_single:
+        emit_alert('cant store a single bitch')
+        return
+    else:
+        chamber.add_hand(hand)
+        hand.reset()
+        emit('update_current_hand_desc', {'desc': hand.id_desc})
+        emit('update_current_hand_str', {'str': str(hand)})
+
+def emit_alert(alert: str) -> None:
+    emit('alert', {'alert': alert})
+
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', debug=True)

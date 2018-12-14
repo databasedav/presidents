@@ -3,6 +3,7 @@ import Vuex from 'vuex'
 
 Vue.use(Vuex)
 
+
 export default new Vuex.Store({
   state: {
     // should be a map how to deal with it rn?
@@ -17,7 +18,11 @@ export default new Vuex.Store({
     current_hand: Array,
     current_hand_desc: '',
     stored_hands: new Map(),
-    play_unlocked: false
+    play_unlocked: false,
+    current_hand_str: '',
+    alert: '',
+    // snackbar: false,
+    stored_hands: [],
   },
   getters: {
     cards (state) {
@@ -46,6 +51,18 @@ export default new Vuex.Store({
 
     play_unlocked (state) {
       return state.unlocked
+    },
+
+    alert (state) {
+      return state.alert
+    },
+    
+    // snackbar (state) {
+    //   return state.snackbar
+    // },
+
+    current_hand_str (state) {
+      return state.current_hand_str
     }
   },
   mutations: {
@@ -74,6 +91,10 @@ export default new Vuex.Store({
       state.current_hand_desc = payload.desc
     },
 
+    SOCKET_UPDATE_CURRENT_HAND_STR (state, payload) {
+      state.current_hand_str = payload.str  
+    },
+    
     SOCKET_ADD_CARD (state, payload) {
       state.cards.set(payload.card, false)
       // remove after Vue supports maps
@@ -114,5 +135,17 @@ export default new Vuex.Store({
       // this might not be reactive (even when Vue supports maps)
       state.stored_hands.get(payload.id)['is_selected'] = false
     },
+    SOCKET_ALERT (state, payload) {
+      state.alert = payload.alert
+      Vue.$snackbar.show(payload.alert)
+    },
+    SOCKET_DESELECT_ALL_HANDS (state, payload) {
+      for (var i = 0; i < state.stored_hands.length; i += 1) {
+        state.stored_hands.splice(i, 1, {
+          'cards': state.stored_hands[i].cards,
+          'is_selected': false
+        })
+      }
+    }
   }
 })
