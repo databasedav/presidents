@@ -16,7 +16,7 @@ def cartesian_product_pp(arrays):
     """
     la = len(arrays)
     L = *map(len, arrays), la
-    arr = np.empty(L, dtype=int)
+    arr = np.empty(L, dtype=np.uint8)
     arrs = *accumulate(chain((arr,), repeat(0, la-1)), np.ndarray.__getitem__),
     idx = slice(None), *repeat(None, la-1)
     for i in range(la-1, 0, -1):

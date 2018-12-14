@@ -91,12 +91,12 @@ class Hand(object):
                  _id: int=None,
                  _insertion_index: int=None) -> None:
         if _cards is None:  # default empty hand
-            self._cards = np.zeros(shape=5, dtype=int)
+            self._cards = np.zeros(shape=5, dtype=np.uint8)
             self._id = 0
             self._insertion_index = 4
         else:
             assert len(_cards) == 5
-            self._cards = np.array(_cards, dtype=int)
+            self._cards = np.array(_cards, dtype=np.uint8)
             if _id is not None and _insertion_index is not None:
                 self._id = _id
                 self._insertion_index = _insertion_index
@@ -247,7 +247,7 @@ class Hand(object):
         return id_desc_dict[self._id]
 
     def reset(self) -> None:
-        self._cards = np.zeros(shape=5, dtype=int)
+        self._cards = np.zeros(shape=5, dtype=np.uint8)
         self._id = 0
         self._insertion_index = 4
 

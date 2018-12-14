@@ -1,6 +1,6 @@
 from hand import Hand, DuplicateCardError, FullHandError
 from typing import List, Dict, Any
-from chamber import Chamber
+from emitting_chamber import EmittingChamber
 from flask_socketio import emit
 import numpy as np
 from bidict import bidict
@@ -28,20 +28,20 @@ class Game:
         """
         self._hand_in_play: Hand = Hand()
         self._turn_manager = None
-        self._current_hands: List[Hand] = [Hand(), Hand(), Hand(), Hand()]
-        self._chambers = [Chamber(), Chamber(), Chamber(), Chamber()]
+        self._current_hands: List[Hand] = [Hand() for _ in range(4)]
+        self._chambers = [EmittingChamber() for _ in range(4)]
         self._current_player = None
         self._num_consecutive_passes = 0
         self._positions = list()
-        self._takes_remaining = [0, 0, 0, 0]
-        self._gives_remaining = [0, 0, 0, 0]
+        self._takes_remaining = [0 for _ in range(4)]
+        self._gives_remaining = [0 for _ in range(4)]
         self._num_consecutive_games = 0
         self._winning_last_played = False
         self._room = None
         self._sid_spot_dict = bidict()  # sid to spot
-        self._unlocked =  [False, False, False, False]
-        self._names = [None, None, None, None]
-        self._open_spots = {0, 1, 2, 3}
+        self._unlocked =  [False for _ in range(4)]
+        self._names = [None for _ in range(4)]
+        self._open_spots = {i for i in range(4)}
         self.num_players = 0
         self.num_spectators = 0
     
@@ -188,7 +188,7 @@ class Game:
     # client that they should not modify the dom and then reset the card values
     def add_or_remove_card(self, sid: str, card: int) -> None:
         chamber = self._get_chamber(sid)
-        if not chamber.contains_card(card):
+        if card not in chamber:
             self._alert_dont_modify_dom(sid)
             # self._reset_card values
         hand = self._get_current_hand(sid)
