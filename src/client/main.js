@@ -13,11 +13,7 @@ Vue.config.productionTip = false
 
 Vue.use(Vuetify);
 Vue.use(VueSocketio, io(`//${window.location.host}`), { store })
-<<<<<<< HEAD
 Vue.use(SnackbarStackPlugin, {duration: 3000})
-=======
-Vue.use(SnackbarStackPlugin, { duration: 3000 })
->>>>>>> 862b65305567d81fa5982ca1bcdd8b9d67c091c0
 
 new Vue({
   router,

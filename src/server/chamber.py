@@ -9,12 +9,6 @@ from utils.iternodes_dllist import IterNodesDLList
 
 
 # TODO: use del for removing nodes?
-# TODO: add is not None checks for cards existing
-# TODO: utilize weakrefs from the hand nodes to their parents instead of
-#       storing the card number in a card node allowing to get rid of 
-#       card nodes
-# TODO: check for memory leaks?
-# TODO: make visual, interactive chamber
 # TODO: make high quality representation of what is going on
 
 
@@ -32,12 +26,13 @@ class Chamber:
             for card in cards:
                 self._cards[card] = HandPointerDLList()
                 self._num_cards += 1
+        self._current_hand: Hand = Hand()
         self._hands: HandNodeDLList = HandNodeDLList()
     
     def __contains__(self, card) -> bool:
         return self._cards[card] is not None
 
-    # TODO: should be simple but meaningful    
+    # TODO: should be simple but meaningful
     def __repr__(self) -> str:
         ...
 
@@ -150,9 +145,9 @@ class HandNodeDLList(IterNodesDLList):
 
 class HandNode(dllistnode):
     """
-    .value is the list of HandPointerNodes corresponding to the cards in
-    the hand; increments/decrements the number of cards selected in each
-    hand as they are selected in the chamber
+    Node's value is the list of HandPointerNodes corresponding to the 
+    cards in the hand; increments/decrements the number of cards
+    selected in each hand as they are selected in the chamber.
     """
     def __init__(self, hand_pointer_nodes: List[HandPointerNode]):
         super().__init__(hand_pointer_nodes)
