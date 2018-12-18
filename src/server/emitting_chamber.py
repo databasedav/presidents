@@ -11,7 +11,9 @@ from flask_socketio import emit
 class EmittingChamber(Chamber):
     """
     Chamber that emits socketio events. Allows the base data structure
-    to be debugged without needing an active HTTP request.    
+    to be debugged without needing an active HTTP request.
+
+    Emittals should occur as soon as possible.   
     """
     
     def __init__(self, cards: np.ndarray=None) -> None:
@@ -31,14 +33,11 @@ class EmittingChamber(Chamber):
 
     # TODO: card maybe both a python int and np.uint8
     def add_card(self, card: np.uint8) -> None:
-        super().add_card(card)
         self._emit('add_card', {'card': int(card)})
-
+        super().add_card(card)
+        
     def remove_card(self, card: np.uint8) -> None:
-        # TODO: is this deselection unnecessary for the front end as
-        #       well? If not this method can be removed.
-        # if not self._debug:
-        #     self._emit('deselect_card', {'card': card})
+        self._emit('remove_card', {'card': card})
         super().remove_card(card)
 
     def add_hand(self, hand: Hand) -> None:

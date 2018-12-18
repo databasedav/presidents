@@ -55,14 +55,6 @@ id_desc_dict = {
 # TODO: are these errors even necessary
 
 
-class DuplicateCardError(RuntimeError):
-    pass
-
-
-class FullHandError(RuntimeError):
-    pass
-
-
 class Hand(object):
     """
     Base class for president's hands and the core data structure of
@@ -310,10 +302,10 @@ class Hand(object):
         self._identify()
 
     def _card_index(self, card: int) -> int:
-        assert card in self, \
-                f"Bug: attempting to find index of card ({card}) which is " + \
-                "not in hand."
-        return np.where(self._cards == card)[0][0]  # TODO: justify in notebook
+        try:
+            return np.where(self._cards == card)[0][0]  # TODO: justify in notebook
+        except IndexError:
+            raise CardNotInHandError('Attempting to find index of card ({card}) which is not in hand.')
 
     def remove(self, card) -> None:
         assert self._id != 0, "Bug: attempting to remove from an empty hand."
@@ -324,3 +316,15 @@ class Hand(object):
         self[ii + 1: ci + 1] = self[ii: ci]  # right shift lower cards
         self[ii] = 0
         self._identify()
+
+
+class DuplicateCardError(RuntimeError):
+    pass
+
+
+class FullHandError(RuntimeError):
+    pass
+
+
+class CardNotInHandError(RuntimeError):
+    pass

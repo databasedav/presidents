@@ -190,14 +190,12 @@ class Game:
         chamber = self._get_chamber(sid)
         if card not in chamber:
             self._alert_dont_modify_dom(sid)
-            # self._reset_card values
-        hand = self._get_current_hand(sid)
+            # TODO self._reset_card_values()
         # TODO: verify to add or remove to be first empirically
         try:
-            hand.add(card)
             chamber.select_card(card)
+        
         except DuplicateCardError:
-            hand.remove(card)
             chamber.deselect_card(card)
         except FullHandError:
             self._alert_hand_full(sid)
@@ -221,7 +219,7 @@ class Game:
         return self._chambers[self._get_spot(sid)] 
     
     def _get_current_hand(self, sid: str):
-        return self._current_hands[self._get_spot(sid)]
+        return self._get_chamber(sid).current_hand
 
     def _get_unlocked(self, sid: str):
         return self._unlocked[self._get_spot(sid)]

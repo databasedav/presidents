@@ -2,7 +2,7 @@ from __future__ import annotations
 import numpy as np
 from llist import sllist, sllistnode, dllist, dllistnode
 from typing import List, Union, Generator, Dict, Any
-from hand import Hand
+from hand import Hand, CardNotInHandError
 from flask_socketio import emit
 import xxhash
 from utils.iternodes_dllist import IterNodesDLList
@@ -20,13 +20,13 @@ class Chamber:
     Uses doubly linked list because node removal is constant time.
     """
     def __init__(self, cards: np.ndarray=None) -> None:
+        self.current_hand: Hand = Hand()
         self._num_cards: int = 0
         self._cards: np.ndarray = np.empty(shape=53, dtype=np.object)
         if cards:
             for card in cards:
                 self._cards[card] = HandPointerDLList()
                 self._num_cards += 1
-        self._current_hand: Hand = Hand()
         self._hands: HandNodeDLList = HandNodeDLList()
     
     def __contains__(self, card) -> bool:
@@ -41,9 +41,10 @@ class Chamber:
         return self._num_cards == 0
 
     def reset(self) -> None:
+        self.current_hand.reset()
         self._num_cards = 0
         self._cards = np.empty(shape=53, dtype=np.object)
-        self._hands: dllist = dllist()
+        self._hands.clear()
 
     def add_card(self, card: np.uint8) -> None:
         self._cards[card] = HandPointerDLList()
@@ -55,10 +56,23 @@ class Chamber:
 
     def remove_card(self, card: np.uint8) -> None:
         """
-        Here is it important to note that we do not need to deselect the
+        Here it is important to note that we do not need to deselect the
         card before we remove it because all the hand nodes that contain
         the card will be removed.
+
+        Cards that are to be removed will not always be the in the
+        current hand, e.g. during trading I imagine many people will
+        just let the game default to giving the asking player the
+        lowest matching card.
+        
+        Using a try/except here because most of the time, the card will
+        be in the hand but this should be empirically verified and the
+        performance difference tested. TODO
         """
+        try:
+            self.current_hand.remove(card)
+        except CardNotInHandError:
+            pass
         for base_hand_pointer_node in self._cards[card].iter_nodes():
             hand_node = base_hand_pointer_node.value
             for hand_pointer_node in hand_node.value:
@@ -69,7 +83,7 @@ class Chamber:
             hand_node.owner().remove(hand_node)
         self._cards[card] = None
         self._num_cards -= 1
-    
+
     def remove_cards(self, cards):
         for card in cards:
             self.remove_card(card)
@@ -88,7 +102,9 @@ class Chamber:
         self._hands.appendnode(hand_node)
     
     def select_card(self, card: int):
-        assert card in self
+        if card not in self:
+            raise CardNotInChamberError()
+        
         # self._cards[card] is a HandPointerDLList; iterating through
         # it, via the class' own __iter__ (which iterates through the
         # values, not the nodes) gives us each HandNode which contains
@@ -97,7 +113,8 @@ class Chamber:
             hand_node.increment_num_selected_cards()
 
     def deselect_card(self, card: int):
-        assert card in self
+        if card not in self:
+            raise CardNotInChamberError()
         for hand_node in self._cards[card]:
             hand_node.decrement_num_selected_cards()
 
@@ -165,3 +182,6 @@ class HandNode(dllistnode):
     def decrement_num_selected_cards(self) -> None:
         self._num_cards_selected -= 1
 
+
+class CardNotInChamberError(RuntimeError):
+    pass
