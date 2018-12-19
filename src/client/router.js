@@ -13,21 +13,21 @@ export default new Router({
       name: 'home',
       component: Home
     },
-    {
-      path: '/serverbrowser',
-      name: 'serverbrowser',
-      component: ServerBrowser
-    },
-    {
-      path: '/statistics',
-      name: 'statistics',
-      component: Statistics
-    },
-    {
-      path: '/tester',
-      name: 'tester',
-      component: Tester
-    },
+    // {
+    //   path: '/serverbrowser',
+    //   name: 'serverbrowser',
+    //   component: ServerBrowser
+    // },
+    // {
+    //   path: '/statistics',
+    //   name: 'statistics',
+    //   component: Statistics
+    // },
+    // {
+    //   path: '/tester',
+    //   name: 'tester',
+    //   component: Tester
+    // },
     {
       path: '/about',
       name: 'about',

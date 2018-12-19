@@ -1,11 +1,11 @@
 <template>
   <div id='app'>
     <v-app>
-      <v-btn to='/serverbrowser'>Server Browser</v-btn>
+      <!-- <v-btn to='/serverbrowser'>Server Browser</v-btn>
       <v-btn to='/stats'>Statistics</v-btn>
       <v-btn to='/tester'>Tester</v-btn>
-      <router-view/>
-      <!-- <v-container grid-list-md text-xs-center >
+      <router-view/> -->
+      <v-container grid-list-md text-xs-center >
         <v-layout row wrap>
           <v-flex xs12>
             <ButtonBox/>
@@ -17,7 +17,7 @@
             <StoredHandBox/>
           </v-flex>
         </v-layout>
-      </v-container> -->
+      </v-container>
     </v-app>
   </div>
 </template>

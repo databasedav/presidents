@@ -5,3 +5,13 @@
         <CardBox/>
     </div>
 </template>
+
+<script>
+export default {
+    name: 'TesterPlayerBox',
+    components: {
+        CardBox
+    },
+    
+}
+</script>

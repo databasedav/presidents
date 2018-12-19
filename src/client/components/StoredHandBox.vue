@@ -1,11 +1,11 @@
 <template>
   <div>
-    <Hand
+    <!-- <Hand
       v-for='(hand, index) in stored_hands'
       :key='index'
       :cards='hand.cards'
       :is_selected='hand.is_selected'
-    ></Hand>
+    ></Hand> -->
   </div>
 </template>
 
@@ -26,7 +26,7 @@ export default {
     }
   },
   computed: {
-    ...mapGetters(['stored_hands'])
+    // ...mapGetters(['stored_hands'])
   },
   methods: {
   }

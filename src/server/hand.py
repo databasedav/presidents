@@ -291,7 +291,7 @@ class Hand(object):
         # TODO: do I need these assertions?
         assert 1 <= card <= 52, "Bug: attempting to add invalid card."
         if card in self:
-            raise DuplicateCardError("Attempting to add duplicate card.")
+            raise DuplicateCardError(f'{card} already in hand.')
         if (self.is_full):  # TODO: should this be an error?
             raise FullHandError("Cannot add any more cards to this hand.")
         ii: int = self._insertion_index

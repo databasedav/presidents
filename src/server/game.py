@@ -1,5 +1,6 @@
 from hand import Hand, DuplicateCardError, FullHandError
 from typing import List, Dict, Any
+from chamber import CardNotInChamberError
 from emitting_chamber import EmittingChamber
 from flask_socketio import emit
 import numpy as np
@@ -183,24 +184,23 @@ class Game:
         emit('lock_play', room=sid)
         self._set_unlocked(sid, False)
 
-    # client can attempt to add any card (via the console) so should first
-    # check that the card is actually in the chamber and then notify the
-    # client that they should not modify the dom and then reset the card values
     def add_or_remove_card(self, sid: str, card: int) -> None:
         chamber = self._get_chamber(sid)
-        if card not in chamber:
-            self._alert_dont_modify_dom(sid)
-            # TODO self._reset_card_values()
-        # TODO: verify to add or remove to be first empirically
+        # TODO: verify to add or remove to be first empirically; may
+        #       potentially justify looking before leaping if
+        #       distribution is symmetric
         try:
             chamber.select_card(card)
-        
+        except CardNotInChamberError:
+            self._alert_dont_modify_dom(sid)
+            # TODO self._reset_card_values()
         except DuplicateCardError:
-            chamber.deselect_card(card)
+            # such an error can only occur if check passes
+            chamber.deselect_card(card, check=False)
         except FullHandError:
             self._alert_hand_full(sid)
         except Exception as e:
-            print("Bug: probably the card hand chamber freaking out.")
+            print("Bug: probably the chamber freaking out.")
             raise e
 
     def _get_spot(self, sid: str) -> int:
