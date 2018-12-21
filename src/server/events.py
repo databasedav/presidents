@@ -4,7 +4,7 @@ from json import dumps
 from game import Game
 from flask import request, session
 from flask import Flask, render_template
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit, join_room, leave_room
 import numpy as np
 from hand import Hand, DuplicateCardError, FullHandError
 from chamber import Chamber
@@ -20,18 +20,24 @@ socketio = SocketIO(app)
 def catch_all(path):
     return render_template('index.html')
 
+# should deal with room list separately from games because
+# games are modular but rooms should persist
+room = 'room'
+rooms = [room]
+
 game = Game()
+game.set_room(room)
 
 def get_sid() -> str:
     return request.sid
 
 def join_game(sid):
-    sid = get_sid()
-    game.add_player(sid, 'fuck')
+    game.add_player(sid, sid)
 
 @socketio.on('connect')
 def connect():
     sid = get_sid()
+    join_room(room, sid)
     join_game(sid)
     print(f'{sid} connected.')
     if game.num_players == 4:
@@ -46,13 +52,13 @@ def attempt_to_join_game(payload):
     sid = get_sid()
     room = payload['room']
 
-@socketio.on('join game')
-def join_game(sid):
-    sid = get_sid()
-    try:
-        game.add_player(sid, 'fuck')
-    except AssertionError:
-        game.restart
+# @socketio.on('join game')
+# def join_game(sid):
+#     sid = get_sid()
+#     try:
+#         game.add_player(sid, 'fuck')
+#     except AssertionError:
+#         game.restart
 
 @socketio.on('card click')
 def card_click(payload):

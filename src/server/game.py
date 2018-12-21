@@ -16,7 +16,7 @@ BaseHand = BaseHand()
 
 class Game:
 
-    def __init__(self):
+    def __init__(self, room: str=None) -> None:
         """
         main event handler should have dict from each room
         to the game object in that room; the game object
@@ -27,6 +27,7 @@ class Game:
 
         has full control of the game
         """
+        self._room: str = room
         self._hand_in_play: Hand = Hand()
         self._turn_manager = None
         self._current_hands: List[Hand] = [Hand() for _ in range(4)]
@@ -50,6 +51,9 @@ class Game:
     def _current_player_sid(self) -> str:
         return self._get_sid(self._current_player)
     
+    def set_room(room: str) -> None:
+        self._room = room
+    
     # TODO: only for testing not in final game
     def restart(self) -> None:
         sids = list(self._sid_spot_dict.keys())
@@ -62,11 +66,11 @@ class Game:
         self._start_round()
 
     def _all_off_turn(self):
-        self._emit('all_off_turn', {})
+        self._emit('all_off_turn', {}, self._room)
     
     # TODO: make Any type more specific
-    def _emit(self, event: str, payload: Dict[str, Any], sid: str=None):
-        emit(event, payload, room=sid)
+    def _emit(self, event: str, payload: Dict[str, Any], room: str=None):
+        emit(event, payload, room=room)
 
 
     def start_game(self):
@@ -112,10 +116,10 @@ class Game:
         c3_index = np.where(decks == 1)[0][0]  # get which deck has the 3 of clubs
         self._turn_manager = TurnManager(c3_index)
         self._next_player()
-        for (sid, spot), deck in zip(self._sid_spot_dict.items(), decks):
+        for sid, spot in self._sid_spot_dict.items():
             chamber = self._get_chamber(sid)
             chamber.set_sid(sid)
-            chamber.add_cards(deck)
+            chamber.add_cards(decks[spot])
 
     def maybe_unlock_play(self, sid):
         """
@@ -291,7 +295,7 @@ class TurnManager:
 
     def __init__(self, first: int) -> None:
         self._spots = list(range(4))
-        self._curr = 3 if first == 0 else first - 1
+        self._curr = first
         self._num_unfinished_players = 4
     
     def __next__(self):
