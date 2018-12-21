@@ -25,16 +25,16 @@ export default function getters () {
     },
   
     play_unlocked (state) {
-      return state.unlocked
+      return state.play_unlocked
     },
   
     alert (state) {
       return state.alert
     },
     
-    // snackbar (state) {
-    //   return state.snackbar
-    // },
+    snackbar (state) {
+      return state.snackbar
+    },
   
     current_hand_str (state) {
       return state.current_hand_str

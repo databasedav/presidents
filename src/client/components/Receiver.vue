@@ -61,6 +61,14 @@ export default {
     this.socket.on('all_off_turn',
       payload => commit(this.namespace, 'all_off_turn', payload)
     )
+
+    this.socket.on('unlock_play',
+      payload => commit(this.namespace, 'unlock_play', payload)
+    )
+
+    this.socket.on('lock_play',
+      payload => commit(this.namespace, 'lock_play', payload)
+    )
   },
 
 }

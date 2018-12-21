@@ -60,11 +60,22 @@ def attempt_to_join_game(payload):
 #     except AssertionError:
 #         game.restart
 
-@socketio.on('card click')
+@socketio.on('card_click')
 def card_click(payload):
     sid = get_sid()
     card = payload['card']
     game.add_or_remove_card(sid, card)
+
+@socketio.on('unlock')
+def unlock():
+    sid = get_sid()
+    game.maybe_unlock_play(sid)
+
+@socketio.on('lock')
+def lock():
+    sid = get_sid()
+    game._lock_play(sid)
+
 
 @socketio.on('restart')
 def restart():

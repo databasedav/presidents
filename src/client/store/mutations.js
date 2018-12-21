@@ -1,3 +1,5 @@
+import Vue from 'vue'
+
 export default function mutations () {
   return {
     SOCKET_ASSIGN_CARDS (state, payload) {
@@ -117,6 +119,7 @@ export default function mutations () {
     alert (state, payload) {
       state.alert = payload.alert
       state.snackbar = true
+      setTimeout(() => state.snackbar = false, 1000)
     },
 
     flip_turn (state, payload) {
@@ -125,6 +128,14 @@ export default function mutations () {
 
     all_off_turn (state, payload) {
       state.on_turn = false
+    },
+
+    unlock_play (state, payload) {
+      state.play_unlocked = true
+    },
+
+    lock_play (state, payload) {
+      state.play_unlocked = false
     }
   }
 }

@@ -6,13 +6,13 @@
     ></Receiver>
     <div v-if='on_turn' class='circle-green'></div>
     <div v-else class='circle-red'></div>
-    <!-- <AlertSnackbar/> -->
+    <AlertSnackbar :namespace='this.namespace'></AlertSnackbar>
     <!-- <InPlayBox/> -->
     <CardBox
       :socket='this.socket'
       :namespace='this.namespace'
     ></CardBox>
-    <ButtonBox :socket='this.socket'></ButtonBox>
+    <ButtonBox :socket='this.socket' :namespace='this.namespace'></ButtonBox>
   </div>
 </template>
 

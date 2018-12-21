@@ -9,11 +9,6 @@ import random
 
 # TODO: adding and removal of players, including management of spot assignment
 
-class BaseHand:
-    """hand at begininning of game; 3 of clubs must be played on it"""
-    pass
-BaseHand = BaseHand()
-
 class Game:
 
     def __init__(self, room: str=None) -> None:
@@ -28,7 +23,7 @@ class Game:
         has full control of the game
         """
         self._room: str = room
-        self._hand_in_play: Hand = Hand()
+        self._hand_in_play: Hand = BaseHand
         self._turn_manager = None
         self._current_hands: List[Hand] = [Hand() for _ in range(4)]
         self._chambers = [EmittingChamber() for _ in range(4)]
@@ -69,7 +64,7 @@ class Game:
         self._emit('all_off_turn', {}, self._room)
     
     # TODO: make Any type more specific
-    def _emit(self, event: str, payload: Dict[str, Any], room: str=None):
+    def _emit(self, event: str, payload: Dict[str, Any], room: str):
         emit(event, payload, room=room)
 
 
@@ -132,12 +127,14 @@ class Game:
             self._alert_cannot_play_invalid_hand(sid)
             return
         hip = self._hand_in_play
-        if hip is BaseHand:
+        if hip is BaseHand and self._is_current_player(sid):
             if 1 not in hand:
                 self._alert_3_of_clubs(sid)
                 return
             else:
                 self._unlock_play(sid)
+        elif hip is BaseHand:
+            self._unlock_play(sid)
         # elif hip is None:  # current player won last hand
         #     self._unlock_play(sid)
         else:
@@ -198,15 +195,15 @@ class Game:
         self._emit('flip_turn', {}, sid)
 
     def _update_hand_in_play(self, hand: Hand):
-        emit('update_hand_in_play', {'hand': hand.to_list()}, room=self._room)
+        self._emit('update_hand_in_play', {'hand': hand.to_list()}, self._room)
         self._hand_in_play = hand
     
     def _unlock_play(self, sid: str):
-        emit('unlock_play', room=sid)
+        self._emit('unlock_play', {}, sid)
         self._set_unlocked(sid, True)
     
     def _lock_play(self, sid: str):
-        emit('lock_play', room=sid)
+        self._emit('lock_play', {}, sid)
         self._set_unlocked(sid, False)
 
     def add_or_remove_card(self, sid: str, card: int) -> None:
@@ -216,12 +213,14 @@ class Game:
         #       distribution is symmetric
         try:
             chamber.select_card(card)
+            self._lock_play(sid)
         except CardNotInChamberError:
             self._alert_dont_modify_dom(sid)
             # TODO self._reset_card_values()
         except DuplicateCardError:
             # such an error can only occur if check passes
             chamber.deselect_card(card, check=False)
+            self._lock_play(sid)
         except FullHandError:
             self._alert_hand_full(sid)
         except Exception as e:
@@ -290,6 +289,10 @@ class Game:
         # emit("message")
         ...
 
+class BaseHand:
+    """hand at begininning of game; 3 of clubs must be played on it"""
+    pass
+BaseHand = BaseHand()
 
 class TurnManager:
 

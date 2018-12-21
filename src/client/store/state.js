@@ -1,5 +1,3 @@
-import io from 'socket.io-client'
-
 export default function state () {
   return {
     // should be a map how to deal with it rn?
@@ -15,7 +13,7 @@ export default function state () {
     stored_hands: new Map(),
     play_unlocked: false,
     current_hand_str: '',
-    snackbar: Boolean,
+    snackbar: false,
     alert: String,
     stored_hands: [],
     hand_in_play: [],

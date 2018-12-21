@@ -41,7 +41,7 @@ export default {
   },
   methods: {
     try_select () {
-      this.socket.emit('card click', {'card': this.card})
+      this.socket.emit('card_click', {'card': this.card})
     }
   }
 }
