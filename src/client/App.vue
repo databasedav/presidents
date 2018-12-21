@@ -1,32 +1,36 @@
 <template>
   <div id='app'>
     <v-app>
+      <Player :namespace='"a"'></Player>
+      <Player :namespace='"b"'></Player>
+      <Player :namespace='"c"'></Player>
+      <Player :namespace='"d"'></Player>
       <!-- <v-btn to='/serverbrowser'>Server Browser</v-btn>
       <v-btn to='/stats'>Statistics</v-btn>
       <v-btn to='/tester'>Tester</v-btn>
       <router-view/> -->
-      <v-container grid-list-md text-xs-center >
+      <!-- <v-container grid-list-md text-xs-center >
         <v-layout row wrap>
-          <!-- <v-flex xs12>
+          <v-flex xs12>
             <ButtonBox/>
-          </v-flex> -->
-          <v-flex xs12>
-            <PlayerView :namespace='"a"'></PlayerView>
           </v-flex>
           <v-flex xs12>
-            <PlayerView :namespace='"b"'></PlayerView>
+            
           </v-flex>
           <v-flex xs12>
-            <PlayerView :namespace='"c"'></PlayerView>
+            <Player :namespace='"b"'></Player>
           </v-flex>
           <v-flex xs12>
-            <PlayerView :namespace='"d"'></PlayerView>
+            <Player :namespace='"c"'></Player>
           </v-flex>
-          <!-- <v-flex xs12>
+          <v-flex xs12>
+            <Player :namespace='"d"'></Player>
+          </v-flex>
+          <v-flex xs12>
             <StoredHandBox/>
-          </v-flex> -->
+          </v-flex>
         </v-layout>
-      </v-container>
+      </v-container> -->
       <!-- <iframe> <ButtonBox/> </iframe>
       <iframe> <ButtonBox/> </iframe>
       <iframe> <ButtonBox/> </iframe>
@@ -44,8 +48,8 @@ import Hand from './components/Hand'
 import StoredHandBox from './components/StoredHandBox'
 import CurrentHandBox from './components/CurrentHandBox'
 import Receiver from './components/Receiver'
-import PlayerView from './components/PlayerView'
-// import AlertSnackBar from './components/AlertSnackBar'
+import Player from './components/Player'
+// import AlertSnackbar from './components/AlertSnackbar'
 
 export default {
   name: 'app',
@@ -57,8 +61,8 @@ export default {
     StoredHandBox,
     CurrentHandBox,
     Receiver,
-    PlayerView
-    // AlertSnackBar
+    Player
+    // AlertSnackbar
   }
 }
 </script>

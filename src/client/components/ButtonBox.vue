@@ -1,24 +1,24 @@
 <template>
   <div>
+    <v-btn color="error">unlock</v-btn>
+    <v-btn color="info">store hand</v-btn>
+    <v-btn color="success">play</v-btn>
+    <br>
     <button @click='restart'>restart</button>
-    
   </div>
 </template>
 
 <script>
+import io from 'socket.io-client'
+
 export default {
   name: 'ButtonBox',
+  props: {
+    socket: io.Socket
+  },
   methods: {
-    join_game () {
-      this.$socket.emit('join game')
-    },
-
-    store_current_hand () {
-      this.$socket.emit('store current hand')
-    },
-
     restart () {
-      this.$socket.emit('restart')
+      this.socket.emit('restart')
     }
   }
 }

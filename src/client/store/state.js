@@ -15,8 +15,11 @@ export default function state () {
     stored_hands: new Map(),
     play_unlocked: false,
     current_hand_str: '',
-    alert: '',
-    // snackbar: false,
-    stored_hands: []
+    snackbar: Boolean,
+    alert: String,
+    stored_hands: [],
+    hand_in_play: [],
+    hand_in_play_str: '',
+    on_turn: false
   }
 }

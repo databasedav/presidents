@@ -38,6 +38,18 @@ export default function getters () {
   
     current_hand_str (state) {
       return state.current_hand_str
+    },
+
+    hand_in_play(state) {
+      return state.hand_in_play
+    },
+
+    hand_in_play_str(state) {
+      return state.hand_in_play_str
+    },
+
+    on_turn (state) {
+      return state.on_turn
     }
   }
 }

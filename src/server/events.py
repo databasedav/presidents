@@ -25,10 +25,14 @@ game = Game()
 def get_sid() -> str:
     return request.sid
 
+def join_game(sid):
+    sid = get_sid()
+    game.add_player(sid, 'fuck')
+
 @socketio.on('connect')
 def connect():
     sid = get_sid()
-    game.add_player(sid, 'fuck')
+    join_game(sid)
     print(f'{sid} connected.')
     if game.num_players == 4:
         game._start_round()
@@ -43,10 +47,12 @@ def attempt_to_join_game(payload):
     room = payload['room']
 
 @socketio.on('join game')
-def join_game():
+def join_game(sid):
     sid = get_sid()
-    game.add_player(sid, 'fuck')
-    game.start_game()
+    try:
+        game.add_player(sid, 'fuck')
+    except AssertionError:
+        game.restart
 
 @socketio.on('card click')
 def card_click(payload):

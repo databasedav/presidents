@@ -28,6 +28,10 @@ export default function mutations () {
       state.current_hand_str = payload.str  
     },
     
+    update_current_hand_str (state, payload) {
+      state.current_hand_str = payload.str  
+    },
+
     SOCKET_ADD_CARD (state, payload) {
       state.cards.set(payload.card, false)
       // remove after Vue supports maps
@@ -69,6 +73,12 @@ export default function mutations () {
       state.cards_array = new Array()
       state.cards_selected_array.fill(false)
     },
+
+    clear_cards (state, payload) {
+      state.cards.clear()
+      state.cards_array = new Array()
+      state.cards_selected_array.fill(false)
+    },
   
     SOCKET_STORE_HAND (state, payload) {
       state.stored_hands.set(payload.id, {
@@ -97,6 +107,24 @@ export default function mutations () {
           'is_selected': false
         })
       }
+    },
+
+    update_hand_in_play (state, payload) {
+      state.hand_in_play = payload.hand_in_play
+      state.hand_in_play.str = payload.hand_in_play_str
+    },
+
+    alert (state, payload) {
+      state.alert = payload.alert
+      state.snackbar = true
+    },
+
+    flip_turn (state, payload) {
+      state.on_turn = !state.on_turn
+    },
+
+    all_off_turn (state, payload) {
+      state.on_turn = false
     }
   }
 }

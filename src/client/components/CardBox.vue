@@ -1,6 +1,5 @@
 <template>
   <div>
-    <!-- <button @click='restart'>restart</button> -->
     <br>
       <span v-if="current_hand_str != ': empty hand'">{{ current_hand_str }}</span>
       <span v-else>Click on cards to add them to your current hand!</span>

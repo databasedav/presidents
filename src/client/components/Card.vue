@@ -8,6 +8,9 @@
 </template>
 
 <script>
+// TODO: make cards a basic shape object (?) and then use it
+//       as a button or not as needed.
+
 import io from 'socket.io-client'
 
 const values = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2']
