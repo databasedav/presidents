@@ -25,6 +25,14 @@ game = Game()
 def get_sid() -> str:
     return request.sid
 
+@socketio.on('connect')
+def connect():
+    sid = get_sid()
+    game.add_player(sid, 'fuck')
+    print(f'{sid} connected.')
+    if game.num_players == 4:
+        game._start_round()
+
 @socketio.on('list servers')
 def list_servers():
     ...
@@ -48,8 +56,7 @@ def card_click(payload):
 
 @socketio.on('restart')
 def restart():
-    sid = get_sid()
-    game.restart(sid)
+    game.restart()
 
 @main
 def main():

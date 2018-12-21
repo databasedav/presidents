@@ -1,27 +1,30 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
+import { createSocketioPlugin } from 'vuex-socketio-plugin'
+import io from 'socket.io-client'
 import state from './state'
 import mutations from './mutations'
 import getters from './getters'
 
 Vue.use(Vuex)
 
-
-const SinglePlayerStore = {
-  strict: process.env.NODE_ENV !== 'production',
-  namespaced: true,
-  state () {
-    return state
-  },
-  getters,
-  mutations
+function createSinglePlayerStore () {
+  return {
+    strict: process.env.NODE_ENV !== 'production',
+    namespaced: true,
+    state: state(),
+    getters: getters(),
+    mutations: mutations()
+  }
 }
+
+// start with only 1 module and add modules for testing
 
 export default new Vuex.Store({
   modules: {
-    a: SinglePlayerStore,
-    b: SinglePlayerStore,
-    c: SinglePlayerStore,
-    d: SinglePlayerStore
+    a: createSinglePlayerStore(),
+    b: createSinglePlayerStore(),
+    c: createSinglePlayerStore(),
+    d: createSinglePlayerStore()
   }
 })

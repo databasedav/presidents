@@ -26,7 +26,7 @@ class EmittingChamber(Chamber):
         self._emit('clear_cards')
         super().reset()
 
-    def set_sid(sid: str) -> None:
+    def set_sid(self, sid: str) -> None:
         self._sid = sid
         for hand_node in self._hands.iter_nodes():
             hand_node.set_sid(sid)

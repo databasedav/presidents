@@ -8,6 +8,8 @@
 </template>
 
 <script>
+import io from 'socket.io-client'
+
 const values = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2']
 const suits = ['♣', '♦', '♥', '♠']
 
@@ -16,6 +18,7 @@ export default {
   props: {
     card: Number,
     is_selected: Boolean,
+    socket: io.Socket
   },
   data () {
     return {
@@ -35,7 +38,7 @@ export default {
   },
   methods: {
     try_select () {
-      this.$socket.emit('card click', {'card': this.card})
+      this.socket.emit('card click', {'card': this.card})
     }
   }
 }

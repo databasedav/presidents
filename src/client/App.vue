@@ -7,17 +7,30 @@
       <router-view/> -->
       <v-container grid-list-md text-xs-center >
         <v-layout row wrap>
-          <v-flex xs12>
+          <!-- <v-flex xs12>
             <ButtonBox/>
+          </v-flex> -->
+          <v-flex xs12>
+            <PlayerView :namespace='"a"'></PlayerView>
           </v-flex>
           <v-flex xs12>
-            <CardBox/>
+            <PlayerView :namespace='"b"'></PlayerView>
           </v-flex>
           <v-flex xs12>
+            <PlayerView :namespace='"c"'></PlayerView>
+          </v-flex>
+          <v-flex xs12>
+            <PlayerView :namespace='"d"'></PlayerView>
+          </v-flex>
+          <!-- <v-flex xs12>
             <StoredHandBox/>
-          </v-flex>
+          </v-flex> -->
         </v-layout>
       </v-container>
+      <!-- <iframe> <ButtonBox/> </iframe>
+      <iframe> <ButtonBox/> </iframe>
+      <iframe> <ButtonBox/> </iframe>
+      <iframe> <ButtonBox/> </iframe> -->
     </v-app>
   </div>
 </template>
@@ -30,6 +43,8 @@ import ButtonBox from './components/ButtonBox'
 import Hand from './components/Hand'
 import StoredHandBox from './components/StoredHandBox'
 import CurrentHandBox from './components/CurrentHandBox'
+import Receiver from './components/Receiver'
+import PlayerView from './components/PlayerView'
 // import AlertSnackBar from './components/AlertSnackBar'
 
 export default {
@@ -41,6 +56,8 @@ export default {
     Hand,
     StoredHandBox,
     CurrentHandBox,
+    Receiver,
+    PlayerView
     // AlertSnackBar
   }
 }

@@ -47,11 +47,13 @@ class Game:
         self.num_spectators = 0
     
     # TODO: only for testing not in final game
-    def restart(self, sid: str) -> None:
+    def restart(self) -> None:
+        sids = list(self._sid_spot_dict.keys())
         self.clear_players()
-        self.add_player(sid, 'fuck')
-        chamber = self._get_chamber(sid)
-        chamber.reset()
+        for i, sid in enumerate(sids):
+            self.add_player(sid, f'fuck{i}')
+            chamber = self._get_chamber(sid)
+            chamber.reset()
         self._start_round()
 
     
@@ -104,7 +106,7 @@ class Game:
         self._next_player()
         for (sid, spot), deck in zip(self._sid_spot_dict.items(), decks):
             chamber = self._get_chamber(sid)
-            chamber.set_sid = sid
+            chamber.set_sid(sid)
             chamber.add_cards(deck)
 
     def maybe_unlock_play(self, sid):
