@@ -18,6 +18,8 @@
 import io from 'socket.io-client'
 import Card from './Card.vue'
 
+import { namespaced_getter } from '../utils/utils'
+
 export default {
 
   name: 'CardBox',
@@ -33,13 +35,13 @@ export default {
 
   computed: {
     cards () {
-      return this.$store.getters[`${this.namespace}/cards_array`]
+      return namespaced_getter(this.namespace, 'cards_array')
     },
     cards_selected () {
-      return this.$store.getters[`${this.namespace}/cards_selected_array`]
+      return namespaced_getter(this.namespace, 'cards_selected_array')
     },
     current_hand_str () {
-      return this.$store.getters[`${this.namespace}/current_hand_str`]
+      return namespaced_getter(this.namespace, 'current_hand_str')
     },
   },
 }

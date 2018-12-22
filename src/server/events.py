@@ -76,6 +76,11 @@ def lock():
     sid = get_sid()
     game._lock_play(sid)
 
+@socketio.on('play')
+def play():
+    sid = get_sid()
+    game.play_current_hand(sid)
+
 
 @socketio.on('restart')
 def restart():

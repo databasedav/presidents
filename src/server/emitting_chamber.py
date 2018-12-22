@@ -38,7 +38,8 @@ class EmittingChamber(Chamber):
         
     def remove_card(self, card: np.uint8, check: bool) -> None:
         super().remove_card(card, check)
-        self._emit('remove_card', {'card': card})
+        self._emit('remove_card', {'card': int(card)})
+        self._emit_update_current_hand_str()
 
     def add_hand(self, hand: Hand) -> None:
         """

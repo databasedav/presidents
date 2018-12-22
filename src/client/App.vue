@@ -47,7 +47,7 @@ import ButtonBox from './components/ButtonBox'
 import Hand from './components/Hand'
 import StoredHandBox from './components/StoredHandBox'
 import CurrentHandBox from './components/CurrentHandBox'
-import Receiver from './components/Receiver'
+import Listener from './components/Listener'
 import Player from './components/Player'
 // import AlertSnackbar from './components/AlertSnackbar'
 
@@ -60,7 +60,7 @@ export default {
     Hand,
     StoredHandBox,
     CurrentHandBox,
-    Receiver,
+    Listener,
     Player
     // AlertSnackbar
   }

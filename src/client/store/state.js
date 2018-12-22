@@ -15,7 +15,6 @@ export default function state () {
     current_hand_str: '',
     snackbar: false,
     alert: String,
-    stored_hands: [],
     hand_in_play: [],
     hand_in_play_str: '',
     on_turn: false

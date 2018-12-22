@@ -23,18 +23,17 @@ class Game:
         has full control of the game
         """
         self._room: str = room
-        self._hand_in_play: Hand = BaseHand
+        self._hand_in_play: [BaseHand, Hand] = BaseHand
         self._turn_manager = None
         self._current_hands: List[Hand] = [Hand() for _ in range(4)]
-        self._chambers = [EmittingChamber() for _ in range(4)]
-        self._current_player = None
+        self._chambers: List[EmittingChamber] = [EmittingChamber() for _ in range(4)]
+        self._current_player: [int, None] = None
         self._num_consecutive_passes = 0
         self._positions = list()
         self._takes_remaining = [0 for _ in range(4)]
         self._gives_remaining = [0 for _ in range(4)]
         self._num_consecutive_games = 0
         self._winning_last_played = False
-        self._room = None
         self._sid_spot_dict = bidict()  # sid to spot
         self._unlocked =  [False for _ in range(4)]
         self._names = [None for _ in range(4)]
@@ -45,10 +44,10 @@ class Game:
     @property
     def _current_player_sid(self) -> str:
         return self._get_sid(self._current_player)
-    
-    def set_room(room: str) -> None:
+
+    def set_room(self, room: str) -> None:
         self._room = room
-    
+
     # TODO: only for testing not in final game
     def restart(self) -> None:
         sids = list(self._sid_spot_dict.keys())
@@ -58,6 +57,7 @@ class Game:
             chamber = self._get_chamber(sid)
             chamber.reset()
         self._all_off_turn()
+        # self._update_hand_in_play()
         self._start_round()
 
     def _all_off_turn(self):
@@ -123,6 +123,9 @@ class Game:
         # TODO: disable playing current hand when trading
         # TODO: disable playing current hand when not your turn
         hand = self._get_current_hand(sid)
+        if hand.is_empty:
+            self._alert_add_cards_before_unlocking(sid)
+            return
         if not hand.is_valid:
             self._alert_cannot_play_invalid_hand(sid)
             return
@@ -149,8 +152,6 @@ class Game:
     def _is_current_player(self, sid) -> bool:
         return sid is self._sid_spot_dict.inv[self._current_player]
 
-    # TODO: this one requires tying together card removal and deselection in the chamber
-    #       i.e. removing cards should also deselect them
     def play_current_hand(self, sid):
         if not self._is_current_player(sid):
             self._alert_can_only_play_on_turn(sid)
@@ -162,16 +163,19 @@ class Game:
             return
         else:
             chamber = self._get_chamber(sid)
-            hand = chamber.current_hand
+            hand = Hand.copy(chamber.current_hand)
             chamber.remove_cards(hand)
+            self._lock_play(sid)
             self._update_hand_in_play(hand)
-            self._message_hand_played(hand)
+            # self._message_hand_played(hand)
             if chamber.is_empty:
                 self._player_finish(sid)
             else:
                 self._winning_last_played = False
             if self._num_unfinished_players == 1:
-                self._next_player(room, game_end=True)
+                self._next_player(game_end=True)
+            else:
+                self._next_player()
 
 
     def _player_finish(self, sid: str):
@@ -195,7 +199,9 @@ class Game:
         self._emit('flip_turn', {}, sid)
 
     def _update_hand_in_play(self, hand: Hand):
-        self._emit('update_hand_in_play', {'hand': hand.to_list()}, self._room)
+        self._emit('update_hand_in_play', {
+            'hand_in_play': hand.to_list(),
+            'hand_in_play_str': str(hand)}, self._room)
         self._hand_in_play = hand
     
     def _unlock_play(self, sid: str):
@@ -241,7 +247,7 @@ class Game:
 
     def _get_chamber(self, sid: str):
         return self._chambers[self._get_spot(sid)] 
-    
+
     def _get_current_hand(self, sid: str):
         return self._get_chamber(sid).current_hand
 
@@ -250,49 +256,51 @@ class Game:
 
     def _set_unlocked(self, sid: str, unlocked: bool):
         self._unlocked[self._get_spot(sid)] = unlocked
-    
+
     def _set_name(self, sid: str, name: str):
         self._names[self._get_spot(sid)] = name
-    
+
     def _get_name(self, sid: str):
         return self._names[self._get_spot(sid)]
-
-    def set_room(self, room: str):
-        self._room = room
 
     def _emit_alert(self, alert, sid: str) -> None:
         self._emit('alert', {'alert': alert}, sid)
 
     def _alert_cannot_play_invalid_hand(self, sid: str) -> None:
         self._emit_alert("you can't play invalid hands", sid)
-    
+
     def _alert_3_of_clubs(self, sid: str) -> None:
         self._emit_alert('the first hand must contain the 3 of clubs', sid)
-    
+
     def _alert_hand_full(self, sid: str) -> None:
         self._emit_alert('your current hand is full', sid)
-    
+
     def _alert_weaker_hand(self, sid: str) -> None:
         self._emit_alert('your current hand is weaker than the hand in play', sid)
-    
+
     def _alert_dont_modify_dom(self, sid: str) -> None:
         self._emit_alert("please don't hax", sid)
 
     def _alert_can_only_play_on_turn(self, sid: str) -> None:
         self._emit_alert("you can only play a hand on your turn", sid)
 
-    def _message_hand_played(self, hand: Hand):
-        self._emit_alert("please don't hax", sid)
-    
-    def _message_current_player_finished_position(self, sid: str):
-        name = self._get_name(sid)
-        # emit("message")
-        ...
+    def _alert_add_cards_before_unlocking(self, sid: str) -> None:
+        self._emit_alert("you must add cards before attempting to unlock", sid)
+
+    # def _message_hand_played(self, sid: str, hand: Hand):
+    #     self._emit_alert("please don't hax", sid)
+
+    # def _message_current_player_finished_position(self, sid: str):
+    #     name = self._get_name(sid)
+    #     # emit("message")
+    #     ...
+
 
 class BaseHand:
     """hand at begininning of game; 3 of clubs must be played on it"""
     pass
 BaseHand = BaseHand()
+
 
 class TurnManager:
 
@@ -300,7 +308,7 @@ class TurnManager:
         self._spots = list(range(4))
         self._curr = first
         self._num_unfinished_players = 4
-    
+
     def __next__(self):
         if len(self._spots) == 1:
             return -1
@@ -313,4 +321,3 @@ class TurnManager:
     def remove(self, spot: int) -> None:
         self._spots.remove(spot)
         self._num_unfinished_players -= 1
-

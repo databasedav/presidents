@@ -1,13 +1,13 @@
 <template>
   <div>
-    <Receiver
+    <Listener
       :socket='this.socket'
       :namespace='this.namespace'
-    ></Receiver>
+    ></Listener>
     <div v-if='on_turn' class='circle-green'></div>
     <div v-else class='circle-red'></div>
     <AlertSnackbar :namespace='this.namespace'></AlertSnackbar>
-    <!-- <InPlayBox/> -->
+    <InPlayBox :namespace='this.namespace'></InPlayBox>
     <CardBox
       :socket='this.socket'
       :namespace='this.namespace'
@@ -20,10 +20,11 @@
 import io from 'socket.io-client'
 import CardBox from './CardBox.vue'
 import ButtonBox from './ButtonBox.vue'
-import Receiver from './Receiver.vue'
+import Listener from './Listener.vue'
 import InPlayBox from './InPlayBox.vue'
 import AlertSnackbar from './AlertSnackbar'
 
+import { namespaced_getter } from '../utils/utils'
 
 
 export default {
@@ -39,7 +40,7 @@ export default {
 
   components: {
     CardBox,
-    Receiver,
+    Listener,
     ButtonBox,
     InPlayBox,
     AlertSnackbar
@@ -57,7 +58,8 @@ export default {
 
   computed: {
     on_turn () {
-      return this.$store.getters[`${this.namespace}/on_turn`]
+      return namespaced_getter(this.namespace, 'on_turn')
+      // return this.$store.getters[`${this.namespace}/on_turn`]
     }
   },
 

@@ -4,13 +4,16 @@
       v-for='card in hand_in_play'
       :key='card'
       :card='card'
-    ></Card><span v-if='this.hand_in_play.length == 0'></span><span v-else>{{ hand_in_play_str }}</span>
+    ></Card>
+    <!-- <span v-if='this.hand_in_play.length == 0'></span><span v-else>{{ hand_in_play_str }}</span> -->
   </div>
 </template>
 
 <script>
 import io from 'socket.io-client'
 import Card from './Card.vue'
+
+import { namespaced_getter } from '../utils/utils'
 
 export default {
 
@@ -21,17 +24,16 @@ export default {
   },
 
   props: {
-    socket: io.Socket,
     namespace: String
   },
 
   computed: {
     hand_in_play () {
-      return this.$store.getters[`${this.namespace}/hand_in_play`]
+      return namespaced_getter(this.namespace, 'hand_in_play')
     },
 
     hand_in_play_str () {
-      return this.$store.getters[`${this.namespace}/hand_in_play_str`]
+      return namespaced_getter(this.namespace, 'hand_in_play_str')
     },
   },
 }

@@ -14,13 +14,14 @@ function commit (namespace, event, payload) {
 
 export default {
 
-  name: 'Receiver',
+  name: 'Listener',
 
   props: {
     socket: io.Socket,
     namespace: String
   },
 
+  // TODO: why on created instead of a different part of lifecycle?
   created () {
     this.socket.on('add_card',
       payload => commit(this.namespace, 'add_card', payload)
@@ -69,6 +70,11 @@ export default {
     this.socket.on('lock_play',
       payload => commit(this.namespace, 'lock_play', payload)
     )
+
+    this.socket.on('remove_card',
+      payload => commit(this.namespace, 'remove_card', payload)
+    )
+
   },
 
 }
