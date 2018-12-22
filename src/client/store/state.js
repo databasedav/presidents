@@ -16,7 +16,8 @@ export default function state () {
     snackbar: false,
     alert: String,
     hand_in_play: [],
-    hand_in_play_str: '',
-    on_turn: false
+    hand_in_play_desc: '',
+    on_turn: false,
+    spot: Number
   }
 }

@@ -6,6 +6,7 @@
 import io from 'socket.io-client'
 import CardBox from './CardBox.vue'
 import store from '../store/store'
+import mutations from '../store/mutations';
 
 // commits mutation to (namespaced) store
 function commit (namespace, event, payload) {
@@ -73,6 +74,14 @@ export default {
 
     this.socket.on('remove_card',
       payload => commit(this.namespace, 'remove_card', payload)
+    )
+
+    this.socket.on('update_spot',
+      payload => commit(this.namespace, 'update_spot', payload)
+    )
+
+    this.socket.on('clear_hand_in_play',
+      payload => commit(this.namespace, 'clear_hand_in_play', payload)
     )
 
   },

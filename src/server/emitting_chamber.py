@@ -24,6 +24,7 @@ class EmittingChamber(Chamber):
     
     def reset(self) -> None:
         self._emit('clear_cards')
+        self._emit_update_current_hand_str()
         super().reset()
 
     def set_sid(self, sid: str) -> None:
@@ -47,19 +48,19 @@ class EmittingChamber(Chamber):
         HandNodes.
         """
         # TODO: POLL: should the cards be deselected after creating a hand?
-        self.deselect_cards(card)
+        self.deselect_cards(hand)
         self._emit('store_hand', {
             'id': xxhash.xxh64().intdigest(),
             'cards': hand.to_list()
         })
         hand_pointer_nodes: List[HandPointerNode] = list()
-        hand_node: HandNode = EmittingHandNode(hand_pointer_nodes, self._sid)
+        hand_node: HandNode = EmittingHandNode(hand_pointer_nodes)
         for card in hand:
             hand_pointer_node: HandPointerNode = HandPointerNode(hand_node)
             hand_pointer_nodes.append(hand_pointer_node)
             self._cards[card].appendnode(hand_pointer_node)
         self._hands.appendnode(hand_node)
-    
+
     def select_card(self, card: int, check: bool=True) -> None:
         super().select_card(card, check)
         self._emit('select_card', {'card': card})
@@ -68,8 +69,9 @@ class EmittingChamber(Chamber):
     def deselect_card(self, card: int, check: bool=True) -> None:
         super().deselect_card(card, check)
         self._emit('deselect_card', {'card': card})
+        # TODO: current hand str shouldn't be lazy loaded
         self._emit_update_current_hand_str()
-    
+
     def _emit_update_current_hand_str(self) -> None:
         self._emit('update_current_hand_str', {'str': str(self.current_hand)})
 
@@ -79,13 +81,13 @@ class EmittingHandNode(HandNode):
     def __init__(self, hand_pointer_nodes: List[HandPointerNode]) -> None:
         self._id = None  # TODO: random number or string (which one is better?)
         self._sid = None
-    
+
     def __repr__(self):
         return 'EmittingHandNode'
-    
+
     def _emit(self, event, paylaod) -> None:
         emit(event, {'id': self._id}, room=self._sid)
-    
+
     def set_sid(self, sid: str) -> None:
         self._sid = sid
 

@@ -83,10 +83,7 @@ export default function mutations () {
     //   }
     // },
 
-    update_hand_in_play (state, payload) {
-      state.hand_in_play = payload.hand_in_play
-      state.hand_in_play_str = payload.hand_in_play_str
-    },
+    
 
     alert (state, payload) {
       state.alert = payload.alert
@@ -144,6 +141,20 @@ export default function mutations () {
       state.cards.delete(payload.card)
       // this is gross
       state.cards_array = Array.from(state.cards.keys())
-    }
+    },
+
+    update_spot (state, payload) {
+      state.spot = payload.spot
+    },
+
+    update_hand_in_play (state, payload) {
+      state.hand_in_play = payload.hand_in_play
+      state.hand_in_play_desc = payload.hand_in_play_desc
+    },
+
+    clear_hand_in_play (state, payload) {
+      state.hand_in_play = []
+      state.hand_in_play_desc = ''
+    },
   }
 }

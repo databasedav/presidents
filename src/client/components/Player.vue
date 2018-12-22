@@ -4,8 +4,8 @@
       :socket='this.socket'
       :namespace='this.namespace'
     ></Listener>
-    <div v-if='on_turn' class='circle-green'></div>
-    <div v-else class='circle-red'></div>
+    <div v-if='on_turn' class='circle-green'>{{ spot }}</div>
+    <div v-else class='circle-red'>{{ spot }}</div>
     <AlertSnackbar :namespace='this.namespace'></AlertSnackbar>
     <InPlayBox :namespace='this.namespace'></InPlayBox>
     <CardBox
@@ -59,7 +59,10 @@ export default {
   computed: {
     on_turn () {
       return namespaced_getter(this.namespace, 'on_turn')
-      // return this.$store.getters[`${this.namespace}/on_turn`]
+    },
+
+    spot () {
+      return namespaced_getter(this.namespace, 'spot')
     }
   },
 
@@ -73,8 +76,8 @@ export default {
 
 <style>
 .circle-green {
-  height: 20px;
-  width: 20px;
+  height: 50px;
+  width: 50px;
   position: relative;
   left: 20px;
   top: 20px;
@@ -83,8 +86,8 @@ export default {
 }
 
 .circle-red {
-  height: 20px;
-  width: 20px;
+  height: 50px;
+  width: 50px;
   position: relative;
   left: 20px;
   top: 20px;

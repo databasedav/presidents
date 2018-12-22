@@ -24,7 +24,7 @@ class Game:
         """
         self._room: str = room
         self._hand_in_play: [BaseHand, Hand] = BaseHand
-        self._turn_manager = None
+        self._turn_manager: TurnManager = None
         self._current_hands: List[Hand] = [Hand() for _ in range(4)]
         self._chambers: List[EmittingChamber] = [EmittingChamber() for _ in range(4)]
         self._current_player: [int, None] = None
@@ -57,7 +57,6 @@ class Game:
             chamber = self._get_chamber(sid)
             chamber.reset()
         self._all_off_turn()
-        # self._update_hand_in_play()
         self._start_round()
 
     def _all_off_turn(self):
@@ -115,6 +114,10 @@ class Game:
             chamber = self._get_chamber(sid)
             chamber.set_sid(sid)
             chamber.add_cards(decks[spot])
+            self._update_spot(sid, spot)
+
+    def _update_spot(self, sid: str, spot: int) -> None:
+        self._emit('update_spot', {'spot': spot}, sid)
 
     def maybe_unlock_play(self, sid):
         """
@@ -130,29 +133,30 @@ class Game:
             self._alert_cannot_play_invalid_hand(sid)
             return
         hip = self._hand_in_play
-        if hip is BaseHand and self._is_current_player(sid):
-            if 1 not in hand:
-                self._alert_3_of_clubs(sid)
-                return
-            else:
-                self._unlock_play(sid)
-        elif hip is BaseHand:
-            self._unlock_play(sid)
-        # elif hip is None:  # current player won last hand
-        #     self._unlock_play(sid)
-        else:
-            try:
-                if hand > hip:
-                    self._unlock_play(sid)
+        if hip is BaseHand:  # start of the game
+            if self._is_current_player(sid):  # player with 3 of clubs
+                if 1 not in hand:  # card 1 is the 3 of clubs
+                    self._alert_3_of_clubs(sid)
+                    return
                 else:
-                    self._alert_weaker_hand(sid)
-            except RuntimeError as e:
-                self._emit_alert(str(e), sid)
-    
-    def _is_current_player(self, sid) -> bool:
+                    # any hand with the 3 of clubs is ok
+                    self._unlock_play(sid)
+            else:
+                # other players (without the 3 of clubs) can unlock
+                # whatever hand they want
+                self._unlock_play(sid)
+        elif hip is None:  # current player won last hand and can play any hand
+            self._unlock_play(sid)
+        else:
+            if hand > hip:
+                self._unlock_play(sid)
+            else:
+                self._alert_weaker_hand(sid)
+
+    def _is_current_player(self, sid: str) -> bool:
         return sid is self._sid_spot_dict.inv[self._current_player]
 
-    def play_current_hand(self, sid):
+    def maybe_play_current_hand(self, sid):
         if not self._is_current_player(sid):
             self._alert_can_only_play_on_turn(sid)
             return
@@ -165,9 +169,11 @@ class Game:
             chamber = self._get_chamber(sid)
             hand = Hand.copy(chamber.current_hand)
             chamber.remove_cards(hand)
+            self._num_consecutive_passes = 0
             self._lock_play(sid)
             self._update_hand_in_play(hand)
-            # self._message_hand_played(hand)
+            # TODO: self._message_hand_played(hand)
+
             if chamber.is_empty:
                 self._player_finish(sid)
             else:
@@ -177,7 +183,6 @@ class Game:
             else:
                 self._next_player()
 
-
     def _player_finish(self, sid: str):
         # shouldn't include the setting of takes and gives remaining
         # just do that at the end; just set position, winning last,
@@ -185,29 +190,32 @@ class Game:
         self._positions.append(self._current_player)
         self._winning_last_played = True
         self._turn_manager.remove(self._current_player)
-        self._message_player_finished_position(sid)
+        # TODO: self._message_player_finished_position(sid)
 
     def _next_player(self, hand_won=False, game_end=False):
         if self._current_player is not None:  # TODO: better way to check this
             self._flip_turn(self._current_player_sid)
         self._current_player = next(self._turn_manager)
+        # TODO: if hand_won:
+            # TODO: self._message_hand_won()
         self._flip_turn(self._current_player_sid)
-        if game_end:
-            return
-    
+        # TODO: self._message_announce_turn()
+        # if game_end:
+        #     return
+
     def _flip_turn(self, sid: str) -> None:
         self._emit('flip_turn', {}, sid)
 
     def _update_hand_in_play(self, hand: Hand):
         self._emit('update_hand_in_play', {
             'hand_in_play': hand.to_list(),
-            'hand_in_play_str': str(hand)}, self._room)
+            'hand_in_play_desc': hand.id_desc}, self._room)
         self._hand_in_play = hand
-    
+
     def _unlock_play(self, sid: str):
         self._emit('unlock_play', {}, sid)
         self._set_unlocked(sid, True)
-    
+
     def _lock_play(self, sid: str):
         self._emit('lock_play', {}, sid)
         self._set_unlocked(sid, False)
@@ -229,39 +237,70 @@ class Game:
             self._lock_play(sid)
         except FullHandError:
             self._alert_hand_full(sid)
-        except Exception as e:
-            print("Bug: probably the chamber freaking out.")
-            raise e
+
+    def maybe_pass_turn(self, sid: str) -> None:
+        if not self._is_current_player(sid):
+            self._alert_can_only_pass_on_turn(sid)
+            return
+        hip = self._hand_in_play
+        if hip is BaseHand:
+            self._alert_must_play_3_of_clubs(sid)
+            return
+        if hip is None:
+            self._alert_can_play_any_hand(sid)
+            return
+        self._num_consecutive_passes += 1
+        # TODO: self._message_passed(sid)
+        # all remaining players passed on a winning hand
+        if self._winning_last_played and self._num_consecutive_passes == self._num_unfinished_players:
+            self._hand_in_play = None
+            self._clear_hand_in_play()
+            self._next_player()
+            return
+        # all other players passed on a hand
+        elif self._num_consecutive_passes == self._num_unfinished_players - 1:
+            self._hand_in_play = None
+            self._clear_hand_in_play()
+            self._next_player(hand_won=True)
+            return
+        else:
+            self._next_player()
+
+    def _clear_hand_in_play(self) -> None:
+        self._emit('clear_hand_in_play', {}, self._room)
 
     def _get_spot(self, sid: str) -> int:
         """
-        input: sid, output: spot
+        input: sid; output: spot
         """
         return self._sid_spot_dict[sid]
-    
+
     def _get_sid(self, spot: int) -> str:
         """
-        input spot, output: sid
+        input spot; output: sid
         """
         return self._sid_spot_dict.inv[spot]
 
-    def _get_chamber(self, sid: str):
-        return self._chambers[self._get_spot(sid)] 
+    def _get_chamber(self, sid: str) -> EmittingChamber:
+        return self._chambers[self._get_spot(sid)]
 
-    def _get_current_hand(self, sid: str):
+    def _get_current_hand(self, sid: str) -> Hand:
         return self._get_chamber(sid).current_hand
 
-    def _get_unlocked(self, sid: str):
+    def _get_unlocked(self, sid: str) -> bool:
         return self._unlocked[self._get_spot(sid)]
 
-    def _set_unlocked(self, sid: str, unlocked: bool):
+    def _set_unlocked(self, sid: str, unlocked: bool) -> None:
         self._unlocked[self._get_spot(sid)] = unlocked
 
-    def _set_name(self, sid: str, name: str):
+    def _set_name(self, sid: str, name: str) -> None:
         self._names[self._get_spot(sid)] = name
 
-    def _get_name(self, sid: str):
+    def _get_name(self, sid: str) -> str:
         return self._names[self._get_spot(sid)]
+    
+    def _get_current_player_name(self) -> str:
+        return self._names[self._current_player]
 
     def _emit_alert(self, alert, sid: str) -> None:
         self._emit('alert', {'alert': alert}, sid)
@@ -271,6 +310,9 @@ class Game:
 
     def _alert_3_of_clubs(self, sid: str) -> None:
         self._emit_alert('the first hand must contain the 3 of clubs', sid)
+
+    def _alert_must_play_3_of_clubs(self, sid: str) -> None:
+        self._emit_alert('you cannot pass when you have the 3 of clubs', sid)
 
     def _alert_hand_full(self, sid: str) -> None:
         self._emit_alert('your current hand is full', sid)
@@ -286,6 +328,12 @@ class Game:
 
     def _alert_add_cards_before_unlocking(self, sid: str) -> None:
         self._emit_alert("you must add cards before attempting to unlock", sid)
+
+    def _alert_can_only_pass_on_turn(self, sid: str) -> None:
+        self._emit_alert("you can only pass on your turn", sid)
+
+    def _alert_can_play_any_hand(self, sid: str) -> None:
+        self._emit_alert("you can play any hand", sid)
 
     # def _message_hand_played(self, sid: str, hand: Hand):
     #     self._emit_alert("please don't hax", sid)

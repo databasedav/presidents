@@ -1,10 +1,11 @@
 <template>
-  <button
+  <v-btn class='card'
+    color='grey lighten-3'
     @click='try_select'
     :style='[style_object, selected_style]'
   >
     {{ value }}<br>{{ suit }}
-  </button>
+  </v-btn>
 </template>
 
 <script>
@@ -49,18 +50,21 @@ export default {
 
 <style scoped>
 /* TODO: 10's are fatter than the other cards */
-button {
-  padding: 0px;
-  padding-left: 10px;
-  padding-right: 10px;
+.card {
+  height:60px;
+  width: 30px;
+  /* padding-left: 10px;
+  padding-right: 10px; */
   margin: 4px;
   font-size: 20px;
   text-align: center;
   text-decoration: none;
-  display: inline-block;
-  background: lightgray;
+  display: inline-flex;
+  /* color: rgb(153, 153, 153); */
   border: none;
   border-radius: 4px;
-  position: relative;
+}
+.v-btn {
+  min-width: 0;
 }
 </style>

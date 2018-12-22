@@ -4,8 +4,9 @@
       v-for='card in hand_in_play'
       :key='card'
       :card='card'
-    ></Card>
-    <!-- <span v-if='this.hand_in_play.length == 0'></span><span v-else>{{ hand_in_play_str }}</span> -->
+    ></Card><br>
+    <span v-if='this.hand_in_play.length == 0'>waiting for hand to be played...</span>
+    <span v-else>{{ hand_in_play_desc }}</span>
   </div>
 </template>
 
@@ -32,8 +33,8 @@ export default {
       return namespaced_getter(this.namespace, 'hand_in_play')
     },
 
-    hand_in_play_str () {
-      return namespaced_getter(this.namespace, 'hand_in_play_str')
+    hand_in_play_desc () {
+      return namespaced_getter(this.namespace, 'hand_in_play_desc')
     },
   },
 }

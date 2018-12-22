@@ -44,12 +44,16 @@ export default function getters () {
       return state.hand_in_play
     },
 
-    hand_in_play_str(state) {
-      return state.hand_in_play_str
+    hand_in_play_desc(state) {
+      return state.hand_in_play_desc
     },
 
     on_turn (state) {
       return state.on_turn
+    },
+
+    spot (state) {
+      return state.spot
     }
   }
 }
