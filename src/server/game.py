@@ -6,6 +6,7 @@ from flask_socketio import emit
 import numpy as np
 from bidict import bidict
 import random
+from itertools import cycle
 
 # TODO: adding and removal of players, including management of spot assignment
 
@@ -103,9 +104,9 @@ class Game:
         self._current_player = None
 
     def _start_round(self):
-        deck = np.arange(1, 53, dtype=np.int32)  # deck of cards 1-52
+        deck = np.arange(1, 5, dtype=np.int32)  # deck of cards 1-52
         np.random.shuffle(deck)  # shuffles deck inplace
-        decks = deck.reshape(4, 13)  # splits deck into 4 decks of 13
+        decks = deck.reshape(4, 1)  # splits deck into 4 decks of 13
         decks.sort(axis=1)  # sorts individual decks
         c3_index = np.where(decks == 1)[0][0]  # get which deck has the 3 of clubs
         self._turn_manager = TurnManager(c3_index)
@@ -252,19 +253,21 @@ class Game:
         self._num_consecutive_passes += 1
         # TODO: self._message_passed(sid)
         # all remaining players passed on a winning hand
-        if self._winning_last_played and self._num_consecutive_passes == self._num_unfinished_players:
-            self._hand_in_play = None
-            self._clear_hand_in_play()
-            self._next_player()
-            return
+        if self._winning_last_played:
+            if self._num_consecutive_passes == self._num_unfinished_players:
+                self._hand_in_play = None
+                self._clear_hand_in_play()
+                self._next_player()
+                return
+            # else:                     
+            #     self._next_player()  # this is called at the bottom
         # all other players passed on a hand
         elif self._num_consecutive_passes == self._num_unfinished_players - 1:
             self._hand_in_play = None
             self._clear_hand_in_play()
             self._next_player(hand_won=True)
             return
-        else:
-            self._next_player()
+        self._next_player()
 
     def _clear_hand_in_play(self) -> None:
         self._emit('clear_hand_in_play', {}, self._room)
@@ -352,20 +355,37 @@ BaseHand = BaseHand()
 
 class TurnManager:
 
-    def __init__(self, first: int) -> None:
-        self._spots = list(range(4))
-        self._curr = first
+    # def __init__(self, first: int) -> None:
+    #     self._spots = list(range(4))
+    #     self._curr = first
+    #     self._num_unfinished_players = 4
+
+    # def __next__(self):
+    #     if len(self._spots) == 1:
+    #         return -1
+    #     if self._curr >= len(self._spots):
+    #         self._curr = 0
+    #     index = self._curr
+    #     self._curr += 1
+    #     return self._spots[index]
+
+    # def remove(self, spot: int) -> None:
+    #     self._spots.remove(spot)
+    #     self._num_unfinished_players -= 1
+
+    def __init__(self, first) -> None:
+        self._cycling_list = cycle([i for i in range(4)])
+        for _ in range(first):
+            next(self._cycling_list)
+        self._not_finished_dict: Dict[int, bool] = {i: True for i in range(4)}
         self._num_unfinished_players = 4
 
-    def __next__(self):
-        if len(self._spots) == 1:
-            return -1
-        if self._curr >= len(self._spots):
-            self._curr = 0
-        index = self._curr
-        self._curr += 1
-        return self._spots[index]
+    def __next__(self) -> int:
+        maybe_next = next(self._cycling_list)
+        while self._not_finished_dict[maybe_next] is False:
+            maybe_next = next(self._cycling_list)
+        return maybe_next
 
     def remove(self, spot: int) -> None:
-        self._spots.remove(spot)
+        self._not_finished_dict[spot] = False
         self._num_unfinished_players -= 1
