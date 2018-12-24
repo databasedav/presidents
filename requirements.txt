@@ -4,8 +4,14 @@ flask_socketio
 numpy
 llist
 bidict
-mypy_extensions
 gunicorn
 eventlet
 tables
 xxhash
+
+# for linting
+pylint
+bandit
+mypy
+mypy_extensions
+flake8
