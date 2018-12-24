@@ -1,7 +1,7 @@
 <template>
   <v-btn class='card'
     color='grey lighten-3'
-    @click='try_select'
+    @click='card_click'
     :style='[style_object, selected_style]'
   >
     {{ value }}<br>{{ suit }}
@@ -21,8 +21,7 @@ export default {
   name: 'Card',
   props: {
     card: Number,
-    is_selected: Boolean,
-    socket: io.Socket
+    is_selected: Boolean
   },
   data () {
     return {
@@ -41,8 +40,9 @@ export default {
     }
   },
   methods: {
-    try_select () {
-      this.socket.emit('card_click', {'card': this.card})
+    card_click () {
+      this.$emit('card_click', this.card)
+      // this.socket.emit('card_click', {'card': this.card})
     }
   }
 }

@@ -1,18 +1,25 @@
 <template>
   <div>
     <Listener
-      :socket='this.socket'
-      :namespace='this.namespace'
+      :socket='socket'
+      :namespace='namespace'
     ></Listener>
     <div v-if='on_turn' class='circle-green'>{{ spot }}</div>
     <div v-else class='circle-red'>{{ spot }}</div>
-    <AlertSnackbar :namespace='this.namespace'></AlertSnackbar>
-    <InPlayBox :namespace='this.namespace'></InPlayBox>
+    <AlertSnackbar :namespace='namespace'></AlertSnackbar>
+    <InPlayBox :namespace='namespace'></InPlayBox>
     <CardBox
-      :socket='this.socket'
-      :namespace='this.namespace'
+      :namespace='namespace'
+      @card_click='card_click'
     ></CardBox>
-    <ButtonBox :socket='this.socket' :namespace='this.namespace'></ButtonBox>
+    <ButtonBox
+      :namespace='namespace'
+      @restart='restart'
+      @unlock='unlock'
+      @lock='lock'
+      @play='play'
+      @pass='pass'
+    ></ButtonBox>
   </div>
 </template>
 
@@ -53,6 +60,30 @@ export default {
   methods: {
     restart () {
       this.socket.emit('restart')
+    },
+
+    card_click(card) {
+      this.socket.emit('card_click', {'card': card})
+    },
+
+    restart () {
+      this.socket.emit('restart')
+    },
+
+    unlock () {
+      this.socket.emit('unlock')
+    },
+
+    lock () {
+      this.socket.emit('lock')
+    },
+
+    play () {
+      this.socket.emit('play')
+    },
+
+    pass () {
+      this.socket.emit('pass')
     }
   },
 
@@ -65,12 +96,6 @@ export default {
       return namespaced_getter(this.namespace, 'spot')
     }
   },
-
-  
-
-
-
-
 }
 </script>
 

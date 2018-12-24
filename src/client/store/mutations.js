@@ -156,5 +156,9 @@ export default function mutations () {
       state.hand_in_play = []
       state.hand_in_play_desc = ''
     },
+
+    add_trading_options (state, payload) {
+      state.asking = true
+    },
   }
 }

@@ -5,12 +5,11 @@
 <script>
 import io from 'socket.io-client'
 import CardBox from './CardBox.vue'
-import store from '../store/store'
 import mutations from '../store/mutations';
+import store from '../store/store'
 
-// commits mutation to (namespaced) store
 function commit (namespace, event, payload) {
-  store.commit(`${namespace}/${event}`, payload)
+    store.commit(`${namespace}/${event}`, payload)
 }
 
 export default {
@@ -82,6 +81,22 @@ export default {
 
     this.socket.on('clear_hand_in_play',
       payload => commit(this.namespace, 'clear_hand_in_play', payload)
+    )
+
+    this.socket.on('add_trading_options',
+      payload => commit(this.namespace, 'add_trading_options', payload)
+    )
+
+    this.socket.on('update_trading_button_str',
+      payload => commit(this.namespace, 'update_trading_button_str', payload)
+    )
+
+    this.socket.on('update_takes',
+      payload => commit(this.namespace, 'update_takes', payload)
+    )
+
+    this.socket.on('update_gives',
+      payload => commit(this.namespace, 'update_gives', payload)
     )
 
   },

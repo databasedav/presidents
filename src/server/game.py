@@ -8,7 +8,6 @@ from bidict import bidict
 import random
 from itertools import cycle
 
-# TODO: adding and removal of players, including management of spot assignment
 
 class Game:
 
@@ -36,11 +35,12 @@ class Game:
         self._num_consecutive_games = 0
         self._winning_last_played = False
         self._sid_spot_dict = bidict()  # sid to spot
-        self._unlocked =  [False for _ in range(4)]
+        self._unlocked = [False for _ in range(4)]
         self._names = [None for _ in range(4)]
         self._open_spots = {i for i in range(4)}
         self.num_players = 0
-        self.num_spectators = 0
+        self.num_spectators = 0  # TODO
+        self._currently_trading = False
 
     @property
     def _current_player_sid(self) -> str:
@@ -62,7 +62,7 @@ class Game:
 
     def _all_off_turn(self):
         self._emit('all_off_turn', {}, self._room)
-    
+
     # TODO: make Any type more specific
     def _emit(self, event: str, payload: Dict[str, Any], room: str):
         emit(event, payload, room=room)
@@ -75,7 +75,7 @@ class Game:
     @property
     def _num_unfinished_players(self):
         return self._turn_manager._num_unfinished_players
-    
+
     def _rand_open_spot(self):
         """
         removes random open spot; should not happen when there are no open spots
@@ -89,13 +89,13 @@ class Game:
         self._sid_spot_dict[sid] = self._rand_open_spot()
         self._set_name(sid, name)
         self.num_players += 1
-    
+
     def remove_player(self, sid):
         self._set_name(sid, None)
         self._open_spots.add(self._get_spot(sid))
         self._sid_spot_dict.pop(sid)
-        self.num_players -=1
-    
+        self.num_players -= 1
+
     def clear_players(self) -> None:
         self._sid_spot_dict.clear()
         self._names = [None for _ in range(4)]
@@ -272,6 +272,19 @@ class Game:
     def _clear_hand_in_play(self) -> None:
         self._emit('clear_hand_in_play', {}, self._room)
 
+    def _initiate_trading(self) -> None:
+        self._currently_trading = True
+        for sid in self._president_and_vice_sids():
+            self._add_trading_options(sid)
+        for sid in self._asshole_and_vice_sids():
+            self._change_play_to_give(sid)
+
+    def _add_trading_options(self, sid: str) -> None:
+        self._emit('add_trading_options', {}, sid)
+
+    def _change_play_to_give(self, sid: str) -> None:
+        self._emit('change_play_to_give', {}, sid)
+
     def _get_spot(self, sid: str) -> int:
         """
         input: sid; output: spot
@@ -283,6 +296,12 @@ class Game:
         input spot; output: sid
         """
         return self._sid_spot_dict.inv[spot]
+
+    def _president_and_vice_sids(self) -> List[str]:
+        return [self._get_sid(position) for position in self._positions[0:2]]
+
+    def _asshole_and_vice_sids(self) -> List[str]:
+        return [self._get_sid(position) for position in self._positions[2:4]]
 
     def _get_chamber(self, sid: str) -> EmittingChamber:
         return self._chambers[self._get_spot(sid)]

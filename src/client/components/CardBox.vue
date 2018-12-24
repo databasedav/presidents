@@ -1,15 +1,15 @@
 <template>
   <div>
     <br>
-      <span v-if="current_hand_str != ': empty hand'">{{ current_hand_str }}</span>
-      <span v-else>Click on cards to add them to your current hand!</span>
+      <span v-if='current_hand_str in ["", ": empty hand"]'>Click on cards to add them to your current hand!</span>
+      <span v-else>{{ current_hand_str }}</span>
     <br><br>
     <Card
       v-for='card in cards'
       :key='card'
       :card='card'
       :is_selected='cards_selected[card]'
-      :socket='socket'
+      @card_click='card_click'
     ></Card>
   </div>
 </template>
@@ -29,7 +29,6 @@ export default {
   },
 
   props: {
-    socket: io.Socket,
     namespace: String
   },
 
@@ -44,5 +43,11 @@ export default {
       return namespaced_getter(this.namespace, 'current_hand_str')
     },
   },
+
+  methods: {
+    card_click (card) {
+      this.$emit('card_click', card)
+    }
+  }
 }
 </script>
