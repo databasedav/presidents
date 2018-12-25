@@ -90,6 +90,12 @@ def pass_turn():
 def restart():
     game.restart()
 
+@socketio.on('ask')
+def ask(payload):
+    sid = get_sid()
+    rank = payload['rank']
+    game.ask_for_card(sid, rank)
+
 @main
 def main():
     socketio.run(app, host='0.0.0.0', debug=True)

@@ -110,22 +110,20 @@ export default function mutations () {
     clear_cards (state, payload) {
       state.cards.clear()
       state.cards_array = new Array()
-      state.cards_selected_array.fill(false)
+      state.cards_selected_arr.fill(false)
     },
 
     select_card (state, payload) {
       state.cards.set(payload.card, true)
       // remove after Vue supports maps
-      state.cards_selected_array.splice(payload.card, 1, true)
+      state.cards_selected_arr.splice(payload.card, 1, true)
     },
 
     deselect_card (state, payload) {
       state.cards.set(payload.card, false)
       // remove after Vue supports maps
-      state.cards_selected_array.splice(payload.card, 1, false)
+      state.cards_selected_arr.splice(payload.card, 1, false)
     },
-
-    
 
     add_card (state, payload) {
       state.cards.set(payload.card, false)
@@ -160,5 +158,21 @@ export default function mutations () {
     add_trading_options (state, payload) {
       state.asking = true
     },
+
+    set_asker (state, payload) {
+      state.asker = true
+    },
+
+    set_giver (state, payload) {
+      state.giver = true
+    },
+
+    set_trading (state, payload) {
+      state.trading = payload.trading
+      if (!state.trading) {
+        state.asker = false
+        state.giver = false
+      }
+    }
   }
 }

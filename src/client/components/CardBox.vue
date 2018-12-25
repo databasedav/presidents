@@ -17,11 +17,12 @@
     <br>
 
     <Card
-      v-for='card in cards'
+      v-for='card in this.cards'
       :key='card'
       :card='card'
-      :is_selected='cards_selected[card]'
+      :is_selected='cards_selected_arr[card]'
       @card_click='$emit("card_click", $event)'
+      :namespace='namespace'
     ></Card>
   </div>
 </template>
@@ -30,6 +31,7 @@
 // @card_click='$emit("card_click", $event)'
 import io from 'socket.io-client'
 import Card from './Card.vue'
+import { mapState } from 'vuex'
 
 import { namespaced_getter } from '../utils/utils'
 
@@ -46,14 +48,22 @@ export default {
   },
 
   computed: {
+    // ...mapState(this.namespace, {
+    //   cards: state => state.cards_array,
+    //   cards_selected: state => state.cards_selected,
+    //   current_hand_str: state => state.current_hand_str
+    // })
+
     cards () {
-      return namespaced_getter(this.namespace, 'cards_array')
+      return this.$store.state[this.namespace].cards_array
     },
-    cards_selected () {
-      return namespaced_getter(this.namespace, 'cards_selected_array')
+
+    cards_selected_arr () {
+      return this.$store.state[this.namespace].cards_selected_arr
     },
+
     current_hand_str () {
-      return namespaced_getter(this.namespace, 'current_hand_str')
+      return this.$store.state[this.namespace].current_hand_str
     },
   }
 }

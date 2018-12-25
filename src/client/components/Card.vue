@@ -1,5 +1,6 @@
 <template>
-  <v-btn class='card'
+  <v-btn
+    class='card'
     color='grey lighten-3'
     @click='$emit("card_click", card)'
     :style='{color, top}'
@@ -9,6 +10,8 @@
 </template>
 
 <script>
+
+
 // TODO: make cards a basic shape object (?) and then use it
 //       as a button or not as needed.
 
@@ -53,10 +56,7 @@ export default {
   margin: 4px;
   font-size: 20px;
   text-align: center;
-  text-decoration: none;
-  display: inline-flex;
-  border: none;
-  border-radius: 4px;
+  border-radius: 5px;
 }
 .v-btn {
   min-width: 0;

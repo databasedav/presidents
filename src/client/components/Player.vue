@@ -19,6 +19,7 @@
       @lock='lock'
       @play='play'
       @pass='pass'
+      @ask='ask'
     ></ButtonBox>
   </div>
 </template>
@@ -84,16 +85,20 @@ export default {
 
     pass () {
       this.socket.emit('pass')
+    },
+
+    ask (value) {
+      this.socket.emit('ask', {'value': value})
     }
   },
 
   computed: {
     on_turn () {
-      return namespaced_getter(this.namespace, 'on_turn')
+      return this.$store.state[this.namespace].on_turn
     },
 
     spot () {
-      return namespaced_getter(this.namespace, 'spot')
+      return this.$store.state[this.namespace].spot
     }
   },
 }

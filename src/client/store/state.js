@@ -8,7 +8,7 @@ export default function state () {
     // remove once Vue supports maps; change CardBox getters to cards map
     cards_array: new Array(),
     // remove once Vue supports maps; change CardBox getters to cards map
-    cards_selected_array: Array(52).fill(false),
+    cards_selected_arr: Array(52).fill(false),
     current_hand: Array,
     stored_hands: new Map(),
     play_unlocked: false,
@@ -18,6 +18,10 @@ export default function state () {
     hand_in_play: [],
     hand_in_play_desc: '',
     on_turn: false,
-    spot: Number
+    spot: Number,
+    trading: Boolean,
+    asker: Boolean,
+    giver: Boolean,
+    alt_play_button_str: String
   }
 }

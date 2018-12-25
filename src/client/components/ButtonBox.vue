@@ -1,5 +1,11 @@
 <template>
   <div>
+    <TradingOptions
+      v-if='trading && asker'
+      @ask='$emit("ask", $event)'
+    >
+    </TradingOptions>
+
     <v-btn
       v-if='!play_unlocked'
       @click="$emit('unlock')"
@@ -30,6 +36,22 @@
     </v-btn>
 
     <v-btn
+      v-if='trading && asker'
+      @click="$emit('play')"
+      color='success'
+    >
+      {{ alt_play_button_str }}
+    </v-btn>
+
+    <v-btn
+      v-if='play_unlocked'
+      @click="$emit('play')"
+      color='success'
+    >
+      play
+    </v-btn>
+
+    <v-btn
       v-if='play_unlocked'
       @click="$emit('play')"
       color='success'
@@ -45,6 +67,8 @@
       play
     </v-btn>
 
+
+
     <br>
     <button @click="$emit('restart')">restart</button>
   </div>
@@ -52,20 +76,29 @@
 
 <script>
 import io from 'socket.io-client'
+import TradingOptions from './TradingOptions.vue'
 
 import { namespaced_getter } from '../utils/utils'
 
 export default {
   name: 'ButtonBox',
+
   props: {
     namespace: String
   },
 
+  components: {
+    TradingOptions
+  },
+
   computed: {
     play_unlocked () {
-      return namespaced_getter(this.namespace, 'play_unlocked')
+      return this.$store.state[this.namespace].play_unlocked
     },
-    
-  },
+
+    asker () {
+      return this.$store.state[this.namespace].asker
+    }
+  }
 }
 </script>
