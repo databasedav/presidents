@@ -40,7 +40,8 @@ class Game:
         self._open_spots = {i for i in range(4)}
         self.num_players = 0
         self.num_spectators = 0  # TODO
-        self._currently_trading = False
+        self._trading = False
+        self._selected_for_asking = [0 for _ in range(4)]
 
     @property
     def _current_player_sid(self) -> str:
@@ -188,26 +189,28 @@ class Game:
         # shouldn't include the setting of takes and gives remaining
         # just do that at the end; just set position, winning last,
         # remove from turn manager, and message
+        # TODO: self._message_player_finished_position(sid)
         self._positions.append(self._current_player)
         self._winning_last_played = True
         self._turn_manager.remove(self._current_player)
-        # president and vice president are decided
-        if len(self._positions) == 1:
+        num_unfinished_players = self._num_unfinished_players
+        if num_unfinished_players == 3:
             self._set_president(sid)
-            self._set_asker(sid)
-        # vice asshole and therefore the asshole are decided
+            self._next_player()
+        elif num_unfinished_players == 2:
+            self._set_vice_president(sid)
+            self._next_player()
         else:
-            self._set_giver(sid)
-            self._set_giver(self._get_sid(next(self._turn_manager)))
+            self._set_vice_asshole(sid)
+            self._set_asshole(self._get_sid(next(self._turn_manager)))
             self._initiate_trading()
-        # TODO: self._message_player_finished_position(sid)
 
     def _set_president(self, sid: str) -> None:
         self._set_asker(sid, 2)
-    
+
     def _set_vice_president(self, sid: str) -> None:
         self._set_asker(sid, 1)
-    
+
     def _set_vice_asshole(self, sid: str) -> None:
         self._set_giver(sid, 1)
 
@@ -223,8 +226,13 @@ class Game:
         self._set_gives_remaining(sid, gives)
         self._emit('set_giver', {}, sid)
 
-    def _next_player(self, hand_won=False, game_end=False):
-        
+    def _set_takes_remaining(self, sid: str, takes: int) -> None:
+        self._takes_remaining[self._get_spot(sid)] = takes
+
+    def _set_gives_remaining(self, sid: str, gives: int) -> None:
+        self._gives_remaining[self._get_spot(sid)] = gives
+
+    def _next_player(self, hand_won=False):
         if self._current_player is not None:  # TODO: better way to check this
             self._flip_turn(self._current_player_sid)
         self._current_player = next(self._turn_manager)
@@ -304,23 +312,26 @@ class Game:
         self._emit('clear_hand_in_play', {}, self._room)
 
     def _initiate_trading(self) -> None:
-        self._currently_trading = True
+        self._trading = True
         self._set_trading(True)
-        for sid in self._get_president_and_vice_sids():
-            self._add_trading_options(sid)
-        for sid in self._get_asshole_and_vice_sids():
-            self._change_play_to_give(sid)
 
     def _set_trading(self, trading: bool) -> None:
         self._emit('set_trading', {'trading': trading}, self._room)
 
     def ask_for_card(self, sid: str, rank: int) -> None:
+        if not self._trading:
+            # TODO: asked for card through console?
+            return
         if not self._is_asker(sid):
             # TODO: non asker may be asking for card through console?
             return
         
 
+    def maybe_unlock_ask(self, sid: str) -> None:
+        ...
     
+    def maybe_unlock_give(self, sid: str) -> None:
+        ...
 
     def _get_spot(self, sid: str) -> int:
         """

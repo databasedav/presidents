@@ -83,16 +83,16 @@ export default {
       payload => commit(this.namespace, 'clear_hand_in_play', payload)
     )
 
+    this.socket.on('set_asker',
+      payload => commit(this.namespace, 'set_asker', payload)
+    )
+
+    this.socket.on('set_giver',
+      payload => commit(this.namespace, 'set_giver', payload)
+    )
+
     this.socket.on('set_trading',
       payload => commit(this.namespace, 'set_trading', payload)
-    )
-
-    this.socket.on('add_trading_options',
-      payload => commit(this.namespace, 'add_trading_options', payload)
-    )
-
-    this.socket.on('update_trading_button_str',
-      payload => commit(this.namespace, 'update_trading_button_str', payload)
     )
 
     this.socket.on('update_takes',

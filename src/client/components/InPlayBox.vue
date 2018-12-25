@@ -30,11 +30,11 @@ export default {
 
   computed: {
     hand_in_play () {
-      return namespaced_getter(this.namespace, 'hand_in_play')
+      return this.$store.state[this.namespace].hand_in_play
     },
 
     hand_in_play_desc () {
-      return namespaced_getter(this.namespace, 'hand_in_play_desc')
+      return this.$store.state[this.namespace].hand_in_play_desc
     },
   },
 }

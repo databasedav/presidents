@@ -19,9 +19,10 @@ export default function state () {
     hand_in_play_desc: '',
     on_turn: false,
     spot: Number,
-    trading: Boolean,
-    asker: Boolean,
-    giver: Boolean,
+    trading: false,
+    asker: false,
+    ask_value_selected: Number,
+    giver: false,
     alt_play_button_str: String
   }
 }

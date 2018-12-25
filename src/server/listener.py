@@ -93,8 +93,8 @@ def restart():
 @socketio.on('ask')
 def ask(payload):
     sid = get_sid()
-    rank = payload['rank']
-    game.ask_for_card(sid, rank)
+    value = payload['value']
+    game.ask_for_card(sid, value)
 
 @main
 def main():

@@ -41,10 +41,10 @@ export default {
   
   computed: {
     snackbar () {
-      return this.$store.getters[`${this.namespace}/snackbar`]
+      return this.$store.state[this.namespace].snackbar
     },
     alert () {
-      return this.$store.getters[`${this.namespace}/alert`]
+      return this.$store.state[this.namespace].alert
     },
   },
 

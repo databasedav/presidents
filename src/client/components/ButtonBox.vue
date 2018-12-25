@@ -44,15 +44,7 @@
     </v-btn>
 
     <v-btn
-      v-if='play_unlocked'
-      @click="$emit('play')"
-      color='success'
-    >
-      play
-    </v-btn>
-
-    <v-btn
-      v-if='play_unlocked'
+      v-else-if='play_unlocked'
       @click="$emit('play')"
       color='success'
     >
@@ -98,6 +90,10 @@ export default {
 
     asker () {
       return this.$store.state[this.namespace].asker
+    },
+
+    trading () {
+      return this.$store.state[this.namespace].trading
     }
   }
 }
