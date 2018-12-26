@@ -90,11 +90,16 @@ def pass_turn():
 def restart():
     game.restart()
 
+@socketio.on('select_for_asking')
+def select_for_asking(payload):
+    sid = get_sid()
+    value = payload['value']
+    game.update_selected_for_asking(sid, value)
+
 @socketio.on('ask')
 def ask(payload):
     sid = get_sid()
-    value = payload['value']
-    game.ask_for_card(sid, value)
+    game.ask_for_card(sid)
 
 @main
 def main():

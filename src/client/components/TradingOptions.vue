@@ -4,7 +4,7 @@
       class='rank'
       v-for='value in this.values'
       :key='52 + value'
-      :outline='this.selected_arr[value]'
+      :outline='selected_arr[value]'
       @click='click'
     >
       {{ ranks[value - 1] }}
@@ -33,11 +33,12 @@ export default {
   methods: {
     click (value) {
       if (this.selected_arr[value]) {
-        this.selected_arr.fill(false)
-        
+        this.selected_arr.splice(value, 1, false)
+        this.$emit('select_for_asking', 0)
       } else {
         this.selected_arr.fill(false)
-        this.$emit('ask', value)
+        this.selected_arr.splice(value, 1, true)
+        this.$emit('select_for_asking', value)
       }
     }
   }

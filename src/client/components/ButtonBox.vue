@@ -2,7 +2,8 @@
   <div>
     <TradingOptions
       v-if='trading && asker'
-      @ask='$emit("ask", $event)'
+      @select_for_asking='$emit("select_for_asking", $event)'
+
     >
     </TradingOptions>
 
@@ -58,8 +59,6 @@
     >
       play
     </v-btn>
-
-
 
     <br>
     <button @click="$emit('restart')">restart</button>

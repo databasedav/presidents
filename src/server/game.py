@@ -158,7 +158,7 @@ class Game:
     def _is_current_player(self, sid: str) -> bool:
         return sid is self._sid_spot_dict.inv[self._current_player]
 
-    def maybe_play_current_hand(self, sid):
+    def maybe_play_current_hand(self, sid) -> None:
         if not self._is_current_player(sid):
             self._alert_can_only_play_on_turn(sid)
             return
@@ -177,18 +177,13 @@ class Game:
             # TODO: self._message_hand_played(hand)
 
             if chamber.is_empty:
+                # player_finish takes care of going to the next player
                 self._player_finish(sid)
             else:
+                self._next_player()
                 self._winning_last_played = False
-            # if self._num_unfinished_players == 1:
-            #     self._next_player(game_end=True)
-            # else:
-            #     self._next_player()
 
-    def _player_finish(self, sid: str):
-        # shouldn't include the setting of takes and gives remaining
-        # just do that at the end; just set position, winning last,
-        # remove from turn manager, and message
+    def _player_finish(self, sid: str) -> None:
         # TODO: self._message_player_finished_position(sid)
         self._positions.append(self._current_player)
         self._winning_last_played = True
@@ -246,17 +241,17 @@ class Game:
     def _flip_turn(self, sid: str) -> None:
         self._emit('flip_turn', {}, sid)
 
-    def _update_hand_in_play(self, hand: Hand):
+    def _update_hand_in_play(self, hand: Hand) -> None:
         self._emit('update_hand_in_play', {
             'hand_in_play': hand.to_list(),
             'hand_in_play_desc': hand.id_desc}, self._room)
         self._hand_in_play = hand
 
-    def _unlock_play(self, sid: str):
+    def _unlock_play(self, sid: str) -> None:
         self._emit('unlock_play', {}, sid)
         self._set_unlocked(sid, True)
 
-    def _lock_play(self, sid: str):
+    def _lock_play(self, sid: str) -> None:
         self._emit('lock_play', {}, sid)
         self._set_unlocked(sid, False)
 
@@ -318,18 +313,42 @@ class Game:
     def _set_trading(self, trading: bool) -> None:
         self._emit('set_trading', {'trading': trading}, self._room)
 
-    def ask_for_card(self, sid: str, rank: int) -> None:
+    def ask_for_card(self, sid: str) -> None:
         if not self._trading:
             # TODO: asked for card through console?
             return
         if not self._is_asker(sid):
             # TODO: non asker may be asking for card through console?
             return
-        
+        # TODO: remove trading options when takes run out
+        value = self._selected_for_asking[self._get_spot(sid)]
+        asked_sid = self._get_opposing_position_sid()
+        # chamber for asked
+        chamber = self._get_chamber(asked_sid)
+        cards_to_highlight = list()
+        for card in range((value - 1) * 4 + 1, value * 4 + 1):
+            if card in chamber:
+                cards_to_highlight.append(card)
+        if len(cards_to_highlight) > 0:
+            self._highlight_giving_options(asked_sid, cards_to_highlight)
+
+    def _highlight_giving_options(self, sid: str, cards_to_highlight: List[int]) -> None:
+        self._emit('highlight_giving_options', {options: cards_to_highlight}, sid)
+
+    def _get_position(self, sid: str) -> None:
+        return self._positions.index(self._get_spot(sid))
+
+    def _get_opposing_position_sid(self, sid: str) -> None:
+        return self._get_sid(self._positions[3 - self._get_position(sid)])
+
+
+
+    def update_selected_for_asking(self, sid: str, value: int) -> None:
+        self._selected_for_asking[self._get_spot(sid)] = value
 
     def maybe_unlock_ask(self, sid: str) -> None:
         ...
-    
+
     def maybe_unlock_give(self, sid: str) -> None:
         ...
 
