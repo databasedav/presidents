@@ -75,7 +75,8 @@ def unlock():
             game.maybe_unlock_ask(sid)
         elif game.is_giving(sid):
             game.maybe_unlock_give(sid)
-    game.maybe_unlock_play(sid)
+    else:
+        game.maybe_unlock_play(sid)
 
 @socketio.on('lock')
 def lock():

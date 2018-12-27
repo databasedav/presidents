@@ -230,7 +230,9 @@ class Game:
             self._next_player()
         else:
             self._set_vice_asshole(sid)
-            self._set_asshole(self._get_sid(next(self._turn_manager)))
+            next(self._turn_manager)
+            self._positions.append(self._current_player)
+            self._set_asshole(self._current_player_sid)
             self._initiate_trading()
 
     def _set_president(self, sid: str) -> None:
@@ -343,6 +345,7 @@ class Game:
 
     def _initiate_trading(self) -> None:
         self.trading = True
+        self._clear_hand_in_play()
         self._deal_cards()
         self._set_trading(True)
 

@@ -2,8 +2,7 @@
   <v-btn
     class='card'
     @click='$emit("card_click", card)'
-    :outline='is_selected'
-    :style='{color}'
+    :style='{color, transform}'
   >
     {{ this.rank }}<br>{{ this.suit }}
   </v-btn>
@@ -39,7 +38,16 @@ export default {
 
     color () {
       return [1, 2].includes((this.card - 1) % 4) ? '#ff0000' : '#000000'
+    },
+
+    transform () {
+      return this.is_selected ? 'rotate(15deg)': 'rotate(0deg)'
+    },
+
+    style () {
+
     }
+
   }
 }
 </script>
