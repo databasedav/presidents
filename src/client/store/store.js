@@ -12,9 +12,9 @@ function createSinglePlayerStore () {
   return {
     strict: process.env.NODE_ENV !== 'production',
     namespaced: true,
-    state: state(),
-    getters: getters(),
-    mutations: mutations()
+    state,
+    getters,
+    mutations
   }
 }
 

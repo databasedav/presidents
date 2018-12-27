@@ -37,8 +37,16 @@
     </v-btn>
 
     <v-btn
-      v-if='trading && asker'
+      v-if='trading && asker && unlocked'
       @click="$emit(alt_play_button_str)"
+      color='success'
+    >
+      {{ alt_play_button_str }}
+    </v-btn>
+
+    <v-btn
+      v-else-if='trading && asker'
+      :disabled='true'
       color='success'
     >
       {{ alt_play_button_str }}

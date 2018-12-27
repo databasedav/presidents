@@ -121,7 +121,7 @@ class Game:
         self._open_spots = {0, 1, 2, 3}
         self._current_player = None
 
-    def _start_round(self):
+    def _start_round(self) -> None:
         deck = np.arange(1, 5, dtype=np.int32)  # deck of cards 1-52
         np.random.shuffle(deck)  # shuffles deck inplace
         decks = deck.reshape(4, 1)  # splits deck into 4 decks of 13
@@ -131,6 +131,22 @@ class Game:
         self._next_player()
         for sid, spot in self._sid_spot_dict.items():
             chamber = self._get_chamber(sid)
+            # chamber.reset()
+            chamber.set_sid(sid)
+            chamber.add_cards(decks[spot])
+            self._update_spot(sid, spot)
+
+    def _deal_cards(self) -> None:
+        deck = np.arange(1, 53, dtype=np.int32)  # deck of cards 1-52
+        np.random.shuffle(deck)  # shuffles deck inplace
+        decks = deck.reshape(4, 13)  # splits deck into 4 decks of 13
+        decks.sort(axis=1)  # sorts individual decks
+        c3_index = np.where(decks == 1)[0][0]  # get which deck has the 3 of clubs
+        self._turn_manager = TurnManager(c3_index)
+        self._next_player()
+        for sid, spot in self._sid_spot_dict.items():
+            chamber = self._get_chamber(sid)
+            chamber.reset()
             chamber.set_sid(sid)
             chamber.add_cards(decks[spot])
             self._update_spot(sid, spot)
@@ -279,6 +295,8 @@ class Game:
         #       distribution is symmetric
         try:
             chamber.select_card(card)
+            if self.is_asking(sid):
+                self._deselect_for_asking(sid, self._get_selected_for_asking(sid))
             self.lock(sid)
         except CardNotInChamberError:
             self._alert_dont_modify_dom(sid)
@@ -325,6 +343,7 @@ class Game:
 
     def _initiate_trading(self) -> None:
         self.trading = True
+        self._deal_cards()
         self._set_trading(True)
 
     def _set_trading(self, trading: bool) -> None:
@@ -337,7 +356,7 @@ class Game:
         if not self._is_asker(sid):
             self._alert_dont_use_console(sid)
         # TODO: remove trading options when takes run out
-        value = self._selected_for_asking[self._get_spot(sid)]
+        value = self._get_selected_for_asking(sid)
         asked_sid = self._get_position_sid(self._get_opposing_position(sid))
         # chamber for asked
         chamber = self._get_chamber(asked_sid)
@@ -396,13 +415,14 @@ class Game:
             self._unlock(sid)
 
     def is_asking(self, sid: str) -> bool:
-        return self.trading and self._selected_for_asking(sid) > 0
+        return self.trading and self._get_selected_for_asking(sid) > 0
 
     def is_giving(self, sid: str) -> bool:
         return self.trading and not self._get_current_hand(sid).is_empty
 
     def _select_for_asking(self, sid: str, value: int) -> None:
         self._set_selected_for_asking(sid, value)
+        self._get_chamber(sid).deselect_selected()
         self._emit('select_for_asking', {'value': value}, sid)
 
     def _deselect_for_asking(self, sid: str, value: int) -> None:

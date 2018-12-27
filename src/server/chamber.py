@@ -154,6 +154,9 @@ class Chamber:
     def _check_cards(self, cards):
         for card in cards:
             self._check_card(card)
+
+    def deselect_selected(self) -> None:
+        self.deselect_cards(self.current_hand)
     
 
 class HandPointerDLList(IterNodesDLList):

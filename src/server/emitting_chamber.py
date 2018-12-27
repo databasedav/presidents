@@ -25,6 +25,7 @@ class EmittingChamber(Chamber):
     def reset(self) -> None:
         self._emit('clear_cards')
         self._emit_update_current_hand_str()
+        self.set_sid(None)
         super().reset()
 
     def set_sid(self, sid: str) -> None:
@@ -68,7 +69,7 @@ class EmittingChamber(Chamber):
 
     def deselect_card(self, card: int, check: bool=True) -> None:
         super().deselect_card(card, check)
-        self._emit('deselect_card', {'card': card})
+        self._emit('deselect_card', {'card': int(card)})
         # TODO: current hand str shouldn't be lazy loaded
         self._emit_update_current_hand_str()
 

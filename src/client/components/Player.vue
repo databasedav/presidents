@@ -89,7 +89,7 @@ export default {
     },
 
     ask (value) {
-      this.socket.emit('ask', {'value': value})
+      this.socket.emit('ask')
     },
 
     asking_click (value) {

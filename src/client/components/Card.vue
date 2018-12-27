@@ -1,9 +1,9 @@
 <template>
   <v-btn
     class='card'
-    color='grey lighten-3'
     @click='$emit("card_click", card)'
-    :style='{color, top}'
+    :outline='is_selected'
+    :style='{color}'
   >
     {{ this.rank }}<br>{{ this.suit }}
   </v-btn>
@@ -39,17 +39,13 @@ export default {
 
     color () {
       return [1, 2].includes((this.card - 1) % 4) ? '#ff0000' : '#000000'
-    },
-
-    top () {
-      return this.is_selected ? '-10px' : '0px'
     }
   }
 }
 </script>
 
 <style scoped>
-/* TODO: 10's are fatter than the other cards */
+/* TODO: border should not increase width of cards */
 .card {
   height:60px;
   width: 30px;
@@ -57,8 +53,11 @@ export default {
   font-size: 20px;
   text-align: center;
   border-radius: 5px;
+  border-color: black !important;
+  box-sizing: border-box !important;
 }
 .v-btn {
   min-width: 0;
+  box-sizing: border-box !important;
 }
 </style>
