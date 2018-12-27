@@ -34,6 +34,9 @@ class Chamber:
     
     def __contains__(self, card) -> bool:
         return self._cards[card] is not None
+    
+    def __iter__(self):
+        return [card for card in range(1, 53) if card in self].__iter__()
 
     # TODO: should be simple but meaningful
     def __repr__(self) -> str:
@@ -143,11 +146,6 @@ class Chamber:
         for maybe_dll in self._cards:
             if maybe_dll is not None:
                 maybe_dll.clear()
-
-    def iter_cards(self) -> Generator[int, None, None]:
-        for card in range(1, 53):
-            if card in self:
-                yield card
     
     def _check_card(self, card: int):
         if card not in self:

@@ -42,6 +42,7 @@ def connect():
     print(f'{sid} connected.')
     if game.num_players == 4:
         game._start_round()
+        game.get_game_to_trading()
 
 @socketio.on('list servers')
 def list_servers():

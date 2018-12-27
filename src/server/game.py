@@ -42,6 +42,7 @@ class Game:
         self.num_spectators = 0  # TODO
         self._trading = False
         self._selected_for_asking = [0 for _ in range(4)]
+        self._already_asked = [set() for _ in range(4)]
 
     @property
     def _current_player_sid(self) -> str:
@@ -60,6 +61,23 @@ class Game:
             chamber.reset()
         self._all_off_turn()
         self._start_round()
+    
+    def get_game_to_trading(self) -> None:
+        """
+        For use when testing to quickly get to trading state from 4 card
+        state, i.e. each player has one of the 3's.
+        """
+        while not self._trading:
+            sid = self._current_player_sid
+            chamber = self._get_chamber(sid)
+            for card in chamber:
+                if card not in chamber.current_hand:
+                    self.add_or_remove_card(sid, card)
+                self.maybe_unlock_play(sid)
+                if self._get_unlocked(sid):
+                    self.maybe_play_current_hand(sid)
+                else:
+                    self.maybe_pass_turn(sid)
 
     def _all_off_turn(self):
         self._emit('all_off_turn', {}, self._room)
@@ -331,9 +349,15 @@ class Game:
                 cards_to_highlight.append(card)
         if len(cards_to_highlight) > 0:
             self._highlight_giving_options(asked_sid, cards_to_highlight)
+        else:
+            self._already_asked[self._get_spot(sid)].add(value)
 
     def _highlight_giving_options(self, sid: str, cards_to_highlight: List[int]) -> None:
+        # client will simply change play button to "no" button  if cards_to_highlight is empty
         self._emit('highlight_giving_options', {options: cards_to_highlight}, sid)
+    
+    def _no_dont_have_that_card(self, )
+            
 
     def _get_position(self, sid: str) -> None:
         return self._positions.index(self._get_spot(sid))
@@ -341,13 +365,27 @@ class Game:
     def _get_opposing_position_sid(self, sid: str) -> None:
         return self._get_sid(self._positions[3 - self._get_position(sid)])
 
-
-
     def update_selected_for_asking(self, sid: str, value: int) -> None:
+        if not 1 <= value <= 13:
+            self._alert_dont_use_console(sid)
+        if value in self._already_asked[self._get_spot(sid)]:
+            self._alert_dont_use_console(sid)
+            return
         self._selected_for_asking[self._get_spot(sid)] = value
 
     def maybe_unlock_ask(self, sid: str) -> None:
-        ...
+        if not self._is_asker(sid):
+            self._alert_dont_modify_dom()
+            return
+        if self._get_selected_for_asking(sid) > 0:
+
+
+    def _set_selected_for_asking(self, sid: str, value: int) -> None:
+        self._selected_for_asking[self._get_spot(sid)] = value
+
+    def _get_selected_for_asking(self, sid: str) -> int:
+        self._selected_for_asking[self._get_spot(sid)]
+
 
     def maybe_unlock_give(self, sid: str) -> None:
         ...
@@ -393,7 +431,7 @@ class Game:
 
     def _get_name(self, sid: str) -> str:
         return self._names[self._get_spot(sid)]
-    
+
     def _get_current_player_name(self) -> str:
         return self._names[self._current_player]
 
@@ -416,7 +454,10 @@ class Game:
         self._emit_alert('your current hand is weaker than the hand in play', sid)
 
     def _alert_dont_modify_dom(self, sid: str) -> None:
-        self._emit_alert("please don't hax", sid)
+        self._emit_alert("please don't hax the dom", sid)
+
+    def _alert_dont_use_console(self, sid: str) -> None:
+        self._emit_alert("please don't hax with console", sid)
 
     def _alert_can_only_play_on_turn(self, sid: str) -> None:
         self._emit_alert("you can only play a hand on your turn", sid)
@@ -446,24 +487,6 @@ BaseHand = BaseHand()
 
 
 class TurnManager:
-
-    # def __init__(self, first: int) -> None:
-    #     self._spots = list(range(4))
-    #     self._curr = first
-    #     self._num_unfinished_players = 4
-
-    # def __next__(self):
-    #     if len(self._spots) == 1:
-    #         return -1
-    #     if self._curr >= len(self._spots):
-    #         self._curr = 0
-    #     index = self._curr
-    #     self._curr += 1
-    #     return self._spots[index]
-
-    # def remove(self, spot: int) -> None:
-    #     self._spots.remove(spot)
-    #     self._num_unfinished_players -= 1
 
     def __init__(self, first) -> None:
         self._cycling_list = cycle([i for i in range(4)])
