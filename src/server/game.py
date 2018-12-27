@@ -1,5 +1,5 @@
 from hand import Hand, DuplicateCardError, FullHandError
-from typing import List, Dict, Any
+from typing import List, Dict, Set, Any
 from chamber import CardNotInChamberError
 from emitting_chamber import EmittingChamber
 from flask_socketio import emit
@@ -24,12 +24,12 @@ class Game:
         """
         self._room: str = room
         self._hand_in_play: [BaseHand, Hand] = BaseHand
-        self._turn_manager: TurnManager = None
+        self._turn_manager: [None, TurnManager] = None
         self._current_hands: List[Hand] = [Hand() for _ in range(4)]
         self._chambers: List[EmittingChamber] = [EmittingChamber() for _ in range(4)]
-        self._current_player: [int, None] = None
+        self._current_player: [None, int] = None
         self._num_consecutive_passes = 0
-        self._positions = list()
+        self._positions: List[int] = list()
         self._takes_remaining = [0 for _ in range(4)]
         self._gives_remaining = [0 for _ in range(4)]
         self._num_consecutive_games = 0
@@ -40,9 +40,9 @@ class Game:
         self._open_spots = {i for i in range(4)}
         self.num_players = 0
         self.num_spectators = 0  # TODO
-        self._trading = False
+        self.trading = False
         self._selected_for_asking = [0 for _ in range(4)]
-        self._already_asked = [set() for _ in range(4)]
+        self._already_asked: List[Set[int]] = [set() for _ in range(4)]
 
     @property
     def _current_player_sid(self) -> str:
@@ -61,13 +61,13 @@ class Game:
             chamber.reset()
         self._all_off_turn()
         self._start_round()
-    
+
     def get_game_to_trading(self) -> None:
         """
         For use when testing to quickly get to trading state from 4 card
         state, i.e. each player has one of the 3's.
         """
-        while not self._trading:
+        while not self.trading:
             sid = self._current_player_sid
             chamber = self._get_chamber(sid)
             for card in chamber:
@@ -85,7 +85,6 @@ class Game:
     # TODO: make Any type more specific
     def _emit(self, event: str, payload: Dict[str, Any], room: str):
         emit(event, payload, room=room)
-
 
     def start_game(self):
         if self.num_players == 1:
@@ -160,16 +159,16 @@ class Game:
                     return
                 else:
                     # any hand with the 3 of clubs is ok
-                    self._unlock_play(sid)
+                    self._unlock(sid)
             else:
                 # other players (without the 3 of clubs) can unlock
                 # whatever hand they want
-                self._unlock_play(sid)
+                self._unlock(sid)
         elif hip is None:  # current player won last hand and can play any hand
-            self._unlock_play(sid)
+            self._unlock(sid)
         else:
             if hand > hip:
-                self._unlock_play(sid)
+                self._unlock(sid)
             else:
                 self._alert_weaker_hand(sid)
 
@@ -183,14 +182,14 @@ class Game:
         elif not self._get_unlocked(sid):
             # store was modified to allow play emittal without unlocking
             self._alert_dont_modify_dom(sid)
-            self._lock_play(sid)
+            self.lock(sid)
             return
         else:
             chamber = self._get_chamber(sid)
             hand = Hand.copy(chamber.current_hand)
             chamber.remove_cards(hand)
             self._num_consecutive_passes = 0
-            self._lock_play(sid)
+            self.lock(sid)
             self._update_hand_in_play(hand)
             # TODO: self._message_hand_played(hand)
 
@@ -265,12 +264,12 @@ class Game:
             'hand_in_play_desc': hand.id_desc}, self._room)
         self._hand_in_play = hand
 
-    def _unlock_play(self, sid: str) -> None:
-        self._emit('unlock_play', {}, sid)
+    def _unlock(self, sid: str) -> None:
+        self._emit('unlock', {}, sid)
         self._set_unlocked(sid, True)
 
-    def _lock_play(self, sid: str) -> None:
-        self._emit('lock_play', {}, sid)
+    def lock(self, sid: str) -> None:
+        self._emit('lock', {}, sid)
         self._set_unlocked(sid, False)
 
     def add_or_remove_card(self, sid: str, card: int) -> None:
@@ -280,14 +279,14 @@ class Game:
         #       distribution is symmetric
         try:
             chamber.select_card(card)
-            self._lock_play(sid)
+            self.lock(sid)
         except CardNotInChamberError:
             self._alert_dont_modify_dom(sid)
             # TODO self._reset_card_values()
         except DuplicateCardError:
             # such an error can only occur if check passes
             chamber.deselect_card(card, check=False)
-            self._lock_play(sid)
+            self.lock(sid)
         except FullHandError:
             self._alert_hand_full(sid)
 
@@ -311,7 +310,7 @@ class Game:
                 self._clear_hand_in_play()
                 self._next_player()
                 return
-            # else:                     
+            # else:  
             #     self._next_player()  # this is called at the bottom
         # all other players passed on a hand
         elif self._num_consecutive_passes == self._num_unfinished_players - 1:
@@ -325,70 +324,106 @@ class Game:
         self._emit('clear_hand_in_play', {}, self._room)
 
     def _initiate_trading(self) -> None:
-        self._trading = True
+        self.trading = True
         self._set_trading(True)
 
     def _set_trading(self, trading: bool) -> None:
         self._emit('set_trading', {'trading': trading}, self._room)
 
     def ask_for_card(self, sid: str) -> None:
-        if not self._trading:
-            # TODO: asked for card through console?
+        if not self.trading:
+            self._alert_dont_use_console(sid)
             return
         if not self._is_asker(sid):
-            # TODO: non asker may be asking for card through console?
-            return
+            self._alert_dont_use_console(sid)
         # TODO: remove trading options when takes run out
         value = self._selected_for_asking[self._get_spot(sid)]
-        asked_sid = self._get_opposing_position_sid()
+        asked_sid = self._get_position_sid(self._get_opposing_position(sid))
         # chamber for asked
         chamber = self._get_chamber(asked_sid)
         cards_to_highlight = list()
         for card in range((value - 1) * 4 + 1, value * 4 + 1):
             if card in chamber:
                 cards_to_highlight.append(card)
-        if len(cards_to_highlight) > 0:
-            self._highlight_giving_options(asked_sid, cards_to_highlight)
-        else:
-            self._already_asked[self._get_spot(sid)].add(value)
+        self._highlight_giving_options(asked_sid, cards_to_highlight)
 
     def _highlight_giving_options(self, sid: str, cards_to_highlight: List[int]) -> None:
         # client will simply change play button to "no" button  if cards_to_highlight is empty
-        self._emit('highlight_giving_options', {options: cards_to_highlight}, sid)
+        self._emit('highlight_giving_options', {'options': cards_to_highlight}, sid)
     
-    def _no_dont_have_that_card(self, )
-            
+    def _no_dont_have_such_card(self):
+        ...
 
-    def _get_position(self, sid: str) -> None:
+    def _get_position(self, sid: str) -> int:
         return self._positions.index(self._get_spot(sid))
-
-    def _get_opposing_position_sid(self, sid: str) -> None:
-        return self._get_sid(self._positions[3 - self._get_position(sid)])
+    
+    def _get_opposing_position(self, sid: str) -> int:
+        return 3 - self._get_position(sid)
+    
+    def _get_position_sid(self, position: int) -> str:
+        return self._get_sid(self._positions[position])
 
     def update_selected_for_asking(self, sid: str, value: int) -> None:
-        if not 1 <= value <= 13:
+        if not self._is_asker(sid):
             self._alert_dont_use_console(sid)
+            return
+        if not 0 <= value <= 13:
+            self._alert_dont_use_console(sid)
+            return
         if value in self._already_asked[self._get_spot(sid)]:
             self._alert_dont_use_console(sid)
             return
-        self._selected_for_asking[self._get_spot(sid)] = value
+        selected_for_asking: int = self._get_selected_for_asking(sid)
+        if selected_for_asking == 0:
+            self._select_for_asking(sid, value)
+        elif selected_for_asking == value:
+            self._deselect_for_asking(sid, value)
+        else:
+            self._deselect_for_asking(sid, selected_for_asking)
+            self._select_for_asking(sid, value)
 
     def maybe_unlock_ask(self, sid: str) -> None:
+        if not self.trading:
+            self._alert_dont_use_console(sid)
         if not self._is_asker(sid):
-            self._alert_dont_modify_dom()
+            self._alert_dont_use_console(sid)
             return
-        if self._get_selected_for_asking(sid) > 0:
+        selected_for_asking: int = self._get_selected_for_asking(sid)
+        # selected_for_asking is 0 if no trading option is selected
+        if not selected_for_asking:
+            self._alert_dont_use_console(sid)
+        else:
+            self._unlock(sid)
 
+    def is_asking(self, sid: str) -> bool:
+        return self.trading and self._selected_for_asking(sid) > 0
+
+    def is_giving(self, sid: str) -> bool:
+        return self.trading and not self._get_current_hand(sid).is_empty
+
+    def _select_for_asking(self, sid: str, value: int) -> None:
+        self._set_selected_for_asking(sid, value)
+        self._emit('select_for_asking', {'value': value}, sid)
+
+    def _deselect_for_asking(self, sid: str, value: int) -> None:
+        self._set_selected_for_asking(sid, 0)
+        self._emit('deselect_for_asking', {'value': value}, sid)
 
     def _set_selected_for_asking(self, sid: str, value: int) -> None:
         self._selected_for_asking[self._get_spot(sid)] = value
 
     def _get_selected_for_asking(self, sid: str) -> int:
-        self._selected_for_asking[self._get_spot(sid)]
-
+        return self._selected_for_asking[self._get_spot(sid)]
 
     def maybe_unlock_give(self, sid: str) -> None:
-        ...
+        if not self.trading:
+            self._alert_dont_use_console(sid)
+        hand = self._get_current_hand(sid)
+        # TODO: add ability to give invalid 2 card hand
+        if not hand.is_single:
+            self._alert_can_only_give_singles(sid)
+        else:
+            self._unlock(sid)
 
     def _get_spot(self, sid: str) -> int:
         """
@@ -470,6 +505,9 @@ class Game:
 
     def _alert_can_play_any_hand(self, sid: str) -> None:
         self._emit_alert("you can play any hand", sid)
+        
+    def _alert_can_only_give_singles(self, sid: str) -> None:
+        self._emit_alert("you can only give singles", sid)
 
     # def _message_hand_played(self, sid: str, hand: Hand):
     #     self._emit_alert("please don't hax", sid)

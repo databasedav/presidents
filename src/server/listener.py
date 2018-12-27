@@ -42,7 +42,7 @@ def connect():
     print(f'{sid} connected.')
     if game.num_players == 4:
         game._start_round()
-        game.get_game_to_trading()
+        # game.get_game_to_trading()
 
 @socketio.on('list servers')
 def list_servers():
@@ -70,12 +70,17 @@ def card_click(payload):
 @socketio.on('unlock')
 def unlock():
     sid = get_sid()
+    if game.trading:
+        if game.is_asking(sid):
+            game.maybe_unlock_ask(sid)
+        elif game.is_giving(sid):
+            game.maybe_unlock_give(sid)
     game.maybe_unlock_play(sid)
 
 @socketio.on('lock')
 def lock():
     sid = get_sid()
-    game._lock_play(sid)
+    game._lock(sid)
 
 @socketio.on('play')
 def play():
@@ -91,14 +96,14 @@ def pass_turn():
 def restart():
     game.restart()
 
-@socketio.on('select_for_asking')
+@socketio.on('asking_click')
 def select_for_asking(payload):
     sid = get_sid()
     value = payload['value']
     game.update_selected_for_asking(sid, value)
 
 @socketio.on('ask')
-def ask(payload):
+def ask():
     sid = get_sid()
     game.ask_for_card(sid)
 

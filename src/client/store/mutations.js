@@ -99,17 +99,17 @@ export default function mutations () {
       state.on_turn = false
     },
 
-    unlock_play (state, payload) {
-      state.play_unlocked = true
+    unlock (state, payload) {
+      state.unlocked = true
     },
 
-    lock_play (state, payload) {
-      state.play_unlocked = false
+    lock (state, payload) {
+      state.unlocked = false
     },
 
     clear_cards (state, payload) {
       state.cards.clear()
-      state.cards_array = new Array()
+      state.cards_arr = new Array()
       state.cards_selected_arr.fill(false)
     },
 
@@ -128,7 +128,7 @@ export default function mutations () {
     add_card (state, payload) {
       state.cards.set(payload.card, false)
       // remove after Vue supports maps
-      state.cards_array.push(payload.card)
+      state.cards_arr.push(payload.card)
     },
 
     update_current_hand_str (state, payload) {
@@ -138,7 +138,8 @@ export default function mutations () {
     remove_card (state, payload) {
       state.cards.delete(payload.card)
       // this is gross
-      state.cards_array = Array.from(state.cards.keys())
+      state.cards_arr = Array.from(state.cards.keys())
+      state.cards_selected_arr.splice(payload.card, 1, false)
     },
 
     update_spot (state, payload) {
@@ -173,6 +174,24 @@ export default function mutations () {
         state.asker = false
         state.giver = false
       }
+    },
+
+    select_for_asking (state, payload) {
+      state.ask_values.set(payload.value, true)
+      // remove after Vue supports maps
+      state.ask_values_selected_arr.splice(payload.value, 1, true)
+    },
+
+    deselect_for_asking (state, payload) {
+      state.ask_values.set(payload.value, false)
+      // remove after Vue supports maps
+      state.ask_values_selected_arr.splice(payload.value, 1, false)
+    },
+
+    remove_ask_value (state, payload) {
+      0
     }
+
+
   }
 }

@@ -1,17 +1,13 @@
 export default function state () {
   return {
-    // should be a map how to deal with it rn?
-    // make the things I want to eventually be maps, maps rn
-    // and have the components that read them deal with the 
-    // conversion to lists required v-for iteration
     cards: new Map(),
-    // remove once Vue supports maps; change CardBox getters to cards map
-    cards_array: new Array(),
-    // remove once Vue supports maps; change CardBox getters to cards map
+    // TODO: remove once Vue supports maps; change CardBox getters to cards map
+    cards_arr: new Array(),
+    // TODO: remove once Vue supports maps; change CardBox getters to cards map
     cards_selected_arr: Array(52).fill(false),
     current_hand: Array,
     stored_hands: new Map(),
-    play_unlocked: false,
+    unlocked: false,
     current_hand_str: '',
     snackbar: false,
     alert: String,
@@ -21,7 +17,11 @@ export default function state () {
     spot: Number,
     trading: false,
     asker: false,
-    ask_value_selected: Number,
+    ask_values: new Map([...Array(14).slice(1, 14)].map((_, i) => [i+1, false])),
+    // TODO: use a map for this as well when Vue supports reactive maps
+    ask_values_arr: [...Array(14).keys()].slice(1, 14),  // [1, ..., 13]
+    // TODO: use a map for this as well when Vue supports reactive maps
+    ask_values_selected_arr: Array(13).fill(false),
     giver: false,
     alt_play_button_str: String
   }

@@ -2,13 +2,13 @@
   <div>
     <TradingOptions
       v-if='trading && asker'
-      @select_for_asking='$emit("select_for_asking", $event)'
-
+      :namespace='this.namespace'
+      @asking_click='$emit("asking_click", $event)'
     >
     </TradingOptions>
 
     <v-btn
-      v-if='!play_unlocked'
+      v-if='!unlocked'
       @click="$emit('unlock')"
       color='error'
     >
@@ -38,14 +38,14 @@
 
     <v-btn
       v-if='trading && asker'
-      @click="$emit('play')"
+      @click="$emit(alt_play_button_str)"
       color='success'
     >
       {{ alt_play_button_str }}
     </v-btn>
 
     <v-btn
-      v-else-if='play_unlocked'
+      v-else-if='unlocked'
       @click="$emit('play')"
       color='success'
     >
@@ -83,8 +83,8 @@ export default {
   },
 
   computed: {
-    play_unlocked () {
-      return this.$store.state[this.namespace].play_unlocked
+    unlocked () {
+      return this.$store.state[this.namespace].unlocked
     },
 
     asker () {
@@ -93,6 +93,10 @@ export default {
 
     trading () {
       return this.$store.state[this.namespace].trading
+    },
+
+    alt_play_button_str () {
+      return this.$store.getters[`${this.namespace}/alt_play_button_str`]
     }
   }
 }

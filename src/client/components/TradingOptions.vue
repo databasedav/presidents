@@ -2,10 +2,10 @@
   <div>
     <v-btn
       class='rank'
-      v-for='value in this.values'
+      v-for='value in this.ask_values'
       :key='52 + value'
-      :outline='selected_arr[value]'
-      @click='click'
+      :outline='ask_values_selected_arr[value]'
+      @click='$emit("asking_click", value)'
     >
       {{ ranks[value - 1] }}
     </v-btn>
@@ -22,25 +22,31 @@ export default {
     Card
   },
 
+  props: {
+    namespace: String
+  },
+
   data () {
     return {
-      values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
-      ranks: ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2'],
-      selected_arr: Array(13).fill(false)
+      // TODO: where to put this?
+      ranks: ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2']
     }
   },
 
+  computed: {
+    ask_values () {
+      return this.$store.state[this.namespace].ask_values_arr
+    },
+
+    ask_values_selected_arr () {
+      return this.$store.state[this.namespace].ask_values_selected_arr
+    },
+
+
+  },
+
   methods: {
-    click (value) {
-      if (this.selected_arr[value]) {
-        this.selected_arr.splice(value, 1, false)
-        this.$emit('select_for_asking', 0)
-      } else {
-        this.selected_arr.fill(false)
-        this.selected_arr.splice(value, 1, true)
-        this.$emit('select_for_asking', value)
-      }
-    }
+  
   }
 }
 </script>

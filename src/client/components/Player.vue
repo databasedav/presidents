@@ -20,7 +20,7 @@
       @play='play'
       @pass='pass'
       @ask='ask'
-      @select_for_asking='select_for_asking'
+      @asking_click='asking_click'
     ></ButtonBox>
   </div>
 </template>
@@ -92,8 +92,8 @@ export default {
       this.socket.emit('ask', {'value': value})
     },
 
-    select_for_asking (value) {
-      this.socket.emit('select_for_asking', {'value': value})
+    asking_click (value) {
+      this.socket.emit('asking_click', {'value': value})
     }
   },
 

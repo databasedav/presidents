@@ -63,12 +63,12 @@ export default {
       payload => commit(this.namespace, 'all_off_turn', payload)
     )
 
-    this.socket.on('unlock_play',
-      payload => commit(this.namespace, 'unlock_play', payload)
+    this.socket.on('unlock',
+      payload => commit(this.namespace, 'unlock', payload)
     )
 
-    this.socket.on('lock_play',
-      payload => commit(this.namespace, 'lock_play', payload)
+    this.socket.on('lock',
+      payload => commit(this.namespace, 'lock', payload)
     )
 
     this.socket.on('remove_card',
@@ -93,6 +93,14 @@ export default {
 
     this.socket.on('set_trading',
       payload => commit(this.namespace, 'set_trading', payload)
+    )
+
+    this.socket.on('select_for_asking',
+      payload => commit(this.namespace, 'select_for_asking', payload)
+    )
+
+    this.socket.on('deselect_for_asking',
+      payload => commit(this.namespace, 'deselect_for_asking', payload)
     )
 
     this.socket.on('update_takes',
