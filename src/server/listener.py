@@ -25,6 +25,9 @@ def catch_all(path):
 room = 'room'
 rooms = [room]
 
+games: Dict[str, Game] = dict()
+sid_game_dict: Dict[str, Game] = dict()
+
 game = Game()
 game.set_room(room)
 

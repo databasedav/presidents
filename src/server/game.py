@@ -8,6 +8,10 @@ from bidict import bidict
 import random
 from itertools import cycle
 
+# TODO: change all sid's to spot's because the game should operate on
+#       and not have to pass around the sid everywhere. this includes
+#       changing the sid_spot_dict to a spot_sid_dict.
+
 
 class Game:
 
@@ -45,9 +49,9 @@ class Game:
         self._selected_asking_option: List[int] = [0 for _ in range(4)]
         self._already_asked: List[Set[int]] = [set() for _ in range(4)]
         self._waiting: List[bool] = [False for _ in range(4)]
-        self._giving_options = [set() for _ in range(4)]
-        self._given: List[Set[int]] = [set() for _ in range(4)]
-        self._take: List[Set[int]] = [set() for _ in range(4)]
+        self._giving_options: List[Set] = [set() for _ in range(4)]
+        self._given: List[Set[int]] = [set() for _ in range(2)]  # only for askers
+        self._taken: List[Set[int]] = [set() for _ in range(2)]  # only for askers
 
     @property
     def _current_player_sid(self) -> str:
@@ -367,12 +371,13 @@ class Game:
             self._alert_dont_use_console(sid)
         # TODO: remove trading options when takes run out
         value = self._get_selected_asking_option(sid)
-        asked_sid = self._get_position_sid(self._get_opposing_position(sid))
+        asked_sid = self._get_opposing_position_sid(sid)
         # chamber for asked
         chamber = self._get_chamber(asked_sid)
         giving_options = set()
+        # TODO: set comprehension this maybe?
         for card in range((value - 1) * 4 + 1, value * 4 + 1):
-            if card in chamber:
+            if card in chamber and card not in self._get_given(sid):
                 giving_options.add(card)
         if not giving_options:
             self._add_to_already_asked(sid, value)
@@ -419,12 +424,15 @@ class Game:
 
     def _get_position(self, sid: str) -> int:
         return self._positions.index(self._get_spot(sid))
-    
+
     def _get_opposing_position(self, sid: str) -> int:
         return 3 - self._get_position(sid)
-    
+
     def _get_position_sid(self, position: int) -> str:
         return self._get_sid(self._positions[position])
+
+    def _get_opposing_position_sid(self, sid: str) -> str:
+        return self._get_position_sid(self._get_opposing_position(sid))
 
     def update_selected_asking_option(self, sid: str, value: int) -> None:
         if not self._is_asker(sid):
@@ -494,10 +502,13 @@ class Game:
         # TODO: add ability to give invalid 2 card hand
         if not hand.is_single:
             self._alert_can_only_give_singles(sid)
-        elif hand[4] in self._get_giving_options(sid):
-            self._unlock(sid)
-        else:
-            self._alert_can_only_give_a_giving_option(sid)
+        if self._is_giver(sid):
+            if hand[4] in self._get_giving_options(sid):
+                self._unlock(sid)
+            else:
+                self._alert_can_only_give_a_giving_option(sid)
+        elif self._is_trader(sid):
+            pass
 
     def _give_card(self, sid: str) -> None:
         """
@@ -509,7 +520,16 @@ class Game:
             maybe just allow free use of the card but check that it isn't being
                 given after being taken or being taken after being given
         """
+        card = self._get_current_hand(sid)[4]
+        if card in self._get_taken(sid):
+            pass
+        giver_chamber: EmittingChamber = self._get_chamber(sid)
+        taker_chamber: EmittingChamber = self._get_chamber(self._get_opposing_position_sid(sid))
         
+        giver_chamber
+
+    def _get_taken(self, sid: str) -> Set[int]:
+        return self._taken[self._get_spot(sid)]
 
     def _get_decks_from_chambers(self):
         deck = list()
