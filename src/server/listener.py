@@ -9,6 +9,7 @@ import numpy as np
 from hand import Hand, DuplicateCardError, FullHandError
 from chamber import Chamber
 from utils.utils import main
+from typing import Dict
 
 
 app = Flask(__name__)
@@ -28,14 +29,21 @@ rooms = [room]
 games: Dict[str, Game] = dict()
 sid_game_dict: Dict[str, Game] = dict()
 
-game = Game()
+game_
 game.set_room(room)
+
 
 def get_sid() -> str:
     return request.sid
 
+def get_game_spot():
+
+    return 
+
+
 def join_game(sid):
     game.add_player(sid, sid)
+
 
 @socketio.on('connect')
 def connect():
@@ -47,9 +55,11 @@ def connect():
         game._start_round()
         game.get_game_to_trading()
 
+
 @socketio.on('list servers')
 def list_servers():
     ...
+
 
 @socketio.on('attempt to join game')
 def attempt_to_join_game(payload):
@@ -64,11 +74,13 @@ def attempt_to_join_game(payload):
 #     except AssertionError:
 #         game.restart
 
+
 @socketio.on('card_click')
 def card_click(payload):
     sid = get_sid()
     card = payload['card']
     game.add_or_remove_card(sid, card)
+
 
 @socketio.on('unlock')
 def unlock():
@@ -82,24 +94,29 @@ def unlock():
     else:
         game.maybe_unlock_play(sid)
 
+
 @socketio.on('lock')
 def lock():
     sid = get_sid()
     game.lock(sid)
+
 
 @socketio.on('play')
 def play():
     sid = get_sid()
     game.maybe_play_current_hand(sid)
 
+
 @socketio.on('pass')
 def pass_turn():
     sid = get_sid()
     game.maybe_pass_turn(sid)
 
+
 @socketio.on('restart')
 def restart():
     game.restart()
+
 
 @socketio.on('asking_click')
 def select_asking_option(payload):
@@ -107,15 +124,18 @@ def select_asking_option(payload):
     value = payload['value']
     game.update_selected_asking_option(sid, value)
 
+
 @socketio.on('ask')
 def ask():
     sid = get_sid()
     game.ask_for_card(sid)
 
+
 @socketio.on('give')
 def give():
     sid = get_sid()
     game.give_card(sid)
+
 
 @main
 def main():
