@@ -31,10 +31,10 @@ class Chamber:
                 self._cards[card] = HandPointerDLList()
                 self._num_cards += 1
         self._hands: HandNodeDLList = HandNodeDLList()
-    
+
     def __contains__(self, card) -> bool:
         return self._cards[card] is not None
-    
+
     def __iter__(self):
         return [card for card in range(1, 53) if card in self].__iter__()
 

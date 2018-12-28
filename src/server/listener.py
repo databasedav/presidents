@@ -70,6 +70,7 @@ def card_click(payload):
 @socketio.on('unlock')
 def unlock():
     sid = get_sid()
+    # TODO: let the game take care of this
     if game.trading:
         if game.is_asking(sid):
             game.maybe_unlock_ask(sid)
@@ -81,7 +82,7 @@ def unlock():
 @socketio.on('lock')
 def lock():
     sid = get_sid()
-    game._lock(sid)
+    game.lock(sid)
 
 @socketio.on('play')
 def play():
@@ -107,6 +108,11 @@ def select_asking_option(payload):
 def ask():
     sid = get_sid()
     game.ask_for_card(sid)
+
+@socketio.on('give')
+def give():
+    sid = get_sid()
+    game.give_card(sid)
 
 @main
 def main():

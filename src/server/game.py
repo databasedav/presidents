@@ -22,28 +22,32 @@ class Game:
 
         has full control of the game
         """
+        # TODO: organize attributes
         self._room: str = room
         self._hand_in_play: [BaseHand, Hand] = BaseHand
         self._turn_manager: [None, TurnManager] = None
         self._current_hands: List[Hand] = [Hand() for _ in range(4)]
         self._chambers: List[EmittingChamber] = [EmittingChamber() for _ in range(4)]
         self._current_player: [None, int] = None
-        self._num_consecutive_passes = 0
+        self._num_consecutive_passes: int = 0
         self._positions: List[int] = list()
-        self._takes_remaining = [0 for _ in range(4)]
-        self._gives_remaining = [0 for _ in range(4)]
-        self._num_consecutive_games = 0
-        self._winning_last_played = False
+        self._takes_remaining: List[int] = [0 for _ in range(4)]
+        self._gives_remaining: List[int] = [0 for _ in range(4)]
+        self._num_consecutive_games: int = 0
+        self._winning_last_played: bool = False
         self._sid_spot_dict = bidict()  # sid to spot
-        self._unlocked = [False for _ in range(4)]
+        self._unlocked: List[bool] = [False for _ in range(4)]
         self._names = [None for _ in range(4)]
         self._open_spots = {i for i in range(4)}
-        self.num_players = 0
-        self.num_spectators = 0  # TODO
-        self.trading = False
-        self._selected_asking_option = [0 for _ in range(4)]
+        self.num_players: int = 0
+        self.num_spectators: int = 0  # TODO
+        self.trading: bool = False
+        self._selected_asking_option: List[int] = [0 for _ in range(4)]
         self._already_asked: List[Set[int]] = [set() for _ in range(4)]
         self._waiting: List[bool] = [False for _ in range(4)]
+        self._giving_options = [set() for _ in range(4)]
+        self._given: List[Set[int]] = [set() for _ in range(4)]
+        self._take: List[Set[int]] = [set() for _ in range(4)]
 
     @property
     def _current_player_sid(self) -> str:
@@ -331,15 +335,16 @@ class Game:
                 self._clear_hand_in_play()
                 self._next_player()
                 return
-            # else:  
-            #     self._next_player()  # this is called at the bottom
+            else:
+                self._next_player()
         # all other players passed on a hand
         elif self._num_consecutive_passes == self._num_unfinished_players - 1:
             self._hand_in_play = None
             self._clear_hand_in_play()
             self._next_player(hand_won=True)
             return
-        self._next_player()
+        else:
+            self._next_player()
 
     def _clear_hand_in_play(self) -> None:
         self._emit('clear_hand_in_play', {}, self._room)
@@ -365,17 +370,17 @@ class Game:
         asked_sid = self._get_position_sid(self._get_opposing_position(sid))
         # chamber for asked
         chamber = self._get_chamber(asked_sid)
-        cards_to_highlight = list()
+        giving_options = set()
         for card in range((value - 1) * 4 + 1, value * 4 + 1):
             if card in chamber:
-                cards_to_highlight.append(card)
-        if not cards_to_highlight:
-            self._add_to_already_asked(value)
+                giving_options.add(card)
+        if not giving_options:
+            self._add_to_already_asked(sid, value)
             self._remove_asking_option(sid, value)
         else:
-            self._highlight_giving_options(asked_sid, cards_to_highlight)
+            self._set_giving_options(asked_sid, giving_options)
             self._wait_for_reply(sid)
-    
+
     def _remove_asking_option(self, sid: str, value: int) -> None:
         self._emit('removing_asking_option', {'value': value}, sid)
 
@@ -392,17 +397,23 @@ class Game:
         self._deselect_selected_asking_option(sid)
         self.lock(sid)
         self._set_waiting(sid, True)
-    
+
     def _set_waiting(self, sid: str, waiting: bool) -> None:
         self._waiting[self._get_spot(sid)] = waiting
 
     def _is_waiting(self, sid: str) -> bool:
         return self._waiting[self._get_spot(sid)]
 
-    def _highlight_giving_options(self, sid: str, cards_to_highlight: List[int]) -> None:
-        # client will simply change play button to "no" button  if cards_to_highlight is empty
-        self._emit('highlight_giving_options', {'options': cards_to_highlight}, sid)
-    
+    def _highlight_giving_options(self, sid: str, giving_options: Set[int]) -> None:
+        self._emit('highlight_giving_options', {'options': list(giving_options)}, sid)
+
+    def _set_giving_options(self, sid: str, giving_options: Set[int]) -> None:
+        self._highlight_giving_options(sid, giving_options)
+        self._giving_options[self._get_spot(sid)] = giving_options
+
+    def _get_giving_options(self, sid: str) -> Set[int]:
+        return self._giving_options[self._get_spot(sid)]
+
     def _no_dont_have_such_card(self):
         ...
 
@@ -479,15 +490,33 @@ class Game:
         if not self.trading:
             self._alert_dont_use_console(sid)
             return
-        if not self._is_giver(sid):
-            self._alert_dont_use_console(sid)
-            return
         hand = self._get_current_hand(sid)
         # TODO: add ability to give invalid 2 card hand
         if not hand.is_single:
             self._alert_can_only_give_singles(sid)
-        else:
+        elif hand[4] in self._get_giving_options(sid):
             self._unlock(sid)
+        else:
+            self._alert_can_only_give_a_giving_option(sid)
+
+    def _give_card(self, sid: str) -> None:
+        """
+        how to handle gives?
+
+        asker cannot give a card that was just given to them
+        should givees be able to see the card immediately after they are given?
+            should the given card be with the normal cards and selectable?
+            maybe just allow free use of the card but check that it isn't being
+                given after being taken or being taken after being given
+        """
+        
+
+    def _get_decks_from_chambers(self):
+        deck = list()
+        for chamber in self._chambers:
+            deck.extend(chamber)
+        deck = np.array(deck)
+        return deck.reshape(4, 13)
 
     def _get_spot(self, sid: str) -> int:
         """
@@ -575,6 +604,9 @@ class Game:
 
     def _alert_cannot_ask_while_waiting(self, sid: str) -> None:
         self._emit_alert("you cannot ask while waiting for a response", sid)
+    
+    def _alert_can_only_give_a_giving_option(self, sid: str) -> None:
+        self._emit_alert("you can only give a highlighted option", sid)
 
     # def _message_hand_played(self, sid: str, hand: Hand):
     #     self._emit_alert("please don't hax", sid)
