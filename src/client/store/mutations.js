@@ -91,19 +91,25 @@ export default {
     }
   },
 
-  select_for_asking (state, payload) {
+  select_asking_option (state, payload) {
     state.ask_values.set(payload.value, true)
     // remove after Vue supports maps
     state.ask_values_selected_arr.splice(payload.value, 1, true)
   },
 
-  deselect_for_asking (state, payload) {
+  deselect_asking_option (state, payload) {
     state.ask_values.set(payload.value, false)
     // remove after Vue supports maps
     state.ask_values_selected_arr.splice(payload.value, 1, false)
   },
 
-  remove_ask_value (state, payload) {
-    0
+  highlight_giving_options (state, payload) {
+    for (var i in payload.options) {
+      state.giving_options_arr.splice(payload.options[i], 1, true)
+    }
+  },
+
+  removing_asking_options (state, payload) {
+    
   }
 }

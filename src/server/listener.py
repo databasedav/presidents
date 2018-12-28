@@ -98,10 +98,10 @@ def restart():
     game.restart()
 
 @socketio.on('asking_click')
-def select_for_asking(payload):
+def select_asking_option(payload):
     sid = get_sid()
     value = payload['value']
-    game.update_selected_for_asking(sid, value)
+    game.update_selected_asking_option(sid, value)
 
 @socketio.on('ask')
 def ask():

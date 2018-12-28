@@ -16,7 +16,7 @@
 import Card from './Card.vue'
 
 export default {
-  name: 'TradingOptions',
+  name: 'AskingOptions',
 
   components: {
     Card

@@ -41,8 +41,9 @@ class Game:
         self.num_players = 0
         self.num_spectators = 0  # TODO
         self.trading = False
-        self._selected_for_asking = [0 for _ in range(4)]
+        self._selected_asking_option = [0 for _ in range(4)]
         self._already_asked: List[Set[int]] = [set() for _ in range(4)]
+        self._waiting: List[bool] = [False for _ in range(4)]
 
     @property
     def _current_player_sid(self) -> str:
@@ -143,7 +144,7 @@ class Game:
         decks.sort(axis=1)  # sorts individual decks
         c3_index = np.where(decks == 1)[0][0]  # get which deck has the 3 of clubs
         self._turn_manager = TurnManager(c3_index)
-        self._next_player()
+        # self._next_player()
         for sid, spot in self._sid_spot_dict.items():
             chamber = self._get_chamber(sid)
             chamber.reset()
@@ -230,7 +231,7 @@ class Game:
             self._next_player()
         else:
             self._set_vice_asshole(sid)
-            next(self._turn_manager)
+            self._current_player = next(self._turn_manager)
             self._positions.append(self._current_player)
             self._set_asshole(self._current_player_sid)
             self._initiate_trading()
@@ -298,7 +299,7 @@ class Game:
         try:
             chamber.select_card(card)
             if self.is_asking(sid):
-                self._deselect_for_asking(sid, self._get_selected_for_asking(sid))
+                self._deselect_asking_option(sid, self._get_selected_asking_option(sid))
             self.lock(sid)
         except CardNotInChamberError:
             self._alert_dont_modify_dom(sid)
@@ -346,6 +347,7 @@ class Game:
     def _initiate_trading(self) -> None:
         self.trading = True
         self._clear_hand_in_play()
+        self._all_off_turn()
         self._deal_cards()
         self._set_trading(True)
 
@@ -359,7 +361,7 @@ class Game:
         if not self._is_asker(sid):
             self._alert_dont_use_console(sid)
         # TODO: remove trading options when takes run out
-        value = self._get_selected_for_asking(sid)
+        value = self._get_selected_asking_option(sid)
         asked_sid = self._get_position_sid(self._get_opposing_position(sid))
         # chamber for asked
         chamber = self._get_chamber(asked_sid)
@@ -367,7 +369,35 @@ class Game:
         for card in range((value - 1) * 4 + 1, value * 4 + 1):
             if card in chamber:
                 cards_to_highlight.append(card)
-        self._highlight_giving_options(asked_sid, cards_to_highlight)
+        if not cards_to_highlight:
+            self._add_to_already_asked(value)
+            self._remove_asking_option(sid, value)
+        else:
+            self._highlight_giving_options(asked_sid, cards_to_highlight)
+            self._wait_for_reply(sid)
+    
+    def _remove_asking_option(self, sid: str, value: int) -> None:
+        self._emit('removing_asking_option', {'value': value}, sid)
+
+    def _add_to_already_asked(self, sid: str, value: int) -> None:
+        self._get_already_asked(sid).add(value)
+
+    def _get_already_asked(self, sid: str) -> Set[int]:
+        return self._already_asked[self._get_spot(sid)]
+
+    def _is_already_asked(self, sid: str, value: int) -> bool:
+        return value in self._get_already_asked(sid)
+
+    def _wait_for_reply(self, sid: str) -> None:
+        self._deselect_selected_asking_option(sid)
+        self.lock(sid)
+        self._set_waiting(sid, True)
+    
+    def _set_waiting(self, sid: str, waiting: bool) -> None:
+        self._waiting[self._get_spot(sid)] = waiting
+
+    def _is_waiting(self, sid: str) -> bool:
+        return self._waiting[self._get_spot(sid)]
 
     def _highlight_giving_options(self, sid: str, cards_to_highlight: List[int]) -> None:
         # client will simply change play button to "no" button  if cards_to_highlight is empty
@@ -385,62 +415,73 @@ class Game:
     def _get_position_sid(self, position: int) -> str:
         return self._get_sid(self._positions[position])
 
-    def update_selected_for_asking(self, sid: str, value: int) -> None:
+    def update_selected_asking_option(self, sid: str, value: int) -> None:
         if not self._is_asker(sid):
             self._alert_dont_use_console(sid)
             return
         if not 0 <= value <= 13:
             self._alert_dont_use_console(sid)
             return
-        if value in self._already_asked[self._get_spot(sid)]:
+        if self._is_already_asked(sid, value):
             self._alert_dont_use_console(sid)
             return
-        selected_for_asking: int = self._get_selected_for_asking(sid)
-        if selected_for_asking == 0:
-            self._select_for_asking(sid, value)
-        elif selected_for_asking == value:
-            self._deselect_for_asking(sid, value)
+        selected_asking_option: int = self._get_selected_asking_option(sid)
+        if selected_asking_option == 0:
+            self._select_asking_option(sid, value)
+        elif selected_asking_option == value:
+            self._deselect_asking_option(sid, value)
         else:
-            self._deselect_for_asking(sid, selected_for_asking)
-            self._select_for_asking(sid, value)
+            self._deselect_asking_option(sid, selected_asking_option)
+            self._select_asking_option(sid, value)
 
     def maybe_unlock_ask(self, sid: str) -> None:
         if not self.trading:
             self._alert_dont_use_console(sid)
+            return
         if not self._is_asker(sid):
             self._alert_dont_use_console(sid)
             return
-        selected_for_asking: int = self._get_selected_for_asking(sid)
-        # selected_for_asking is 0 if no trading option is selected
-        if not selected_for_asking:
+        if self._is_waiting(sid):
+            self._alert_cannot_ask_while_waiting(sid)
+            return
+        selected_asking_option: int = self._get_selected_asking_option(sid)
+        # selected_asking_option is 0 if no trading option is selected
+        if not selected_asking_option:
             self._alert_dont_use_console(sid)
         else:
             self._unlock(sid)
 
     def is_asking(self, sid: str) -> bool:
-        return self.trading and self._get_selected_for_asking(sid) > 0
+        return self.trading and self._get_selected_asking_option(sid) > 0
 
     def is_giving(self, sid: str) -> bool:
         return self.trading and not self._get_current_hand(sid).is_empty
 
-    def _select_for_asking(self, sid: str, value: int) -> None:
-        self._set_selected_for_asking(sid, value)
+    def _select_asking_option(self, sid: str, value: int) -> None:
+        self._set_selected_asking_option(sid, value)
         self._get_chamber(sid).deselect_selected()
-        self._emit('select_for_asking', {'value': value}, sid)
+        self._emit('select_asking_option', {'value': value}, sid)
 
-    def _deselect_for_asking(self, sid: str, value: int) -> None:
-        self._set_selected_for_asking(sid, 0)
-        self._emit('deselect_for_asking', {'value': value}, sid)
+    def _deselect_asking_option(self, sid: str, value: int) -> None:
+        self._set_selected_asking_option(sid, 0)
+        self._emit('deselect_asking_option', {'value': value}, sid)
 
-    def _set_selected_for_asking(self, sid: str, value: int) -> None:
-        self._selected_for_asking[self._get_spot(sid)] = value
+    def _set_selected_asking_option(self, sid: str, value: int) -> None:
+        self._selected_asking_option[self._get_spot(sid)] = value
 
-    def _get_selected_for_asking(self, sid: str) -> int:
-        return self._selected_for_asking[self._get_spot(sid)]
+    def _get_selected_asking_option(self, sid: str) -> int:
+        return self._selected_asking_option[self._get_spot(sid)]
+
+    def _deselect_selected_asking_option(self, sid: str) -> None:
+        self._deselect_asking_option(sid, self._get_selected_asking_option(sid))
 
     def maybe_unlock_give(self, sid: str) -> None:
         if not self.trading:
             self._alert_dont_use_console(sid)
+            return
+        if not self._is_giver(sid):
+            self._alert_dont_use_console(sid)
+            return
         hand = self._get_current_hand(sid)
         # TODO: add ability to give invalid 2 card hand
         if not hand.is_single:
@@ -531,6 +572,9 @@ class Game:
         
     def _alert_can_only_give_singles(self, sid: str) -> None:
         self._emit_alert("you can only give singles", sid)
+
+    def _alert_cannot_ask_while_waiting(self, sid: str) -> None:
+        self._emit_alert("you cannot ask while waiting for a response", sid)
 
     # def _message_hand_played(self, sid: str, hand: Hand):
     #     self._emit_alert("please don't hax", sid)

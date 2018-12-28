@@ -21,6 +21,7 @@
       :key='card'
       :card='card'
       :is_selected='cards_selected_arr[card]'
+      :is_option_for_giving='giving_options_arr[card]'
       @card_click='$emit("card_click", $event)'
       :namespace='namespace'
     ></Card>
@@ -65,6 +66,10 @@ export default {
     current_hand_str () {
       return this.$store.state[this.namespace].current_hand_str
     },
+
+    giving_options_arr () {
+      return this.$store.state[this.namespace].giving_options_arr
+    }
   }
 }
 </script>

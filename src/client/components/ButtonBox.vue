@@ -1,11 +1,11 @@
 <template>
   <div>
-    <TradingOptions
+    <AskingOptions
       v-if='trading && asker'
       :namespace='this.namespace'
       @asking_click='$emit("asking_click", $event)'
     >
-    </TradingOptions>
+    </AskingOptions>
 
     <v-btn
       v-if='!unlocked'
@@ -30,39 +30,34 @@
     </v-btn>
 
     <v-btn
-      @click="$emit('pass')"
+      @click='$emit("pass")'
       color='warning'
     >
       pass
     </v-btn>
 
     <v-btn
-      v-if='trading && asker && unlocked'
+      v-if='trading && asker'
       @click="$emit(alt_play_button_str)"
+      :disabled='!unlocked'
       color='success'
     >
       {{ alt_play_button_str }}
     </v-btn>
 
     <v-btn
-      v-else-if='trading && asker'
-      :disabled='true'
+      v-else-if='trading && giver'
+      @click='$emit("give")'
+      :disabled='!unlocked'
       color='success'
     >
-      {{ alt_play_button_str }}
-    </v-btn>
-
-    <v-btn
-      v-else-if='unlocked'
-      @click="$emit('play')"
-      color='success'
-    >
-      play
+      give
     </v-btn>
 
     <v-btn
       v-else
-      :disabled='true'
+      @click="$emit('play')"
+      :disabled='!unlocked'
       color='success'
     >
       play
@@ -75,7 +70,7 @@
 
 <script>
 import io from 'socket.io-client'
-import TradingOptions from './TradingOptions.vue'
+import AskingOptions from './AskingOptions.vue'
 
 import { namespaced_getter } from '../utils/utils'
 
@@ -87,7 +82,7 @@ export default {
   },
 
   components: {
-    TradingOptions
+    AskingOptions
   },
 
   computed: {
@@ -97,6 +92,10 @@ export default {
 
     asker () {
       return this.$store.state[this.namespace].asker
+    },
+
+    giver () {
+      return this.$store.state[this.namespace].giver
     },
 
     trading () {

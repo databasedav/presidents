@@ -95,12 +95,20 @@ export default {
       payload => commit(this.namespace, 'set_trading', payload)
     )
 
-    this.socket.on('select_for_asking',
-      payload => commit(this.namespace, 'select_for_asking', payload)
+    this.socket.on('select_asking_option',
+      payload => commit(this.namespace, 'select_asking_option', payload)
     )
 
-    this.socket.on('deselect_for_asking',
-      payload => commit(this.namespace, 'deselect_for_asking', payload)
+    this.socket.on('deselect_asking_option',
+      payload => commit(this.namespace, 'deselect_asking_option', payload)
+    )
+
+    this.socket.on('highlight_giving_options',
+      payload => commit(this.namespace, 'highlight_giving_options', payload)
+    )
+
+    this.socket.on('removing_asking_option',
+      payload => commit(this.namespace, 'removing_asking_option', payload)
     )
 
     this.socket.on('update_takes',

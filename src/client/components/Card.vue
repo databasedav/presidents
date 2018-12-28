@@ -2,6 +2,7 @@
   <v-btn
     class='card'
     @click='$emit("card_click", card)'
+    :outline='this.outline'
     :style='{color, transform}'
   >
     {{ this.rank }}<br>{{ this.suit }}
@@ -23,7 +24,8 @@ export default {
 
   props: {
     card: Number,
-    is_selected: Boolean
+    is_selected: Boolean,
+    is_option_for_giving: Boolean
   },
 
   computed: {
@@ -44,10 +46,9 @@ export default {
       return this.is_selected ? 'rotate(15deg)': 'rotate(0deg)'
     },
 
-    style () {
-
+    outline () {
+      return this.is_option_for_giving
     }
-
   }
 }
 </script>
@@ -61,11 +62,10 @@ export default {
   font-size: 20px;
   text-align: center;
   border-radius: 5px;
-  border-color: black !important;
+  border-color: gold !important;
   box-sizing: border-box !important;
 }
 .v-btn {
   min-width: 0;
-  box-sizing: border-box !important;
 }
 </style>
