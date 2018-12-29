@@ -66,7 +66,7 @@ class Game:
         self.clear_players()
         for i, sid in enumerate(sids):
             self.add_player(sid, f'fuck{i}')
-            chamber = self._get_chamber(sid)
+            chamber = self._get_chamber(spot)
             chamber.reset()
         self._all_off_turn()
         self._start_round()
@@ -119,7 +119,7 @@ class Game:
 
     def remove_player(self, sid: str) -> None:
         # TODO self._set_name(sid, None)
-        self._open_spots.add(self._get_spot(sid))
+        self._open_spots.add(self.get_spot(sid))
         self.spot_sid_bidict.inv.pop(sid)
         self.num_players -= 1
 
@@ -139,7 +139,7 @@ class Game:
         self._turn_manager = TurnManager(c3_index)
         self._next_player()
         for spot, sid in self.spot_sid_bidict.items():
-            chamber = self._get_chamber(sid)
+            chamber = self._get_chamber(spot)
             # chamber.reset()
             chamber.set_sid(sid)
             chamber.add_cards(decks[spot])
@@ -154,7 +154,7 @@ class Game:
         self._turn_manager = TurnManager(c3_index)
         # self._next_player()
         for spot, sid in self.spot_sid_bidict.items():
-            chamber = self._get_chamber(sid)
+            chamber = self._get_chamber(spot)
             chamber.reset()
             chamber.set_sid(sid)
             chamber.add_cards(decks[spot])
@@ -200,27 +200,27 @@ class Game:
     def _is_current_player(self, spot: int) -> bool:
         return spot == self._current_player
 
-    def maybe_play_current_hand(self, sid) -> None:
-        if not self._is_current_player(sid):
-            self._alert_can_only_play_on_turn(sid)
+    def maybe_play_current_hand(self, spot: int) -> None:
+        if not self._is_current_player(spot):
+            self._alert_can_only_play_on_turn(spot)
             return
-        elif not self._get_unlocked(sid):
+        elif not self._get_unlocked(spot):
             # store was modified to allow play emittal without unlocking
-            self._alert_dont_modify_dom(sid)
-            self.lock(sid)
+            self._alert_dont_modify_dom(spot)
+            self.lock(spot)
             return
         else:
-            chamber = self._get_chamber(sid)
+            chamber = self._get_chamber(spot)
             hand = Hand.copy(chamber.current_hand)
             chamber.remove_cards(hand)
             self._num_consecutive_passes = 0
-            self.lock(sid)
+            self.lock(spot)
             self._update_hand_in_play(hand)
             # TODO: self._message_hand_played(hand)
 
             if chamber.is_empty:
                 # player_finish takes care of going to the next player
-                self._player_finish(sid)
+                self._player_finish(spot)
             else:
                 self._next_player()
                 self._winning_last_played = False
@@ -538,7 +538,7 @@ class Game:
         """
         return self.spot_sid_bidict[spot]
 
-    def _get_spot(self, sid: str) -> int:
+    def get_spot(self, sid: str) -> int:
         """
         input: sid; output: spot
         """
