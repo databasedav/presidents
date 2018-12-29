@@ -43,7 +43,8 @@ export default {
   add_card (state, payload) {
     state.cards.set(payload.card, false)
     // remove after Vue supports maps
-    state.cards_arr.push(payload.card)
+    // also ew
+    state.cards_arr = Array.from(state.cards.keys())
   },
 
   update_current_hand_str (state, payload) {
@@ -52,7 +53,7 @@ export default {
 
   remove_card (state, payload) {
     state.cards.delete(payload.card)
-    // this is gross
+    // TODO: this is gross
     state.cards_arr = Array.from(state.cards.keys())
     state.cards_selected_arr.splice(payload.card, 1, false)
   },
@@ -92,24 +93,27 @@ export default {
   },
 
   select_asking_option (state, payload) {
-    state.ask_values.set(payload.value, true)
+    state.asking_options.set(payload.value, true)
     // remove after Vue supports maps
-    state.ask_values_selected_arr.splice(payload.value, 1, true)
+    state.asking_options_selected_arr.splice(payload.value, 1, true)
   },
 
   deselect_asking_option (state, payload) {
-    state.ask_values.set(payload.value, false)
+    state.asking_options.set(payload.value, false)
     // remove after Vue supports maps
-    state.ask_values_selected_arr.splice(payload.value, 1, false)
+    state.asking_options_selected_arr.splice(payload.value, 1, false)
+  },
+
+  remove_asking_option (state, payload) {
+    state.asking_options.delete(payload.value)
+    // TODO: this is gross
+    state.asking_options_arr = Array.from(state.asking_options.keys())
+    state.asking_options_selected_arr.splice(payload.value, 1, false)
   },
 
   highlight_giving_options (state, payload) {
     for (var i in payload.options) {
-      state.giving_options_arr.splice(payload.options[i], 1, true)
+      state.giving_options_arr.splice(payload.options[i], 1, payload.highlight)
     }
   },
-
-  removing_asking_options (state, payload) {
-    
-  }
 }

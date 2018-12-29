@@ -4,7 +4,7 @@ export default {
   },
 
   at_least_one_ask_value_selected (state) {
-    return state.ask_values_selected_arr.some(selected => selected)
+    return state.asking_options_selected_arr.some(selected => selected)
   },
 
   alt_play_button_str (state, getters) {

@@ -25,6 +25,7 @@
 
     <v-btn
       color='info'
+      disabled='true'
     >
       store hand
     </v-btn>

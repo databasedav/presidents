@@ -124,7 +124,7 @@ def play():
 @socketio.on('pass')
 def pass_turn():
     game, spot = get_game_spot_from_sid(get_sid())
-    game.maybe_pass_turn(spot)
+    game.pass_turn(spot)
 
 
 @socketio.on('restart')

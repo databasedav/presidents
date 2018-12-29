@@ -8,9 +8,9 @@ from bidict import bidict
 import random
 from itertools import cycle
 
-# TODO: change all sid's to spot's because the game should operate on
-#       and not have to pass around the sid everywhere. this includes
-#       changing the sid_spot_dict to a spot_sid_dict.
+
+# TODO: make separate base game that does not emit for local testing
+# TODO: nice way to remove asking options after takes are exhausted
 
 
 class Game:
@@ -35,8 +35,6 @@ class Game:
         self._current_player: [None, int] = None
         self._num_consecutive_passes: int = 0
         self._positions: List[int] = list()
-        self._takes_remaining: List[int] = [0 for _ in range(4)]
-        self._gives_remaining: List[int] = [0 for _ in range(4)]
         self._num_consecutive_games: int = 0
         self._winning_last_played: bool = False
         self.spot_sid_bidict = bidict()  # spot to sid
@@ -50,8 +48,10 @@ class Game:
         self._already_asked: List[Set[int]] = [set() for _ in range(4)]
         self._waiting: List[bool] = [False for _ in range(4)]
         self._giving_options: List[Set] = [set() for _ in range(4)]
-        self._given: List[Set[int]] = [set() for _ in range(2)]  # only for askers
-        self._taken: List[Set[int]] = [set() for _ in range(2)]  # only for askers
+        self._takes_remaining: List[int] = [0 for _ in range(4)]
+        self._gives_remaining: List[int] = [0 for _ in range(4)]
+        self._given: List[Set[int]] = [set() for _ in range(4)]
+        self._taken: List[Set[int]] = [set() for _ in range(4)]
 
     @property
     def _current_player_sid(self) -> str:
@@ -86,7 +86,7 @@ class Game:
                 if self._get_unlocked(spot):
                     self.maybe_play_current_hand(spot)
                 else:
-                    self.maybe_pass_turn(spot)
+                    self.pass_turn(spot)
 
     def _all_off_turn(self):
         self._emit('all_off_turn', {}, self._room)
@@ -158,7 +158,7 @@ class Game:
             chamber.reset()
             chamber.set_sid(sid)
             chamber.add_cards(decks[spot])
-            self._update_spot(spot, sid)
+            # self._update_spot(spot, sid)
 
     def _update_spot(self, spot: int, sid: str) -> None:
         self._emit('update_spot', {'spot': spot}, sid)
@@ -251,18 +251,17 @@ class Game:
         self._set_asker(spot, 1)
 
     def _set_vice_asshole(self, spot: int) -> None:
-        self._set_giver(spot, 1)
+        self._set_giver(spot)
 
     def _set_asshole(self, spot: int) -> None:
-        self._set_giver(spot, 2)
+        self._set_giver(spot)
 
     def _set_asker(self, spot: int, takes_and_gives: int) -> None:
         self._set_takes_remaining(spot, takes_and_gives)
         self._set_gives_remaining(spot, takes_and_gives)
         self._emit('set_asker', {}, self._get_sid(spot))
 
-    def _set_giver(self, spot: int, gives) -> None:
-        self._set_gives_remaining(spot, gives)
+    def _set_giver(self, spot: int) -> None:
         self._emit('set_giver', {}, self._get_sid(spot))
 
     def _set_takes_remaining(self, spot: int, takes: int) -> None:
@@ -318,8 +317,10 @@ class Game:
             self.lock(spot)
         except FullHandError:
             self._alert_hand_full(spot)
-
-    def maybe_pass_turn(self, spot: int) -> None:
+    # TODO
+    # def maybe_unlock_pass_turn(self, spot: int) -> None:
+        
+    def pass_turn(self, spot: int) -> None:
         if not self._is_current_player(spot):
             self._alert_can_only_pass_on_turn(spot)
             return
@@ -354,13 +355,13 @@ class Game:
         self._emit('clear_hand_in_play', {}, self._room)
 
     def _initiate_trading(self) -> None:
-        self.trading = True
         self._clear_hand_in_play()
         self._all_off_turn()
         self._deal_cards()
         self._set_trading(True)
 
     def _set_trading(self, trading: bool) -> None:
+        self.trading = trading
         self._emit('set_trading', {'trading': trading}, self._room)
 
     def ask_for_card(self, spot: int) -> None:
@@ -371,7 +372,7 @@ class Game:
             self._alert_dont_use_console(spot)
         # TODO: remove trading options when takes run out
         value = self._get_selected_asking_option(spot)
-        asked = self._get_opposing_position(spot)
+        asked = self._get_opposing_position_spot(spot)
         # chamber for asked
         chamber = self._get_chamber(asked)
         giving_options = set()
@@ -386,8 +387,15 @@ class Game:
             self._set_giving_options(asked, giving_options)
             self._wait_for_reply(spot)
 
+    def _get_given(self, spot: int) -> Set[int]:
+        return self._given[spot]
+
+    def _add_to_given(self, spot: int, card: int) -> None:
+        self._get_given(spot).add(card)
+
     def _remove_asking_option(self, spot: int, value: int) -> None:
-        self._emit('removing_asking_option', {'value': value}, self._get_sid(spot))
+        self.lock(spot)
+        self._emit('remove_asking_option', {'value': value}, self._get_sid(spot))
 
     def _add_to_already_asked(self, spot: int, value: int) -> None:
         self._get_already_asked(spot).add(value)
@@ -409,24 +417,26 @@ class Game:
     def _is_waiting(self, spot: int) -> bool:
         return self._waiting[spot]
 
-    def _highlight_giving_options(self, spot: int, giving_options: Set[int]) -> None:
-        self._emit('highlight_giving_options', {'options': list(giving_options)}, self._get_sid(spot))
+    def _highlight_giving_options(self, spot: int, giving_options: Set[int], highlight: bool) -> None:
+        self._emit('highlight_giving_options', {'options': list(giving_options), 'highlight': highlight}, self._get_sid(spot))
 
     def _set_giving_options(self, spot: int, giving_options: Set[int]) -> None:
-        self._highlight_giving_options(spot, giving_options)
+        if giving_options:
+            highlight: bool = True
+        else:
+            giving_options = self._get_giving_options(spot)
+            highlight: bool = False
+        self._highlight_giving_options(spot, giving_options, highlight)
         self._giving_options[spot] = giving_options
 
     def _get_giving_options(self, spot: int) -> Set[int]:
         return self._giving_options[spot]
 
-    def _no_dont_have_such_card(self):
-        ...
-
     def _get_position(self, spot: int) -> int:
         return self._positions.index(spot)
 
-    def _get_opposing_position(self, spot: int) -> int:
-        return 3 - self._get_position(spot)
+    def _get_opposing_position_spot(self, spot: int) -> int:
+        return self._positions[3 - self._get_position(spot)]
 
     def update_selected_asking_option(self, spot: int, value: int) -> None:
         if not self._is_asker(spot):
@@ -457,6 +467,9 @@ class Game:
         if self._is_waiting(spot):
             self._alert_cannot_ask_while_waiting(spot)
             return
+        if not self._has_takes_remaining(spot):
+            self._alert_no_takes_remaining(spot)
+            return
         selected_asking_option: int = self._get_selected_asking_option(spot)
         # selected_asking_option is 0 if no trading option is selected
         if not selected_asking_option:
@@ -473,10 +486,12 @@ class Game:
     def _select_asking_option(self, spot: int, value: int) -> None:
         self._set_selected_asking_option(spot, value)
         self._get_chamber(spot).deselect_selected()
+        self.lock(spot)
         self._emit('select_asking_option', {'value': value}, self._get_sid(spot))
 
     def _deselect_asking_option(self, spot: int, value: int) -> None:
         self._set_selected_asking_option(spot, 0)
+        self.lock(spot)
         self._emit('deselect_asking_option', {'value': value}, self._get_sid(spot))
 
     def _set_selected_asking_option(self, spot: int, value: int) -> None:
@@ -492,38 +507,87 @@ class Game:
         if not self.trading:
             self._alert_dont_use_console(spot)
             return
-        hand = self._get_current_hand(spot)
-        # TODO: add ability to give invalid 2 card hand
+        if self._is_asker(spot) and not self._has_gives_remaining(spot):
+            self._alert_no_gives_remaining(spot)
+            return
+        hand: Hand = self._get_current_hand(spot)
+        if hand.is_empty:
+            self._alert_add_cards_before_unlocking(spot)
+            return
+        # TODO: add ability to give valid/invalid 2 card hand
         if not hand.is_single:
             self._alert_can_only_give_singles(spot)
+            return
+        card: int = hand[4]
         if self._is_giver(spot):
-            if hand[4] in self._get_giving_options(spot):
+            if card in self._get_giving_options(spot):
                 self._unlock(spot)
             else:
                 self._alert_can_only_give_a_giving_option(spot)
         elif self._is_asker(spot):
-            pass
+            if card in self._get_taken(spot):
+                self._alert_cannot_give_taken_card(spot)
+            else:
+                self._unlock(spot)
 
-    def _give_card(self, spot: int) -> None:
-        """
-        how to handle gives?
-
-        asker cannot give a card that was just given to them
-        should givees be able to see the card immediately after they are given?
-            should the given card be with the normal cards and selectable?
-            maybe just allow free use of the card but check that it isn't being
-                given after being taken or being taken after being given
-        """
+    def give_card(self, spot: int) -> None:
         card = self._get_current_hand(spot)[4]
-        if card in self._get_taken(spot):
-            pass
         giver_chamber: EmittingChamber = self._get_chamber(spot)
-        taker_chamber: EmittingChamber = self._get_chamber(self._get_opposing_position(spot))
-        
-        giver_chamber
+        asker_chamber: EmittingChamber = self._get_chamber(self._get_opposing_position_spot(spot))
+        giver_chamber.remove_card(card)
+        asker_chamber.add_card(card)
+        if self._is_asker(spot):
+            self._add_to_given(spot, card)
+            self._decrement_gives_remaining(spot)
+        elif self._is_giver(spot):
+            self._set_giving_options(spot, set())
+            asker_spot = self._get_opposing_position_spot(spot)
+            self._add_to_taken(asker_spot, card)
+            self._decrement_takes_remaining(asker_spot)
+            self._set_waiting(asker_spot, False)
+        self.lock(spot)
+
+    def _get_takes_remaining(self, spot: int) -> int:
+        return self._takes_remaining[spot]
+
+    def _has_takes_remaining(self, spot: int) -> bool:
+        return self._get_takes_remaining(spot) > 0
+
+    def _decrement_takes_remaining(self, spot: int) -> None:
+        self._takes_remaining[spot] -= 1
+        # TODO: remove asking options when no takes remaining
+        if self._no_takes_or_gives_remaining:
+            self._end_trading()
+
+    def _get_gives_remaining(self, spot: int) -> int:
+        return self._gives_remaining[spot]
+
+    def _has_gives_remaining(self, spot: int) -> bool:
+        return self._get_gives_remaining(spot) > 0
+
+    def _decrement_gives_remaining(self, spot: int) -> None:
+        self._gives_remaining[spot] -= 1
+        if self._no_takes_or_gives_remaining:
+            self._end_trading()
 
     def _get_taken(self, spot: int) -> Set[int]:
         return self._taken[spot]
+
+    @property
+    def _no_takes_or_gives_remaining(self) -> bool:
+        return not any(self._takes_remaining) and not any(self._gives_remaining)
+
+    def _add_to_taken(self, spot: int, card: int) -> None:
+        self._get_taken(spot).add(card)
+
+    def _end_trading(self) -> None:
+        # setup turn manager based on cards in chambers since the 3 of
+        # clubs may have changed hands
+        decks = self._get_decks_from_chambers()
+        c3_index = np.where(decks == 1)[0][0]  # get which deck has the 3 of clubs
+        self._turn_manager = TurnManager(c3_index)
+        self._set_trading(False)
+        self._next_player()
 
     def _get_decks_from_chambers(self):
         deck = list()
@@ -621,6 +685,15 @@ class Game:
 
     def _alert_can_only_give_a_giving_option(self, spot: int) -> None:
         self._emit_alert("you can only give a highlighted option", spot)
+
+    def _alert_cannot_give_taken_card(self, spot: int) -> None:
+        self._emit_alert("you cannot give a card you took", spot)
+
+    def _alert_no_takes_remaining(self, spot: int) -> None:
+        self._emit_alert("you have no takes remaining", spot)
+
+    def _alert_no_gives_remaining(self, spot: int) -> None:
+        self._emit_alert("you have no gives remaining", spot)
 
     # def _message_hand_played(self, sid: str, hand: Hand):
     #     self._emit_alert("please don't hax", sid)

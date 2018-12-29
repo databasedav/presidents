@@ -2,9 +2,9 @@
   <div>
     <v-btn
       class='rank'
-      v-for='value in this.ask_values'
+      v-for='value in this.asking_options'
       :key='52 + value'
-      :outline='ask_values_selected_arr[value]'
+      :outline='asking_options_selected_arr[value]'
       @click='$emit("asking_click", value)'
     >
       {{ ranks[value - 1] }}
@@ -34,12 +34,12 @@ export default {
   },
 
   computed: {
-    ask_values () {
-      return this.$store.state[this.namespace].ask_values_arr
+    asking_options () {
+      return this.$store.state[this.namespace].asking_options_arr
     },
 
-    ask_values_selected_arr () {
-      return this.$store.state[this.namespace].ask_values_selected_arr
+    asking_options_selected_arr () {
+      return this.$store.state[this.namespace].asking_options_selected_arr
     },
 
 

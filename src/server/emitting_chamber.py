@@ -1,4 +1,5 @@
 from __future__ import annotations
+from hand import Hand
 from chamber import Chamber, HandNode, HandPointerNode
 from typing import Dict, List, Any
 import numpy as np
@@ -38,7 +39,7 @@ class EmittingChamber(Chamber):
         self._emit('add_card', {'card': int(card)})
         super().add_card(card)
         
-    def remove_card(self, card: np.uint8, check: bool) -> None:
+    def remove_card(self, card: np.uint8, check: bool=True) -> None:
         super().remove_card(card, check)
         self._emit('remove_card', {'card': int(card)})
         self._emit_update_current_hand_str()

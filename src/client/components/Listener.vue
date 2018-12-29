@@ -107,8 +107,8 @@ export default {
       payload => commit(this.namespace, 'highlight_giving_options', payload)
     )
 
-    this.socket.on('removing_asking_option',
-      payload => commit(this.namespace, 'removing_asking_option', payload)
+    this.socket.on('remove_asking_option',
+      payload => commit(this.namespace, 'remove_asking_option', payload)
     )
 
     this.socket.on('update_takes',
