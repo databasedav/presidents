@@ -436,7 +436,7 @@ class Game:
         giving_options = set()
         # TODO: set comprehension this maybe?
         for card in range((value - 1) * 4 + 1, value * 4 + 1):
-            if card in chamber and card not in self._get_given(spot):
+            if card in chamber and card not in self._given[spot]:
                 giving_options.add(card)
         if not giving_options:
             self._add_to_already_asked(spot, value)
@@ -445,32 +445,23 @@ class Game:
             self._set_giving_options(asked, giving_options)
             self._wait_for_reply(spot)
 
-    def _get_given(self, spot: int) -> Set[int]:
-        return self._given[spot]
-
     def _add_to_given(self, spot: int, card: int) -> None:
-        self._get_given(spot).add(card)
+        self._given[spot].add(card)
 
     def _remove_asking_option(self, spot: int, value: int) -> None:
         self.lock(spot)
         self._emit('remove_asking_option', {'value': value}, self._get_sid(spot))
 
     def _add_to_already_asked(self, spot: int, value: int) -> None:
-        self._get_already_asked(spot).add(value)
-
-    def _get_already_asked(self, spot: int) -> Set[int]:
-        return self._already_asked[spot]
+        self._get_already_asked[spot].add(value)
 
     def _is_already_asked(self, spot: int, value: int) -> bool:
-        return value in self._get_already_asked(spot)
+        return value in self._get_already_asked[spot]
 
     def _wait_for_reply(self, spot: int) -> None:
         self._deselect_selected_asking_option(spot)
         self.lock(spot)
-        self._set_waiting(spot, True)
-
-    def _set_waiting(self, spot: int, waiting: bool) -> None:
-        self._waiting[spot] = waiting
+        self._waiting[spot] = True
 
     def _is_waiting(self, spot: int) -> bool:
         return self._waiting[spot]
@@ -602,7 +593,7 @@ class Game:
             asker_spot = self._get_opposing_position_spot(spot)
             self._add_to_taken(asker_spot, card)
             self._decrement_takes_remaining(asker_spot)
-            self._set_waiting(asker_spot, False)
+            self._waiting[asker_spot] = False
         self.lock(spot)
 
     def _get_takes_remaining(self, spot: int) -> int:
