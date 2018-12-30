@@ -1,10 +1,11 @@
 from __future__ import annotations
+
+from typing import List
+
 import numpy as np
-from llist import sllist, sllistnode, dllist, dllistnode
-from typing import List, Union, Generator, Dict, Any
+from llist import dllistnode
+
 from hand import Hand, CardNotInHandError
-from flask_socketio import emit
-import xxhash
 from utils.iternodes_dllist import IterNodesDLList
 
 
@@ -16,7 +17,7 @@ class Chamber:
     """
     Storage for cards and hands specifically designed for fast runtimes
     in context of front end interaction. Base class for EmittingChamber.
-    
+
     Uses doubly linked list because node removal is constant time.
 
     For operations that involve more than 1 card at a time, check that
@@ -40,7 +41,7 @@ class Chamber:
 
     # TODO: should be simple but meaningful
     def __repr__(self) -> str:
-        ...
+        return 'Chamber'
 
     @property
     def is_empty(self) -> bool:
@@ -71,7 +72,7 @@ class Chamber:
         current hand, e.g. during trading I imagine many people will
         just let the game default to giving the asking player the
         lowest matching card.
-        
+
         Using a try/except here because most of the time, the card will
         be in the hand but this should be empirically verified and the
         performance difference tested. TODO
@@ -109,7 +110,7 @@ class Chamber:
             cards.append(card)
             self._cards[card].appendnode(hand_pointer_node)
         self._hands.appendnode(hand_node)
-    
+
     def select_card(self, card: int, check: bool=True) -> None:
         if check:
             self._check_card(card)
@@ -120,7 +121,7 @@ class Chamber:
         # card passed to the function
         for hand_node in self._cards[card]:
             hand_node.increment_num_selected_cards()
-    
+
     def select_cards(self, cards) -> None:
         self._check_cards(cards)
         for card in cards:
@@ -132,7 +133,7 @@ class Chamber:
         self.current_hand.remove(card)
         for hand_node in self._cards[card]:
             hand_node.decrement_num_selected_cards()
-    
+
     def deselect_cards(self, cards) -> None:
         self._check_cards(cards)
         for card in cards:
@@ -146,18 +147,18 @@ class Chamber:
         for maybe_dll in self._cards:
             if maybe_dll is not None:
                 maybe_dll.clear()
-    
+
     def _check_card(self, card: int):
         if card not in self:
             raise CardNotInChamberError(f'{card} not in chamber.')
-    
+
     def _check_cards(self, cards):
         for card in cards:
             self._check_card(card)
 
     def deselect_selected(self) -> None:
         self.deselect_cards(self.current_hand)
-    
+
 
 class HandPointerDLList(IterNodesDLList):
     """
@@ -165,7 +166,7 @@ class HandPointerDLList(IterNodesDLList):
     """
     def __repr__(self) -> str:
         return 'HandPointerDLList'
-    
+
 
 class HandPointerNode(dllistnode):
     """
@@ -175,9 +176,10 @@ class HandPointerNode(dllistnode):
     def __init__(self, hand_node: HandNode) -> None:
         super().__init__(None)
         self.value: HandNode = hand_node
-    
+
     def __repr__(self):
         return 'HandPointerNode'
+
 
 class HandNodeDLList(IterNodesDLList):
     """
@@ -196,7 +198,7 @@ class HandNode(dllistnode):
     def __init__(self, hand_pointer_nodes: List[HandPointerNode]) -> None:
         super().__init__(hand_pointer_nodes)
         self._num_cards_selected: int = 0
-        
+
     def __repr__(self) -> str:
         return 'HandNode'
 

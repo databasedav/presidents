@@ -26,6 +26,6 @@ export default function state () {
     asking_options_selected_arr: Array(14).fill(false),
     giver: false,
     alt_play_button_str: String,
-    giving_options_arr: Array(52).fill(false)
+    giving_options_arr: Array(53).fill(false)
   }
 }

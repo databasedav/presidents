@@ -58,11 +58,11 @@ export default {
     state.cards_selected_arr.splice(payload.card, 1, false)
   },
 
-  update_spot (state, payload) {
+  set_spot (state, payload) {
     state.spot = payload.spot
   },
 
-  update_hand_in_play (state, payload) {
+  set_hand_in_play (state, payload) {
     state.hand_in_play = payload.hand_in_play
     state.hand_in_play_desc = payload.hand_in_play_desc
   },

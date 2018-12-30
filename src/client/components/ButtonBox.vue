@@ -25,7 +25,7 @@
 
     <v-btn
       color='info'
-      disabled='true'
+      :disabled='true'
     >
       store hand
     </v-btn>
@@ -63,9 +63,6 @@
     >
       play
     </v-btn>
-
-    <br>
-    <button @click="$emit('restart')">restart</button>
   </div>
 </template>
 

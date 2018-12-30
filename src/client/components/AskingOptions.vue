@@ -7,7 +7,7 @@
       :outline='asking_options_selected_arr[value]'
       @click='$emit("asking_click", value)'
     >
-      {{ ranks[value - 1] }}
+      {{ ranks[value] }}
     </v-btn>
   </div>
 </template>
@@ -29,7 +29,7 @@ export default {
   data () {
     return {
       // TODO: where to put this?
-      ranks: ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2']
+      ranks: [null, '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2']
     }
   },
 

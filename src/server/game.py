@@ -1,75 +1,85 @@
-from hand import Hand, DuplicateCardError, FullHandError
-from typing import List, Dict, Set, Any
-from chamber import CardNotInChamberError
-from emitting_chamber import EmittingChamber
-from flask_socketio import emit
-import numpy as np
-from bidict import bidict
 import random
 from itertools import cycle
+from typing import Any, Dict, List, Optional, Set, Union
+
+import numpy as np
+from bidict import bidict
+from flask_socketio import emit
+
+from chamber import CardNotInChamberError
+from emitting_chamber import EmittingChamber
+from hand import Hand, DuplicateCardError, FullHandError
 
 
 # TODO: make separate base game that does not emit for local testing
 # TODO: nice way to remove asking options after takes are exhausted
+# TODO: deal with mypy's treatment of nonetypes being passed into
+#       functions that do not take them
+# TODO: make Game JSON-serializable
+# TODO: make class more manageable (or not)
 
 
 class Game:
 
     def __init__(self) -> None:
         """
-        main event handler should have dict from each room
-        to the game object in that room; the game object
-        will be fed actions from the event handler with the
-        sid of the player who made that action, and the game
-        object has a dict from the sid to the spot number
-        which is used for everything else
-
-        has full control of the game
+        Represents a 'game' of presidents. Operates on 'spots'
+        attempting confirmation/allowal of certain moves (e.g. unlocking
+        play, unlocking pass, etc.), and then actually carrying out
+        those moves and changing the game state as necessary.
         """
-        # TODO: organize attributes
-        self._room: str = ''
-        self._hand_in_play: [BaseHand, Hand] = BaseHand
-        self._turn_manager: [None, TurnManager] = None
-        self._current_hands: List[Hand] = [Hand() for _ in range(4)]
-        self._chambers: List[EmittingChamber] = [EmittingChamber() for _ in range(4)]
-        self._current_player: [None, int] = None
-        self._num_consecutive_passes: int = 0
-        self._positions: List[int] = list()
-        self._num_consecutive_games: int = 0
-        self._winning_last_played: bool = False
-        self.spot_sid_bidict = bidict()  # spot to sid
-        self._unlocked: List[bool] = [False for _ in range(4)]
-        self._names: List[str] = [None for _ in range(4)]
-        self._open_spots = {i for i in range(4)}
+
+        # instance related attributes
+        self._room: Optional[str] = None
         self.num_players: int = 0
         self.num_spectators: int = 0  # TODO
+        self._num_consecutive_games: int = 0  # TODO
+
+        # setup and ID related attributes
+        self._open_spots = {i for i in range(4)}
+        self.spot_sid_bidict = bidict()
+        self._names: List[Optional[str]] = [None for _ in range(4)]
+
+        # game related attributes
+        self._turn_manager: Optional[TurnManager] = None
+        self._current_player: Optional[int] = None
+        self._chambers: List[EmittingChamber] = [
+            EmittingChamber() for _ in range(4)
+        ]
+        self._hand_in_play: Optional[Union[BaseHand, Hand]] = base_hand
+        self._num_consecutive_passes: int = 0
+        self._winning_last_played: bool = False
+        self._positions: List[int] = list()
+        self._unlocked: List[bool] = [False for _ in range(4)]
+
+        # trading related attributes
         self.trading: bool = False
         self._selected_asking_option: List[int] = [0 for _ in range(4)]
         self._already_asked: List[Set[int]] = [set() for _ in range(4)]
         self._waiting: List[bool] = [False for _ in range(4)]
-        self._giving_options: List[Set] = [set() for _ in range(4)]
+        self._giving_options: List[Optional[Set[int]]] = [
+            None for _ in range(4)
+        ]
         self._takes_remaining: List[int] = [0 for _ in range(4)]
         self._gives_remaining: List[int] = [0 for _ in range(4)]
         self._given: List[Set[int]] = [set() for _ in range(4)]
         self._taken: List[Set[int]] = [set() for _ in range(4)]
 
+    # properties
+
     @property
     def _current_player_sid(self) -> str:
         return self._get_sid(self._current_player)
 
-    def set_room(self, room: str) -> None:
-        self._room = room
+    @property
+    def _num_unfinished_players(self):
+        return self._turn_manager._num_unfinished_players
 
-    # TODO: only for testing not in final game
-    def restart(self) -> None:
-        sids = list(self.spot_sid_bidict.values())
-        self.clear_players()
-        for i, sid in enumerate(sids):
-            self.add_player(sid, f'fuck{i}')
-            chamber = self._get_chamber(spot)
-            chamber.reset()
-        self._all_off_turn()
-        self._start_round()
+    @property
+    def _no_takes_or_gives_remaining(self) -> bool:
+        return not any(self._takes_remaining) and not any(self._gives_remaining)
+
+    # testing related methods TODO: make a separate class for these
 
     def get_game_to_trading(self) -> None:
         """
@@ -77,7 +87,7 @@ class Game:
         state, i.e. each player has one of the 3's.
         """
         while not self.trading:
-            spot = self._current_player
+            spot: int = self._current_player
             chamber = self._get_chamber(spot)
             for card in chamber:
                 if card not in chamber.current_hand:
@@ -88,24 +98,15 @@ class Game:
                 else:
                     self.pass_turn(spot)
 
-    def _all_off_turn(self):
-        self._emit('all_off_turn', {}, self._room)
+    # setup related methods
 
-    # TODO: make Any type more specific
-    def _emit(self, event: str, payload: Dict[str, Any], room: str):
-        emit(event, payload, room=room)
-
-    def start_game(self):
-        if self.num_players == 1:
-            self._start_round()
-
-    @property
-    def _num_unfinished_players(self):
-        return self._turn_manager._num_unfinished_players
+    def set_room(self, room: str) -> None:
+        self._room = room
 
     def _rand_open_spot(self):
         """
-        removes random open spot; should not happen when there are no open spots
+        Returns random open spot. Should not happen when there are no
+        open spots.
         """
         assert self._open_spots
         spot = random.sample(self._open_spots, 1)[0]
@@ -113,37 +114,19 @@ class Game:
         return spot
 
     def add_player(self, sid: str, name: str) -> None:
-        self.spot_sid_bidict.inv[sid] = self._rand_open_spot()
-        # TODO self._set_name(sid, name)
+        rand_open_spot: int = self._rand_open_spot()
+        self.spot_sid_bidict.inv[sid] = rand_open_spot
+        self._set_name(rand_open_spot, name)
         self.num_players += 1
 
+    def _set_name(self, spot: int, name: Optional[str]) -> None:
+        self._names[spot] = name
+
     def remove_player(self, sid: str) -> None:
-        # TODO self._set_name(sid, None)
+        self._set_name(self.get_spot(sid), None)
         self._open_spots.add(self.get_spot(sid))
         self.spot_sid_bidict.inv.pop(sid)
         self.num_players -= 1
-
-    def clear_players(self) -> None:
-        self.spot_sid_bidict.clear()
-        self._names = [None for _ in range(4)]
-        self.num_players = 0
-        self._open_spots = {0, 1, 2, 3}
-        self._current_player = None
-
-    def _start_round(self) -> None:
-        deck = np.arange(1, 5, dtype=np.int32)  # deck of cards 1-52
-        np.random.shuffle(deck)  # shuffles deck inplace
-        decks = deck.reshape(4, 1)  # splits deck into 4 decks of 13
-        decks.sort(axis=1)  # sorts individual decks
-        c3_index = np.where(decks == 1)[0][0]  # get which deck has the 3 of clubs
-        self._turn_manager = TurnManager(c3_index)
-        self._next_player()
-        for spot, sid in self.spot_sid_bidict.items():
-            chamber = self._get_chamber(spot)
-            # chamber.reset()
-            chamber.set_sid(sid)
-            chamber.add_cards(decks[spot])
-            self._update_spot(spot, sid)
 
     def _deal_cards(self) -> None:
         deck = np.arange(1, 53, dtype=np.int32)  # deck of cards 1-52
@@ -158,72 +141,33 @@ class Game:
             chamber.reset()
             chamber.set_sid(sid)
             chamber.add_cards(decks[spot])
-            # self._update_spot(spot, sid)
+            # self._emit_set_spot(spot, sid)
 
-    def _update_spot(self, spot: int, sid: str) -> None:
-        self._emit('update_spot', {'spot': spot}, sid)
+    # game flow related methods
 
-    def maybe_unlock_play(self, spot: int):
-        """
-        can only unlock valid hands
-        """
-        # TODO: disable playing current hand when trading
-        # TODO: disable playing current hand when not your turn
-        hand = self._get_current_hand(spot)
-        if hand.is_empty:
-            self._alert_add_cards_before_unlocking(spot)
-            return
-        if not hand.is_valid:
-            self._alert_cannot_play_invalid_hand(spot)
-            return
-        hip = self._hand_in_play
-        if hip is BaseHand:  # start of the game
-            if self._is_current_player(spot):  # player with 3 of clubs
-                if 1 not in hand:  # card 1 is the 3 of clubs
-                    self._alert_3_of_clubs(spot)
-                    return
-                else:
-                    # any hand with the 3 of clubs is ok
-                    self._unlock(spot)
-            else:
-                # other players (without the 3 of clubs) can unlock
-                # whatever hand they want
-                self._unlock(spot)
-        elif hip is None:  # current player won last hand and can play any hand
-            self._unlock(spot)
-        else:
-            if hand > hip:
-                self._unlock(spot)
-            else:
-                self._alert_weaker_hand(spot)
-
-    def _is_current_player(self, spot: int) -> bool:
-        return spot == self._current_player
-
-    def maybe_play_current_hand(self, spot: int) -> None:
-        if not self._is_current_player(spot):
-            self._alert_can_only_play_on_turn(spot)
-            return
-        elif not self._get_unlocked(spot):
-            # store was modified to allow play emittal without unlocking
-            self._alert_dont_modify_dom(spot)
-            self.lock(spot)
-            return
-        else:
+    def _start_round(self) -> None:
+        deck = np.arange(1, 5, dtype=np.int32)  # deck of cards 1-52
+        np.random.shuffle(deck)  # shuffles deck inplace
+        decks = deck.reshape(4, 1)  # splits deck into 4 decks of 13
+        decks.sort(axis=1)  # sorts individual decks
+        c3_index = np.where(decks == 1)[0][0]  # get which deck has the 3 of clubs
+        self._turn_manager = TurnManager(c3_index)
+        self._next_player()
+        for spot, sid in self.spot_sid_bidict.items():
             chamber = self._get_chamber(spot)
-            hand = Hand.copy(chamber.current_hand)
-            chamber.remove_cards(hand)
-            self._num_consecutive_passes = 0
-            self.lock(spot)
-            self._update_hand_in_play(hand)
-            # TODO: self._message_hand_played(hand)
-
-            if chamber.is_empty:
-                # player_finish takes care of going to the next player
-                self._player_finish(spot)
-            else:
-                self._next_player()
-                self._winning_last_played = False
+            # chamber.reset()
+            chamber.set_sid(sid)
+            chamber.add_cards(decks[spot])
+            self._emit_set_spot(spot, sid)
+    
+    def _next_player(self, hand_won=False):
+        if self._current_player is not None:  # TODO: better way to check this
+            self._emit_flip_turn(self._current_player)
+        self._current_player = next(self._turn_manager)
+        # TODO: if hand_won:
+            # TODO: self._message_hand_won()
+        self._emit_flip_turn(self._current_player)
+        # TODO: self._message_announce_turn()
 
     def _player_finish(self, spot: int) -> None:
         # TODO: self._message_player_finished_position(sid)
@@ -243,6 +187,119 @@ class Game:
             self._positions.append(self._current_player)
             self._set_asshole(self._current_player)
             self._initiate_trading()
+
+    # playing and passing related methods
+
+    def maybe_unlock_play(self, spot: int): 
+        hand = self._get_current_hand(spot)
+        if hand.is_empty:
+            self._alert_add_cards_before_unlocking(spot)
+            return
+        if not hand.is_valid:
+            self._alert_cannot_play_invalid_hand(spot)
+            return
+        hip = self._hand_in_play
+        if hip is base_hand:  # start of the game
+            if self._is_current_player(spot):  # player with 3 of clubs
+                if 1 not in hand:  # card 1 is the 3 of clubs
+                    self._alert_3_of_clubs(spot)
+                    return
+                else:
+                    # any hand with the 3 of clubs is ok
+                    self._unlock(spot)
+            else:
+                # other players (without the 3 of clubs) can unlock
+                # whatever hand they want
+                self._unlock(spot)
+        elif hip is None:  # current player won last hand and can play any hand
+            self._unlock(spot)
+        else:
+            if hand > hip:
+                self._unlock(spot)
+            else:
+                self._alert_weaker_hand(spot)
+
+    def maybe_play_current_hand(self, spot: int) -> None:
+        if not self._is_current_player(spot):
+            self._alert_can_only_play_on_turn(spot)
+            return
+        elif not self._get_unlocked(spot):
+            # store was modified to allow play emittal without unlocking
+            self._alert_dont_modify_dom(spot)
+            self.lock(spot)
+            return
+        else:
+            chamber = self._get_chamber(spot)
+            hand = Hand.copy(chamber.current_hand)
+            chamber.remove_cards(hand)
+            self._num_consecutive_passes = 0
+            self.lock(spot)
+            self._set_hand_in_play(hand)
+            # TODO: self._message_hand_played(hand)
+            if chamber.is_empty:
+                # player_finish takes care of going to the next player
+                self._player_finish(spot)
+            else:
+                self._next_player()
+                self._winning_last_played = False
+    
+    # TODO
+    # def maybe_unlock_pass_turn(self, spot: int) -> None:
+        
+    def pass_turn(self, spot: int) -> None:
+        if not self._is_current_player(spot):
+            self._alert_can_only_pass_on_turn(spot)
+            return
+        hip = self._hand_in_play
+        if hip is base_hand:
+            self._alert_must_play_3_of_clubs(spot)
+            return
+        if hip is None:
+            self._alert_can_play_any_hand(spot)
+            return
+        self._num_consecutive_passes += 1
+        # TODO: self._message_passed(sid)
+        # all remaining players passed on a winning hand
+        if self._winning_last_played:
+            if self._num_consecutive_passes == self._num_unfinished_players:
+                self._hand_in_play = None
+                self._clear_hand_in_play()
+                self._next_player()
+                return
+            else:
+                self._next_player()
+        # all other players passed on a hand
+        elif self._num_consecutive_passes == self._num_unfinished_players - 1:
+            self._hand_in_play = None
+            self._clear_hand_in_play()
+            self._next_player(hand_won=True)
+            return
+        else:
+            self._next_player()
+
+    # trading related methods
+
+
+
+    
+
+    def _all_off_turn(self):
+        self._emit('all_off_turn', {}, self._room)
+
+    def _emit(self, event: str, payload: Dict[str, Union[int, str, List[int]]], room: str):
+        emit(event, payload, room=room)
+
+    
+
+    # getters
+
+
+
+    # setters
+
+    def _set_hand_in_play(self, hand: Hand) -> None:
+        self._emit_set_hand_in_play(hand)
+        self._hand_in_play = hand
 
     def _set_president(self, spot: int) -> None:
         self._set_asker(spot, 2)
@@ -270,25 +327,45 @@ class Game:
     def _set_gives_remaining(self, spot: int, gives: int) -> None:
         self._gives_remaining[spot] = gives
 
-    def _next_player(self, hand_won=False):
-        if self._current_player is not None:  # TODO: better way to check this
-            self._flip_turn(self._current_player)
-        self._current_player = next(self._turn_manager)
-        # TODO: if hand_won:
-            # TODO: self._message_hand_won()
-        self._flip_turn(self._current_player)
-        # TODO: self._message_announce_turn()
-        # if game_end:
-        #     return
 
-    def _flip_turn(self, spot: int) -> None:
-        self._emit('flip_turn', {}, self._get_sid(spot))
 
-    def _update_hand_in_play(self, hand: Hand) -> None:
-        self._emit('update_hand_in_play', {
+    # boolers
+
+    def _is_current_player(self, spot: int) -> bool:
+        return spot == self._current_player
+
+
+    # emitters
+
+    def _emit_set_spot(self, spot: int, sid: str) -> None:
+        self._emit('set_spot', {'spot': spot}, sid)
+
+    def _emit_set_hand_in_play(self, hand: Hand) -> None:
+        self._emit('set_hand_in_play', {
             'hand_in_play': hand.to_list(),
             'hand_in_play_desc': hand.id_desc}, self._room)
-        self._hand_in_play = hand
+
+    def _emit_flip_turn(self, spot: int) -> None:
+        self._emit('flip_turn', {}, self._get_sid(spot))
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 
     def _unlock(self, spot: int) -> None:
         self._emit('unlock', {}, self._get_sid(spot))
@@ -317,44 +394,14 @@ class Game:
             self.lock(spot)
         except FullHandError:
             self._alert_hand_full(spot)
-    # TODO
-    # def maybe_unlock_pass_turn(self, spot: int) -> None:
-        
-    def pass_turn(self, spot: int) -> None:
-        if not self._is_current_player(spot):
-            self._alert_can_only_pass_on_turn(spot)
-            return
-        hip = self._hand_in_play
-        if hip is BaseHand:
-            self._alert_must_play_3_of_clubs(spot)
-            return
-        if hip is None:
-            self._alert_can_play_any_hand(spot)
-            return
-        self._num_consecutive_passes += 1
-        # TODO: self._message_passed(sid)
-        # all remaining players passed on a winning hand
-        if self._winning_last_played:
-            if self._num_consecutive_passes == self._num_unfinished_players:
-                self._hand_in_play = None
-                self._clear_hand_in_play()
-                self._next_player()
-                return
-            else:
-                self._next_player()
-        # all other players passed on a hand
-        elif self._num_consecutive_passes == self._num_unfinished_players - 1:
-            self._hand_in_play = None
-            self._clear_hand_in_play()
-            self._next_player(hand_won=True)
-            return
-        else:
-            self._next_player()
+    
 
     def _clear_hand_in_play(self) -> None:
         self._emit('clear_hand_in_play', {}, self._room)
 
     def _initiate_trading(self) -> None:
+        # TODO: maybe just reset the entire game here
+        self._current_player = None
         self._clear_hand_in_play()
         self._all_off_turn()
         self._deal_cards()
@@ -573,9 +620,7 @@ class Game:
     def _get_taken(self, spot: int) -> Set[int]:
         return self._taken[spot]
 
-    @property
-    def _no_takes_or_gives_remaining(self) -> bool:
-        return not any(self._takes_remaining) and not any(self._gives_remaining)
+    
 
     def _add_to_taken(self, spot: int, card: int) -> None:
         self._get_taken(spot).add(card)
@@ -587,6 +632,7 @@ class Game:
         c3_index = np.where(decks == 1)[0][0]  # get which deck has the 3 of clubs
         self._turn_manager = TurnManager(c3_index)
         self._set_trading(False)
+        self._hand_in_play = base_hand
         self._next_player()
 
     def _get_decks_from_chambers(self):
@@ -597,15 +643,9 @@ class Game:
         return deck.reshape(4, 13)
 
     def _get_sid(self, spot: int) -> str:
-        """
-        input spot; output: sid
-        """
         return self.spot_sid_bidict[spot]
 
     def get_spot(self, sid: str) -> int:
-        """
-        input: sid; output: spot
-        """
         return self.spot_sid_bidict.inv[sid]
 
     def _get_president_and_vice_president(self) -> List[int]:
@@ -640,6 +680,8 @@ class Game:
 
     def _get_current_player_name(self) -> str:
         return self._names[self._current_player]
+
+    # alerting-related methods
 
     def _emit_alert(self, alert, spot: int) -> None:
         self._emit('alert', {'alert': alert}, self._get_sid(spot))
@@ -707,7 +749,7 @@ class Game:
 class BaseHand:
     """hand at begininning of game; 3 of clubs must be played on it"""
     pass
-BaseHand = BaseHand()
+base_hand = BaseHand()
 
 
 class TurnManager:

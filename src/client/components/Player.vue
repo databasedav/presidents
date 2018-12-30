@@ -14,7 +14,6 @@
     ></CardBox>
     <ButtonBox
       :namespace='namespace'
-      @restart='restart'
       @unlock='unlock'
       @lock='lock'
       @play='play'
@@ -67,10 +66,6 @@ export default {
 
     card_click(card) {
       this.socket.emit('card_click', {'card': card})
-    },
-
-    restart () {
-      this.socket.emit('restart')
     },
 
     unlock () {

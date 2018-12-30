@@ -43,8 +43,8 @@ export default {
       payload => commit(this.namespace, 'update_alert_str', payload)
     )
 
-    this.socket.on('update_hand_in_play',
-      payload => commit(this.namespace, 'update_hand_in_play', payload)
+    this.socket.on('set_hand_in_play',
+      payload => commit(this.namespace, 'set_hand_in_play', payload)
     )
 
     this.socket.on('alert',
@@ -75,8 +75,8 @@ export default {
       payload => commit(this.namespace, 'remove_card', payload)
     )
 
-    this.socket.on('update_spot',
-      payload => commit(this.namespace, 'update_spot', payload)
+    this.socket.on('set_spot',
+      payload => commit(this.namespace, 'set_spot', payload)
     )
 
     this.socket.on('clear_hand_in_play',
