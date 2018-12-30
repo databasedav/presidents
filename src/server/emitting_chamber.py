@@ -1,7 +1,7 @@
 from __future__ import annotations
 from hand import Hand
 from chamber import Chamber, HandNode, HandPointerNode
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import numpy as np
 from flask_socketio import emit
 
@@ -19,17 +19,19 @@ class EmittingChamber(Chamber):
     def __init__(self, cards: np.ndarray=None) -> None:
         super().__init__(cards)
         self._sid: str = None
-    
-    def _emit(self, event: str, payload: [Dict[str, Any], None]=None):
+
+    def _emit(self, event: str, payload: Dict[str, Any]):
         emit(event, payload, room=self._sid)
-    
+
     def reset(self) -> None:
-        self._emit('clear_cards')
+        self._emit('clear_cards', {})
         self._emit_update_current_hand_str()
         self.set_sid(None)
+        # TODO: deal with hands being removed, i.e. the asshole's stored
+        #       hands must be removed
         super().reset()
 
-    def set_sid(self, sid: str) -> None:
+    def set_sid(self, sid: Optional[str]) -> None:
         self._sid = sid
         for hand_node in self._hands.iter_nodes():
             hand_node.set_sid(sid)

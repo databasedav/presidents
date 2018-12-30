@@ -22,6 +22,10 @@ export default {
     state.unlocked = false
   },
 
+  set_unlocked (state, payload) {
+    state.unlocked = payload.unlocked
+  },
+
   clear_cards (state, payload) {
     state.cards.clear()
     state.cards_arr = new Array()

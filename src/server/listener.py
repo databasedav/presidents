@@ -1,7 +1,7 @@
 import eventlet
 # eventlet.monkey_patch()
 from json import dumps
-from game import Game
+from emitting_game import EmittingGame
 from flask import request, session
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit, join_room, leave_room
@@ -25,7 +25,7 @@ def catch_all(path):
 # games are modular but rooms should persist
 room = 'room'
 room_game_dict: Dict[str, Game] = dict()
-game: Game = Game()
+game: Game = EmittingGame()
 game.set_room(room)
 room_game_dict[room] = game
 sid_room_dict: Dict[str, str] = dict()

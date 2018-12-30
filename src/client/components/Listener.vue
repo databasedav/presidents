@@ -71,6 +71,10 @@ export default {
       payload => commit(this.namespace, 'lock', payload)
     )
 
+    this.socket.on('set_unlocked',
+      payload => commit(this.namespace, 'set_unlocked', payload)
+    )
+
     this.socket.on('remove_card',
       payload => commit(this.namespace, 'remove_card', payload)
     )

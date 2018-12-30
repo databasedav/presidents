@@ -1,13 +1,13 @@
 import random
 from itertools import cycle
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Union
 
 import numpy as np
 from bidict import bidict
 from flask_socketio import emit
 
-from chamber import CardNotInChamberError
 from emitting_chamber import EmittingChamber
+from chamber import Chamber, CardNotInChamberError
 from hand import Hand, DuplicateCardError, FullHandError
 
 
@@ -17,6 +17,8 @@ from hand import Hand, DuplicateCardError, FullHandError
 #       functions that do not take them
 # TODO: make Game JSON-serializable
 # TODO: make class more manageable (or not)
+# TODO: how to manage base Game alerts? Runtime errors?
+# TODO: get rid of trivial getters and setters
 
 
 class Game:
@@ -30,21 +32,18 @@ class Game:
         """
 
         # instance related attributes
-        self._room: Optional[str] = None
         self.num_players: int = 0
-        self.num_spectators: int = 0  # TODO
-        self._num_consecutive_games: int = 0  # TODO
+        self._num_consecutive_rounds: int = 0  # TODO
 
         # setup and ID related attributes
         self._open_spots = {i for i in range(4)}
-        self.spot_sid_bidict = bidict()
         self._names: List[Optional[str]] = [None for _ in range(4)]
 
         # game related attributes
         self._turn_manager: Optional[TurnManager] = None
         self._current_player: Optional[int] = None
-        self._chambers: List[EmittingChamber] = [
-            EmittingChamber() for _ in range(4)
+        self._chambers: List[Optional[Chamber]] = [
+            Chamber() for _ in range(4)
         ]
         self._hand_in_play: Optional[Union[BaseHand, Hand]] = base_hand
         self._num_consecutive_passes: int = 0
@@ -68,10 +67,6 @@ class Game:
     # properties
 
     @property
-    def _current_player_sid(self) -> str:
-        return self._get_sid(self._current_player)
-
-    @property
     def _num_unfinished_players(self):
         return self._turn_manager._num_unfinished_players
 
@@ -88,20 +83,17 @@ class Game:
         """
         while not self.trading:
             spot: int = self._current_player
-            chamber = self._get_chamber(spot)
+            chamber = self._chambers[spot]
             for card in chamber:
                 if card not in chamber.current_hand:
                     self.add_or_remove_card(spot, card)
                 self.maybe_unlock_play(spot)
-                if self._get_unlocked(spot):
+                if self._unlocked[spot]:
                     self.maybe_play_current_hand(spot)
                 else:
                     self.pass_turn(spot)
 
     # setup related methods
-
-    def set_room(self, room: str) -> None:
-        self._room = room
 
     def _rand_open_spot(self):
         """
@@ -113,64 +105,50 @@ class Game:
         self._open_spots.remove(spot)
         return spot
 
-    def add_player(self, sid: str, name: str) -> None:
-        rand_open_spot: int = self._rand_open_spot()
-        self.spot_sid_bidict.inv[sid] = rand_open_spot
-        self._set_name(rand_open_spot, name)
+    def add_player(self, name: str) -> None:
+        self._names[self._rand_open_spot()] = name
         self.num_players += 1
 
-    def _set_name(self, spot: int, name: Optional[str]) -> None:
-        self._names[spot] = name
-
-    def remove_player(self, sid: str) -> None:
-        self._set_name(self.get_spot(sid), None)
-        self._open_spots.add(self.get_spot(sid))
-        self.spot_sid_bidict.inv.pop(sid)
+    def remove_player(self, spot: int) -> None:
+        self._names[spot] = None
+        self._open_spots.add(spot)
         self.num_players -= 1
 
-    def _deal_cards(self) -> None:
+    def _make_shuffled_decks(self):
         deck = np.arange(1, 53, dtype=np.int32)  # deck of cards 1-52
         np.random.shuffle(deck)  # shuffles deck inplace
         decks = deck.reshape(4, 13)  # splits deck into 4 decks of 13
         decks.sort(axis=1)  # sorts individual decks
-        c3_index = np.where(decks == 1)[0][0]  # get which deck has the 3 of clubs
-        self._turn_manager = TurnManager(c3_index)
-        # self._next_player()
-        for spot, sid in self.spot_sid_bidict.items():
-            chamber = self._get_chamber(spot)
+        return decks
+
+    def _deal_cards(self) -> None:
+        decks = self._make_shuffled_decks()
+        for spot in zip(range(4), decks):
+            chamber = self._chambers[spot]
             chamber.reset()
-            chamber.set_sid(sid)
-            chamber.add_cards(decks[spot])
-            # self._emit_set_spot(spot, sid)
+            chamber.add_cards(decks)
+    
+    def _make_and_set_turn_manager(self) -> None:
+        decks = self._get_decks_from_chambers()
+        # get which deck has the 3 of clubs
+        c3_index = np.where(decks == 1)[0][0]
+        return TurnManager(c3_index)
 
     # game flow related methods
 
     def _start_round(self) -> None:
-        deck = np.arange(1, 5, dtype=np.int32)  # deck of cards 1-52
-        np.random.shuffle(deck)  # shuffles deck inplace
-        decks = deck.reshape(4, 1)  # splits deck into 4 decks of 13
-        decks.sort(axis=1)  # sorts individual decks
-        c3_index = np.where(decks == 1)[0][0]  # get which deck has the 3 of clubs
-        self._turn_manager = TurnManager(c3_index)
+        if not self._num_consecutive_rounds:
+            self._create_chambers()
+        self._deal_cards()
+        self._make_and_set_turn_manager()
         self._next_player()
-        for spot, sid in self.spot_sid_bidict.items():
-            chamber = self._get_chamber(spot)
-            # chamber.reset()
-            chamber.set_sid(sid)
-            chamber.add_cards(decks[spot])
-            self._emit_set_spot(spot, sid)
-    
-    def _next_player(self, hand_won=False):
-        if self._current_player is not None:  # TODO: better way to check this
-            self._emit_flip_turn(self._current_player)
+
+    def _next_player(self):
         self._current_player = next(self._turn_manager)
-        # TODO: if hand_won:
-            # TODO: self._message_hand_won()
-        self._emit_flip_turn(self._current_player)
         # TODO: self._message_announce_turn()
 
     def _player_finish(self, spot: int) -> None:
-        # TODO: self._message_player_finished_position(sid)
+        # TODO: self._message_player_finished_position(spot)
         self._positions.append(self._current_player)
         self._winning_last_played = True
         self._turn_manager.remove(self._current_player)
@@ -187,6 +165,30 @@ class Game:
             self._positions.append(self._current_player)
             self._set_asshole(self._current_player)
             self._initiate_trading()
+
+    # card management related methods
+
+    def add_or_remove_card(self, spot: int, card: int) -> None:
+        chamber = self._chambers[spot]
+        # TODO: verify to add or remove to be first empirically; may
+        #       potentially justify looking before leaping if
+        #       distribution is symmetric
+        try:
+            chamber.select_card(card)
+            self.lock(spot)
+        except CardNotInChamberError:
+            self._alert_dont_modify_dom(spot)
+            # TODO self._reset_card_values()
+        except DuplicateCardError:
+            # such an error can only occur if check passes
+            chamber.deselect_card(card, check=False)
+            self.lock(spot)
+        except FullHandError:
+            self._alert_hand_full(spot)
+
+    # TODO
+    def store_hand(self, spot: int) -> None:
+        ...
 
     # playing and passing related methods
 
@@ -223,13 +225,13 @@ class Game:
         if not self._is_current_player(spot):
             self._alert_can_only_play_on_turn(spot)
             return
-        elif not self._get_unlocked(spot):
+        elif not self._unlocked[spot]:
             # store was modified to allow play emittal without unlocking
             self._alert_dont_modify_dom(spot)
             self.lock(spot)
             return
         else:
-            chamber = self._get_chamber(spot)
+            chamber = self._chambers[spot]
             hand = Hand.copy(chamber.current_hand)
             chamber.remove_cards(hand)
             self._num_consecutive_passes = 0
@@ -263,7 +265,7 @@ class Game:
         if self._winning_last_played:
             if self._num_consecutive_passes == self._num_unfinished_players:
                 self._hand_in_play = None
-                self._clear_hand_in_play()
+                self._emit_clear_hand_in_play()
                 self._next_player()
                 return
             else:
@@ -271,7 +273,8 @@ class Game:
         # all other players passed on a hand
         elif self._num_consecutive_passes == self._num_unfinished_players - 1:
             self._hand_in_play = None
-            self._clear_hand_in_play()
+            self._emit_clear_hand_in_play()
+            # TODO: self._message_hand_won(self._current_player)
             self._next_player(hand_won=True)
             return
         else:
@@ -286,8 +289,7 @@ class Game:
     def _all_off_turn(self):
         self._emit('all_off_turn', {}, self._room)
 
-    def _emit(self, event: str, payload: Dict[str, Union[int, str, List[int]]], room: str):
-        emit(event, payload, room=room)
+    
 
     
 
@@ -327,6 +329,9 @@ class Game:
     def _set_gives_remaining(self, spot: int, gives: int) -> None:
         self._gives_remaining[spot] = gives
 
+    def _set_chamber(self, spot: int, chamber: Chamber) -> None:
+        self._chambers[spot] = chamber
+
 
 
     # boolers
@@ -337,6 +342,13 @@ class Game:
 
     # emitters
 
+    def _emit(self, event: str, payload: Dict[str, Union[int, str, List[int]]], spot_or_room: Union[int, str]):
+        # TODO: verify EAFP or LBYL empirically
+        try:  # is a spot
+            emit(event, payload, room=self._get_sid(spot_or_room))
+        except KeyError:  # is an sid
+            emit(event, payload, room=spot_or_room)
+
     def _emit_set_spot(self, spot: int, sid: str) -> None:
         self._emit('set_spot', {'spot': spot}, sid)
 
@@ -346,7 +358,19 @@ class Game:
             'hand_in_play_desc': hand.id_desc}, self._room)
 
     def _emit_flip_turn(self, spot: int) -> None:
-        self._emit('flip_turn', {}, self._get_sid(spot))
+        self._emit('flip_turn', {}, spot)
+
+    
+
+    def _emit_set_unlocked(self, spot: int, unlocked: bool) -> None:
+        self._emit('set_unlocked', {'unlocked': unlocked}, spot)
+    
+    def test(self):
+        _emit_to_all_players(self._emit_clear_hand_in_play)
+
+    def _emit_to_all_players(self, emit_method: Callable[[int], None], payload: Dict[str, Union[int, str, List[int]]]):
+        for sid in self.spot_sid_bidict.values():
+            emit_method()
     
 
     
@@ -360,49 +384,36 @@ class Game:
     
 
     
-
     
-
-    
-
-    
-
     def _unlock(self, spot: int) -> None:
-        self._emit('unlock', {}, self._get_sid(spot))
+        self._emit_set_unlocked(spot, True)
         self._set_unlocked(spot, True)
 
     def lock(self, spot: int) -> None:
-        self._emit('lock', {}, self._get_sid(spot))
+        self._emit_set_unlocked(spot, False)
         self._set_unlocked(spot, False)
 
-    def add_or_remove_card(self, spot: int, card: int) -> None:
-        chamber = self._get_chamber(spot)
-        # TODO: verify to add or remove to be first empirically; may
-        #       potentially justify looking before leaping if
-        #       distribution is symmetric
-        try:
-            chamber.select_card(card)
-            if self.is_asking(spot):
-                self._deselect_asking_option(spot, self._get_selected_asking_option(spot))
-            self.lock(spot)
-        except CardNotInChamberError:
-            self._alert_dont_modify_dom(spot)
-            # TODO self._reset_card_values()
-        except DuplicateCardError:
-            # such an error can only occur if check passes
-            chamber.deselect_card(card, check=False)
-            self.lock(spot)
-        except FullHandError:
-            self._alert_hand_full(spot)
+    
     
 
-    def _clear_hand_in_play(self) -> None:
+    def _emit_clear_hand_in_play(self) -> None:
         self._emit('clear_hand_in_play', {}, self._room)
+    
+    def _emit_clear_hand_in_play(self, spot: int) -> None:
+        self._emit('clear_hand_in_play', {}, self._get_sid(spot))
+
+    
+
+    def _emit_to_room(self, emit_method: Callable[[int], None]):
+        emit_method()
+
+    
+        
 
     def _initiate_trading(self) -> None:
         # TODO: maybe just reset the entire game here
         self._current_player = None
-        self._clear_hand_in_play()
+        self._emit_clear_hand_in_play()
         self._all_off_turn()
         self._deal_cards()
         self._set_trading(True)
@@ -532,7 +543,7 @@ class Game:
 
     def _select_asking_option(self, spot: int, value: int) -> None:
         self._set_selected_asking_option(spot, value)
-        self._get_chamber(spot).deselect_selected()
+        self._chambers[spot].deselect_selected()
         self.lock(spot)
         self._emit('select_asking_option', {'value': value}, self._get_sid(spot))
 
@@ -579,7 +590,7 @@ class Game:
 
     def give_card(self, spot: int) -> None:
         card = self._get_current_hand(spot)[4]
-        giver_chamber: EmittingChamber = self._get_chamber(spot)
+        giver_chamber: EmittingChamber = self._chambers[spot]
         asker_chamber: EmittingChamber = self._get_chamber(self._get_opposing_position_spot(spot))
         giver_chamber.remove_card(card)
         asker_chamber.add_card(card)
@@ -639,8 +650,7 @@ class Game:
         deck = list()
         for chamber in self._chambers:
             deck.extend(chamber)
-        deck = np.array(deck)
-        return deck.reshape(4, 13)
+        return np.array(deck).reshape(4, 13)
 
     def _get_sid(self, spot: int) -> str:
         return self.spot_sid_bidict[spot]
@@ -660,23 +670,11 @@ class Game:
     def _is_giver(self, spot: int) -> bool:
         return spot in self._get_asshole_and_vice_asshole()
 
-    def _get_chamber(self, spot: int) -> EmittingChamber:
-        return self._chambers[spot]
-
     def _get_current_hand(self, spot: int) -> Hand:
-        return self._get_chamber(spot).current_hand
-
-    def _get_unlocked(self, spot: int) -> bool:
-        return self._unlocked[spot]
+        return self._chambers[spot].current_hand
 
     def _set_unlocked(self, spot: int, unlocked: bool) -> None:
         self._unlocked[spot] = unlocked
-
-    def _set_name(self, spot: int, name: str) -> None:
-        self._names[spot] = name
-
-    def _get_name(self, spot: int) -> str:
-        return self._names[spot]
 
     def _get_current_player_name(self) -> str:
         return self._names[self._current_player]
