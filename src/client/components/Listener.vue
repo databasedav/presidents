@@ -118,7 +118,6 @@ export default {
     this.socket.on('set_gives_remaining',
       payload => commit(this.namespace, 'set_gives_remaining', payload)
     )
-
   },
 
 }
