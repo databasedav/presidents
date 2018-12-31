@@ -33,7 +33,7 @@ import Listener from './Listener.vue'
 import InPlayBox from './InPlayBox.vue'
 import AlertSnackbar from './AlertSnackbar'
 
-import { namespaced_getter } from '../utils/utils'
+import { namespaced_getter, createSinglePlayerStore, register_namespaced_module } from '../utils/utils'
 
 
 export default {
@@ -56,7 +56,7 @@ export default {
   },
 
   created () {
-    
+    register_namespaced_module(this.namespace, createSinglePlayerStore())
     this.socket = io(`//${window.location.host}`, { forceNew: true })
   },
 

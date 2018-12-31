@@ -1,8 +1,8 @@
 <template>
   <div id="app">
     <v-app>
-      <Tester/>
-      <!-- <Home/> -->
+      <!-- <Tester/> -->
+      <Home/>
     </v-app>
   </div>
 </template>
