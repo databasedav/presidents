@@ -21,18 +21,27 @@ socketio = SocketIO(app)
 def catch_all(path):
     return render_template('index.html')
 
-# should deal with room list separately from games because
-# games are modular but rooms should persist
-room = 'room'
+
 room_game_dict: Dict[str, EmittingGame] = dict()
-game: EmittingGame = EmittingGame()
-game.set_room(room)
-room_game_dict[room] = game
+
+for room in ['fuck', 'shit']:
+    game = EmittingGame()
+    game.set_room(room)
+    room_game_dict[room] = game
+
 sid_room_dict: Dict[str, str] = dict()
+
+def room_list():
+    return [{'room': room, 'num_players': game.num_players} for room, game in room_game_dict.items()]
 
 
 def get_sid() -> str:
     return request.sid
+
+
+@socketio.on('refresh')
+def refresh():
+    emit('refresh', {'room_list': room_list()}, room=get_sid())
 
 
 def get_game_from_room(room: str) -> EmittingGame:
@@ -66,8 +75,9 @@ def join_room_as_player(sid: str, room: str) -> None:
 def connect():
     sid = get_sid()
     print(f'{sid} connected.')
-    room = 'room'
-    join_room_as_player(sid, room)
+
+#     room = 'room'
+#     join_room_as_player(sid, room)
 
 
 @socketio.on('list servers')
@@ -151,6 +161,6 @@ def give():
     game.give_card(spot)
 
 
-@main
-def main():
-    socketio.run(app, host='0.0.0.0', debug=True)
+# @main
+# def main():
+#     socketio.run(app, host='0.0.0.0', debug=True)

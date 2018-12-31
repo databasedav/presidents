@@ -61,13 +61,13 @@ export default {
     dialog: false,
     headers: [
       {
-        text: 'room name',
+        text: 'room',
         align: 'left',
         sortable: false,
-        value: 'name'
+        value: 'room'
       },
       { text: '# players', value: 'num_players' },
-      { text: 'actions', value: 'name', sortable: false }
+      { text: 'actions', value: 'room', sortable: false }
     ],
     rooms: [],
     editedIndex: -1,
@@ -93,11 +93,11 @@ export default {
     initialize () {
       this.rooms = [
         {
-          name: 'fuck',
+          room: 'fuck',
           num_players: 4
         },
         {
-          name: 'shit',
+          room: 'shit',
           num_players: 2
         },
       ]
