@@ -55,12 +55,8 @@ export default {
       payload => commit(this.namespace, 'clear_cards', payload)
     )
 
-    this.socket.on('flip_turn',
-      payload => commit(this.namespace, 'flip_turn', payload)
-    )
-
-    this.socket.on('all_off_turn',
-      payload => commit(this.namespace, 'all_off_turn', payload)
+    this.socket.on('set_on_turn',
+      payload => commit(this.namespace, 'set_on_turn', payload)
     )
 
     this.socket.on('unlock',
@@ -107,20 +103,20 @@ export default {
       payload => commit(this.namespace, 'deselect_asking_option', payload)
     )
 
-    this.socket.on('highlight_giving_options',
-      payload => commit(this.namespace, 'highlight_giving_options', payload)
+    this.socket.on('set_giving_options',
+      payload => commit(this.namespace, 'set_giving_options', payload)
     )
 
     this.socket.on('remove_asking_option',
       payload => commit(this.namespace, 'remove_asking_option', payload)
     )
 
-    this.socket.on('update_takes',
-      payload => commit(this.namespace, 'update_takes', payload)
+    this.socket.on('set_takes_remaining',
+      payload => commit(this.namespace, 'set_takes_remaining', payload)
     )
 
-    this.socket.on('update_gives',
-      payload => commit(this.namespace, 'update_gives', payload)
+    this.socket.on('set_gives_remaining',
+      payload => commit(this.namespace, 'set_gives_remaining', payload)
     )
 
   },

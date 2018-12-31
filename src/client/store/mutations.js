@@ -6,12 +6,8 @@ export default {
     setTimeout(() => state.snackbar = false, 1000)
   },
 
-  flip_turn (state, payload) {
-    state.on_turn = !state.on_turn
-  },
-
-  all_off_turn (state, payload) {
-    state.on_turn = false
+  set_on_turn (state, payload) {
+    state.on_turn = payload.on_turn
   },
 
   unlock (state, payload) {
@@ -115,9 +111,17 @@ export default {
     state.asking_options_selected_arr.splice(payload.value, 1, false)
   },
 
-  highlight_giving_options (state, payload) {
+  set_giving_options (state, payload) {
     for (var i in payload.options) {
       state.giving_options_arr.splice(payload.options[i], 1, payload.highlight)
     }
   },
+
+  set_takes_remaining (state, payload) {
+    state.takes_remaining = payload.takes_remaining
+  },
+
+  set_gives_remaining (state, payload) {
+    state.gives_remaining = payload.gives_remaining
+  }
 }

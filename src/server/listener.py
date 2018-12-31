@@ -24,8 +24,8 @@ def catch_all(path):
 # should deal with room list separately from games because
 # games are modular but rooms should persist
 room = 'room'
-room_game_dict: Dict[str, Game] = dict()
-game: Game = EmittingGame()
+room_game_dict: Dict[str, EmittingGame] = dict()
+game: EmittingGame = EmittingGame()
 game.set_room(room)
 room_game_dict[room] = game
 sid_room_dict: Dict[str, str] = dict()
@@ -35,7 +35,7 @@ def get_sid() -> str:
     return request.sid
 
 
-def get_game_from_room(room: str) -> Game:
+def get_game_from_room(room: str) -> EmittingGame:
     return room_game_dict[room]
 
 
@@ -43,31 +43,31 @@ def get_room(sid: str) -> str:
     return sid_room_dict[sid]
 
 
-def get_game_spot_from_sid(sid: str) -> Tuple[Game, int]:
+def get_game_spot_from_sid(sid: str) -> Tuple[EmittingGame, int]:
     room: str = get_room(sid)
-    game: Game = get_game_from_room(room)
+    game: EmittingGame = get_game_from_room(room)
     # TODO: check that sid is a player and not a spectator
-    spot: int = game.get_spot(sid)
+    spot: int = game._get_spot(sid)
     return game, spot
 
 
 def join_room_as_player(sid: str, room: str) -> None:
     join_room(room, sid)
     sid_room_dict[sid] = room
-    game: Game = get_game_from_room(room)
+    game: EmittingGame = get_game_from_room(room)
     game.add_player(sid, sid)
     # TODO: this shouldn't be here
     if game.num_players == 4:
-        game._start_round()
-        game.get_game_to_trading()
+        game._start_round(testing=True)
+        # game.get_game_to_trading()
 
 
 @socketio.on('connect')
 def connect():
     sid = get_sid()
+    print(f'{sid} connected.')
     room = 'room'
     join_room_as_player(sid, room)
-    print(f'{sid} connected.')
 
 
 @socketio.on('list servers')

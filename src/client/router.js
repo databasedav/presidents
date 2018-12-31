@@ -1,6 +1,8 @@
 import Vue from 'vue'
 import Router from 'vue-router'
 import Home from './views/Home.vue'
+import RoomBrowser from './views/RoomBrowser.vue'
+import Tester from './views/Tester.vue'
 
 Vue.use(Router)
 
@@ -13,21 +15,21 @@ export default new Router({
       name: 'home',
       component: Home
     },
-    // {
-    //   path: '/serverbrowser',
-    //   name: 'serverbrowser',
-    //   component: ServerBrowser
-    // },
+    {
+      path: '/room_browser',
+      name: 'room browser',
+      component: RoomBrowser
+    },
     // {
     //   path: '/statistics',
     //   name: 'statistics',
     //   component: Statistics
     // },
-    // {
-    //   path: '/tester',
-    //   name: 'tester',
-    //   component: Tester
-    // },
+    {
+      path: '/tester',
+      name: 'tester',
+      component: Tester
+    },
     {
       path: '/about',
       name: 'about',

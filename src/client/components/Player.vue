@@ -56,6 +56,7 @@ export default {
   },
 
   created () {
+    
     this.socket = io(`//${window.location.host}`, { forceNew: true })
   },
 

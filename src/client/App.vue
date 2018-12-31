@@ -1,75 +1,28 @@
 <template>
-  <div id='app'>
+  <div id="app">
     <v-app>
-      <Player :namespace='"a"'></Player>
-      <Player :namespace='"b"'></Player>
-      <Player :namespace='"c"'></Player>
-      <Player :namespace='"d"'></Player>
-      <!-- <v-btn to='/serverbrowser'>Server Browser</v-btn>
-      <v-btn to='/stats'>Statistics</v-btn>
-      <v-btn to='/tester'>Tester</v-btn>
-      <router-view/> -->
-      <!-- <v-container grid-list-md text-xs-center >
-        <v-layout row wrap>
-          <v-flex xs12>
-            <ButtonBox/>
-          </v-flex>
-          <v-flex xs12>
-            
-          </v-flex>
-          <v-flex xs12>
-            <Player :namespace='"b"'></Player>
-          </v-flex>
-          <v-flex xs12>
-            <Player :namespace='"c"'></Player>
-          </v-flex>
-          <v-flex xs12>
-            <Player :namespace='"d"'></Player>
-          </v-flex>
-          <v-flex xs12>
-            <StoredHandBox/>
-          </v-flex>
-        </v-layout>
-      </v-container> -->
-      <!-- <iframe> <ButtonBox/> </iframe>
-      <iframe> <ButtonBox/> </iframe>
-      <iframe> <ButtonBox/> </iframe>
-      <iframe> <ButtonBox/> </iframe> -->
+      <Tester/>
+      <!-- <Home/> -->
     </v-app>
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
-import Card from './components/Card'
-import CardBox from './components/CardBox'
-import ButtonBox from './components/ButtonBox'
-import Hand from './components/Hand'
-import StoredHandBox from './components/StoredHandBox'
-import CurrentHandBox from './components/CurrentHandBox'
-import Listener from './components/Listener'
-import Player from './components/Player'
-// import AlertSnackbar from './components/AlertSnackbar'
+import Home from './views/Home.vue'
+import Tester from './views/Tester.vue'
 
 export default {
-  name: 'app',
+  name: "app",
   components: {
-    Card,
-    CardBox,
-    ButtonBox,
-    Hand,
-    StoredHandBox,
-    CurrentHandBox,
-    Listener,
-    Player
-    // AlertSnackbar
+    Home,
+    Tester
   }
-}
+};
 </script>
 
 <style>
 #app {
-  font-family: 'Avenir', Helvetica, Arial, sans-serif;
+  font-family: "Avenir", Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;

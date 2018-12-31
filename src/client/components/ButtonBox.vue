@@ -106,3 +106,9 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.v-btn {
+  text-transform: lowercase !important;
+}
+</style>
