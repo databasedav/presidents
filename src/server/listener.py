@@ -67,7 +67,7 @@ def join_room_as_player(sid: str, room: str) -> None:
     game.add_player(sid, sid)
     # TODO: this shouldn't be here
     if game.num_players == 4:
-        game._start_round(testing=True)
+        game._start_round(testing=False)
         # game.get_game_to_trading()
 
 
@@ -76,8 +76,8 @@ def connect():
     sid = get_sid()
     print(f'{sid} connected.')
 
-#     room = 'room'
-#     join_room_as_player(sid, room)
+    room = 'fuck'
+    join_room_as_player(sid, room)
 
 
 @socketio.on('list servers')
