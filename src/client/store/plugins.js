@@ -1,4 +1,18 @@
-function create_namespaced_socket_plugin (namespace, socket) {
+function create_room_browser_socket_plugin (socket) {
+
+  return store => {
+
+    socket.on('refresh', payload => {
+      store.commit('refresh', payload)
+    })
+
+    socket.on('set_room_dne', payload => {
+      store.commit('set_room_dne', payload)
+    })
+  }
+}
+
+function create_namespaced_player_socket_plugin (namespace, socket) {
   
   return store => {
 
@@ -103,3 +117,5 @@ function create_namespaced_socket_plugin (namespace, socket) {
     })
   }
 }
+
+export { create_room_browser_socket_plugin, create_namespaced_player_socket_plugin }

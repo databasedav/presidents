@@ -5,7 +5,7 @@
 <script>
 import io from 'socket.io-client'
 import CardBox from './CardBox.vue'
-import mutations from '../store/mutations';
+import mutations from '../store/player_store/mutations';
 import store from '../store/store'
 
 function commit (namespace, event, payload) {

@@ -33,7 +33,7 @@ import Listener from './Listener.vue'
 import InPlayBox from './InPlayBox.vue'
 import AlertSnackbar from './AlertSnackbar'
 
-import { create_namespaced_player_socket_plugin } from '../store/plugins'
+// import { create_namespaced_player_socket_plugin } from '../store/plugins'
 import { namespaced_getter, createSinglePlayerStore, register_namespaced_module } from '../utils/utils'
 
 
@@ -57,9 +57,9 @@ export default {
   },
 
   created () {
-    this.$store.registerModule(this.namespace, createSinglePlayerStore())
-    const plugin = create_namespaced_player_socket_plugin(this.$store)
-    plugin(this.$store)
+    // create_namespaced_player_socket_plugin(this.$store)
+    register_namespaced_module(this.namespace, createSinglePlayerStore())
+    this.socket = io(`//${window.location.host}`, { forceNew: true })
   },
 
   methods: {
@@ -101,10 +101,6 @@ export default {
   },
 
   computed: {
-    socket () {
-      return this.$store.state.socket
-    },
-
     on_turn () {
       return this.$store.state[this.namespace].on_turn
     },

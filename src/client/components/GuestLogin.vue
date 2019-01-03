@@ -1,26 +1,27 @@
 <template>
   <div>
     <v-text-field
-    label='nickname'
-    v-model='nickname'
-    clearable
-    counter
-    maxlength='20'
-    color='grey'
-  ></v-text-field>
-  <v-btn
-    color='success'
-    :disabled='!nickname'
-    to='/room_browser'
-  >
-    browse rooms
-  </v-btn>
+      label='nickname'
+      v-model='nickname'
+      clearable
+      counter
+      maxlength='20'
+      color='grey'
+    ></v-text-field>
+    <v-btn
+      color='success'
+      :disabled='!nickname'
+      to='/room_browser'
+      ref='browse_rooms'
+    >
+      browse rooms
+    </v-btn>
   </div>
 </template>
 
 <script>
 export default {
-  name: 'guest login',
+  name: 'guest_login',
 
   computed: {
     nickname: {
@@ -29,14 +30,14 @@ export default {
       },
 
       set (nickname) {
-        this.$store.commit('set_nickname', nickname)
+        this.$store.commit('set_nickname', {'nickname': nickname})
       }
     }
   }
 }
 </script>
 
-<style>
+<style scoped>
 .v-btn {
   text-transform: lowercase !important;
 }

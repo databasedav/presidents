@@ -9,7 +9,7 @@ import numpy as np
 from hand import Hand, DuplicateCardError, FullHandError
 from chamber import Chamber
 from utils.utils import main
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 
 
 app = Flask(__name__)
@@ -31,17 +31,17 @@ for room in ['fuck', 'shit']:
 
 sid_room_dict: Dict[str, str] = dict()
 
-def room_list():
-    return [{'room': room, 'num_players': game.num_players} for room, game in room_game_dict.items()]
-
-
 def get_sid() -> str:
     return request.sid
 
 
+def room_list():
+    return [{'room': room, 'num_players': game.num_players} for room, game in room_game_dict.items()]
+
+
 @socketio.on('refresh')
 def refresh():
-    emit('refresh', {'room_list': room_list()}, room=get_sid())
+    emit('refresh', {'rooms': room_list()}, room=get_sid())
 
 
 def get_game_from_room(room: str) -> EmittingGame:
@@ -60,43 +60,35 @@ def get_game_spot_from_sid(sid: str) -> Tuple[EmittingGame, int]:
     return game, spot
 
 
-def join_room_as_player(sid: str, room: str) -> None:
+def join_room_as_player(sid: str, room: str, game: Optional[EmittingGame]=None) -> None:
     join_room(room, sid)
     sid_room_dict[sid] = room
-    game: EmittingGame = get_game_from_room(room)
+    if not game:
+        game: EmittingGame = get_game_from_room(room)
     game.add_player(sid, sid)
     # TODO: this shouldn't be here
-    if game.num_players == 4:
-        game._start_round(testing=False)
+    # if game.num_players == 4:
+    #     game._start_round(testing=False)
         # game.get_game_to_trading()
 
 
 @socketio.on('connect')
 def connect():
-    sid = get_sid()
-    print(f'{sid} connected.')
+    print(f'{get_sid()} connected.')
+#     refresh()
+#     room = 'fuck'
+#     join_room_as_player(sid, room)
 
-    room = 'fuck'
-    join_room_as_player(sid, room)
-
-
-@socketio.on('list servers')
-def list_servers():
-    ...
-
-
-@socketio.on('attempt to join game')
-def attempt_to_join_game(payload):
+@socketio.on('create_room')
+def add_room(payload):
     sid = get_sid()
     room = payload['room']
-
-# @socketio.on('join game')
-# def join_game(sid):
-#     sid = get_sid()
-#     try:
-#         game.add_player(sid, 'fuck')
-#     except AssertionError:
-#         game.restart
+    if room in room_game_dict:
+        emit('set_room_dne', {'room_dne': False}, room=sid)
+    else:
+        game = EmittingGame()
+        room_game_dict[room] = game
+        refresh()
 
 
 @socketio.on('card_click')
@@ -137,11 +129,6 @@ def pass_turn():
     game.pass_turn(spot)
 
 
-@socketio.on('restart')
-def restart():
-    game.restart()
-
-
 @socketio.on('asking_click')
 def select_asking_option(payload):
     game, spot = get_game_spot_from_sid(get_sid())
@@ -161,6 +148,6 @@ def give():
     game.give_card(spot)
 
 
-# @main
-# def main():
-#     socketio.run(app, host='0.0.0.0', debug=True)
+@main
+def main():
+    socketio.run(app, host='0.0.0.0', debug=True)

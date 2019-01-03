@@ -2,6 +2,7 @@ import Vue from 'vue'
 import Router from 'vue-router'
 import Home from './views/Home.vue'
 import RoomBrowser from './views/RoomBrowser.vue'
+import Presidents from './views/Presidents.vue'
 import Tester from './views/Tester.vue'
 
 Vue.use(Router)
@@ -25,6 +26,11 @@ export default new Router({
     //   name: 'statistics',
     //   component: Statistics
     // },
+    {
+      path:'/presidents',
+      name: 'presidents',
+      component: Presidents
+    },
     {
       path: '/tester',
       name: 'tester',

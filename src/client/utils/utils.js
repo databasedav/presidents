@@ -1,7 +1,7 @@
 import store from '../store/store'
-import state from '../store/state'
-import mutations from '../store/mutations'
-import getters from '../store/getters'
+import state from '../store/player_store/state'
+import mutations from '../store/player_store/mutations'
+import getters from '../store/player_store/getters'
 
 function namespaced_getter (namespace, getter) {
     return store.getters[`${namespace}/${getter}`]
