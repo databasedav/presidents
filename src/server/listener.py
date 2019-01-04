@@ -1,5 +1,5 @@
 import eventlet
-# eventlet.monkey_patch()
+eventlet.monkey_patch()
 from .emitting_game import EmittingGame
 from flask import request
 from flask import Flask, render_template

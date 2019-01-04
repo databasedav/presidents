@@ -9,7 +9,7 @@ ENV FLASK_APP ./src/server/listener.py
 # RUN chown -R presidents:presidents ./
 # USER presidents
 EXPOSE 5000
-ENTRYPOINT ["./boot.sh"]
+CMD ["./boot.sh"]
 
 # FROM python:3.7-alpine
 
