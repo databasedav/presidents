@@ -7,11 +7,17 @@ COPY . .
 RUN npm run build
 
 FROM python:3.7-alpine
-RUN python -m venv venv
+COPY --from=0 . .
+WORKDIR /home/presidents
+RUN pwd
+RUN ls
+RUN ls venv
+RUN ls venv/bin
+# RUN python -m venv venv
 RUN venv/bin/pip install -r requirements.txt
-RUN venv/bin/pip install gunicorn
+RUN chmod +x boot.sh
 ENV FLASK_APP ./src/server/listener.py
 RUN chown -R presidents:presidents ./
 USER presidents
 EXPOSE 5000
-
+ENTRYPOINT ["./boot.sh"]
