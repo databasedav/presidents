@@ -57,12 +57,23 @@ def get_game_spot_from_sid(sid: str) -> Tuple[EmittingGame, int]:
     return game, spot
 
 
+def get_game_from_sid(sid: str) -> EmittingGame:
+    return get_game_from_room(sid_room_dict[sid])
+
+
 @socketio.on('connect')
 def connect():
     print(f'{get_sid()} connected.')
 #     refresh()
 #     room = 'fuck'
 #     join_room_as_player(sid, room)
+
+
+@socketio.on('disconnect')
+def disconnect():
+    sid = get_sid()
+    print(f'{sid} disconnected.')
+    room_game_dict[sid_room_dict[sid]] = EmittingGame()
 
 
 @socketio.on('join_room')
