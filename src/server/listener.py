@@ -27,6 +27,7 @@ for room in ['fuck', 'shit']:
 
 sid_room_dict: Dict[str, str] = dict()
 
+
 def get_sid() -> str:
     return request.sid
 
