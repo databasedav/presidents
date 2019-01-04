@@ -49,11 +49,6 @@ export default {
   },
 
   computed: {
-    // ...mapState(this.namespace, {
-    //   cards: state => state.cards_arr,
-    //   cards_selected: state => state.cards_selected,
-    //   current_hand_str: state => state.current_hand_str
-    // })
 
     cards () {
       return this.$store.state[this.namespace].cards_arr

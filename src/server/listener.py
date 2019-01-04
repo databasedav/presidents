@@ -60,24 +60,30 @@ def get_game_spot_from_sid(sid: str) -> Tuple[EmittingGame, int]:
     return game, spot
 
 
-def join_room_as_player(sid: str, room: str, game: Optional[EmittingGame]=None) -> None:
-    join_room(room, sid)
-    sid_room_dict[sid] = room
-    if not game:
-        game: EmittingGame = get_game_from_room(room)
-    game.add_player(sid, sid)
-    # TODO: this shouldn't be here
-    # if game.num_players == 4:
-    #     game._start_round(testing=False)
-        # game.get_game_to_trading()
-
-
 @socketio.on('connect')
 def connect():
     print(f'{get_sid()} connected.')
 #     refresh()
 #     room = 'fuck'
 #     join_room_as_player(sid, room)
+
+
+@socketio.on('join_room')
+def join_room_as_player(payload) -> None:
+    sid = get_sid()
+    room = payload['room']
+    name = payload['name']
+    join_room(room, sid)
+    sid_room_dict[sid] = room
+    game: EmittingGame = get_game_from_room(room)
+    game.add_player(sid, name)
+    # emit('join_room', room=sid)
+
+    # TODO: this shouldn't be here
+    if game.num_players == 4:
+        game._start_round(testing=False)
+        # game.get_game_to_trading()
+
 
 @socketio.on('create_room')
 def add_room(payload):

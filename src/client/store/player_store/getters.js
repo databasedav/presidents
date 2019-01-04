@@ -1,4 +1,5 @@
 export default {
+
   at_least_one_card_selected (state) {
     return state.cards_selected_arr.some(selected => selected)
   },

@@ -1,3 +1,5 @@
+import router from '../router'
+
 function create_room_browser_socket_plugin (socket) {
 
   return store => {
@@ -9,10 +11,14 @@ function create_room_browser_socket_plugin (socket) {
     socket.on('set_room_dne', payload => {
       store.commit('set_room_dne', payload)
     })
+
+    socket.on('join_room', () => {
+      router.push({ path: '/presidents' })
+    })
   }
 }
 
-function create_namespaced_player_socket_plugin (namespace, socket) {
+function create_namespaced_player_socket_plugin (socket, namespace) {
   
   return store => {
 

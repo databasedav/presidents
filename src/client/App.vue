@@ -1,22 +1,15 @@
 <template>
   <div id="app">
     <v-app>
-      <!-- <Tester/> -->
       <router-view/>
     </v-app>
   </div>
 </template>
 
 <script>
-import Home from './views/Home.vue'
-import Tester from './views/Tester.vue'
 
 export default {
-  name: "app",
-  components: {
-    Home,
-    Tester
-  }
+  name: "app"
 };
 </script>
 

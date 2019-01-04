@@ -3,6 +3,8 @@ import state from '../store/player_store/state'
 import mutations from '../store/player_store/mutations'
 import getters from '../store/player_store/getters'
 
+// import { create_namespaced_player_socket_plugin } from "../store/plugins"
+
 function namespaced_getter (namespace, getter) {
     return store.getters[`${namespace}/${getter}`]
 }
@@ -13,7 +15,8 @@ function createSinglePlayerStore () {
       namespaced: true,
       state,
       getters,
-      mutations
+      mutations,
+      // plugins: [create_namespaced_player_socket_plugin(socket, namespace)]
   }
 }
 

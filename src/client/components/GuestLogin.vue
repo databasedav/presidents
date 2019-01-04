@@ -12,7 +12,6 @@
       color='success'
       :disabled='!nickname'
       to='/room_browser'
-      ref='browse_rooms'
     >
       browse rooms
     </v-btn>

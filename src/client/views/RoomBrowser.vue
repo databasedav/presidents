@@ -50,8 +50,8 @@
         <td class="justify-center layout px-0">
           <v-btn
             color="success"
-            :disabled="props.item.num_players === 4"
-            to='/presidents'
+            :disabled="props.item.num_players >= 4"
+            @click='join_room(props.item.room)'
           >join room</v-btn>
         </td>
       </template>
@@ -67,9 +67,8 @@
 </template>
 
 <script>
-import { mapState } from "vuex";
-
-import { create_room_browser_socket_plugin } from "../store/plugins";
+import { mapState } from "vuex"
+import { create_room_browser_socket_plugin } from '../store/plugins'
 
 export default {
   data() {
@@ -99,12 +98,12 @@ export default {
   },
 
   beforeCreate() {
-    this.$store.commit("attach_socket");
+    this.$store.commit('attach_socket')
   },
 
   created() {
-    const plugin = create_room_browser_socket_plugin(this.socket);
-    plugin(this.$store);
+    const plugin = create_room_browser_socket_plugin(this.socket)
+    plugin(this.$store)
     this.refresh()
   },
 
@@ -130,6 +129,7 @@ export default {
 
   computed: {
     ...mapState({
+      nickname: 'nickname',
       socket: 'socket',
       rooms: 'rooms',
       room_dne: 'room_dne'
@@ -142,7 +142,7 @@ export default {
 
   methods: {
     refresh () {
-      this.socket.emit("refresh");
+      this.socket.emit("refresh")
     },
 
     close () {
@@ -152,7 +152,12 @@ export default {
 
     save () {
       this.loading = true
-      this.socket.emit('create_room', {room: this.new_room});
+      this.socket.emit('create_room', {room: this.new_room})
+    },
+
+    join_room (room) {
+      this.socket.emit('join_room', {room: room, name: this.nickname})
+      this.$router.push({ path: '/presidents' })
     }
   }
 };

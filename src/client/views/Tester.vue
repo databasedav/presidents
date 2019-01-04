@@ -1,19 +1,19 @@
 <template>
     <div>
-        <Player :namespace='"a"'></Player>
-        <Player :namespace='"b"'></Player>
-        <Player :namespace='"c"'></Player>
-        <Player :namespace='"d"'></Player>
+        <TestPlayer :namespace='"a"'></TestPlayer>
+        <TestPlayer :namespace='"b"'></TestPlayer>
+        <TestPlayer :namespace='"c"'></TestPlayer>
+        <TestPlayer :namespace='"d"'></TestPlayer>
     </div>
 </template>
 
 <script>
-import Player from '../components/Player.vue'
+import TestPlayer from '../components/TestPlayer.vue'
 
 export default {
     name: 'Tester',
     components: {
-        Player
+        TestPlayer
     }
 }
 </script>

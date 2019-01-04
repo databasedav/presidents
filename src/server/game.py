@@ -551,7 +551,7 @@ class Game:
         return value in self._already_asked[spot]
 
     def _is_waiting(self, spot: int) -> bool:
-        return self._waiting[spot]   
+        return self._waiting[spot]
 
 
 class BaseHand:

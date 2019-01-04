@@ -1,65 +1,48 @@
 <template>
   <div>
-    <Listener
-      :socket='socket'
-      :namespace='namespace'
-    ></Listener>
-    <div v-if='on_turn' class='circle-green'>{{ spot }}</div>
-    <div v-else class='circle-red'>{{ spot }}</div>
-    <AlertSnackbar :namespace='namespace'></AlertSnackbar>
-    <InPlayBox :namespace='namespace'></InPlayBox>
+    <!-- <Listener
+      :socket='this.socket'
+      :namespace='this.namespace'
+    ></Listener> -->
+    <div v-if='this.on_turn' class='circle-green'>{{ this.spot }}</div>
+    <div v-else class='circle-red'>{{ this.spot }}</div>
+    <AlertSnackbar :namespace='this.namespace'></AlertSnackbar>
+    <InPlayBox :namespace='this.namespace'></InPlayBox>
     <CardBox
-      :namespace='namespace'
-      @card_click='card_click'
+      :namespace='this.namespace'
+      @card_click='this.card_click'
     ></CardBox>
     <ButtonBox
-      :namespace='namespace'
-      @unlock='unlock'
-      @lock='lock'
-      @play='play'
-      @pass='pass'
-      @ask='ask'
-      @give='give'
-      @asking_click='asking_click'
+      :namespace='this.namespace'
+      @unlock='this.unlock'
+      @lock='this.lock'
+      @play='this.play'
+      @pass='this.pass'
+      @ask='this.ask'
+      @give='this.give'
+      @asking_click='this.asking_click'
     ></ButtonBox>
   </div>
 </template>
 
 <script>
-import io from 'socket.io-client'
 import CardBox from './CardBox.vue'
 import ButtonBox from './ButtonBox.vue'
 import Listener from './Listener.vue'
 import InPlayBox from './InPlayBox.vue'
 import AlertSnackbar from './AlertSnackbar'
 
-import { create_namespaced_player_socket_plugin } from '../store/plugins'
-import { namespaced_getter, createSinglePlayerStore, register_namespaced_module } from '../utils/utils'
-
 
 export default {
-  data () {
-    return {
-      socket: io.Socket
-    }
-  },
 
-  props: {
-    namespace: String
-  },
-
+  name: 'Player',
+  
   components: {
     CardBox,
     Listener,
     ButtonBox,
     InPlayBox,
     AlertSnackbar
-  },
-
-  created () {
-    this.$store.registerModule(this.namespace, createSinglePlayerStore())
-    const plugin = create_namespaced_player_socket_plugin(this.$store)
-    plugin(this.$store)
   },
 
   methods: {
@@ -103,6 +86,10 @@ export default {
   computed: {
     socket () {
       return this.$store.state.socket
+    },
+
+    namespace () {
+      return this.$store.state.namespace
     },
 
     on_turn () {

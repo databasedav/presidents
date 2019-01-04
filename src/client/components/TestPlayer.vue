@@ -34,7 +34,7 @@ import InPlayBox from './InPlayBox.vue'
 import AlertSnackbar from './AlertSnackbar'
 
 // import { create_namespaced_player_socket_plugin } from '../store/plugins'
-import { namespaced_getter, createSinglePlayerStore, register_namespaced_module } from '../utils/utils'
+import { createSinglePlayerStore, register_namespaced_module } from '../utils/utils'
 
 
 export default {
