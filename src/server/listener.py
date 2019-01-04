@@ -1,15 +1,11 @@
 import eventlet
 # eventlet.monkey_patch()
-from json import dumps
-from emitting_game import EmittingGame
-from flask import request, session
+from .emitting_game import EmittingGame
+from flask import request
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit, join_room, leave_room
-import numpy as np
-from hand import Hand, DuplicateCardError, FullHandError
-from chamber import Chamber
-from utils.utils import main
-from typing import Dict, Tuple, Optional
+from .utils.utils import main
+from typing import Dict, Tuple
 
 
 app = Flask(__name__)

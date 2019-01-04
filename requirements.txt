@@ -6,7 +6,7 @@ llist
 bidict
 gunicorn
 eventlet
-tables
+# tables
 xxhash
 
 # for linting
