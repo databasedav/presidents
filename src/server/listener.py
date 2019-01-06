@@ -1,5 +1,5 @@
 import eventlet
-eventlet.monkey_patch()
+# eventlet.monkey_patch()
 try:
     from .emitting_game import EmittingGame
     from .utils.utils import main
@@ -125,14 +125,13 @@ def add_room(payload):
 
 
 def remove_room(room: str) -> None:
-    emit('send_to_path', {'path': '/room_browser'}, room=room, include_self=False)
+    emit('send_to_path', {'path': '/room_browser'}, room=room)
     close_room(room)
-    del sid_room_dict[room]
+    del room_game_dict[room]
 
 
 def room_with_least_players() -> str:
-    for room in {room: num_players for room, num_players in sorted(room_game_dict.items(), key=lambda x: x[1])}:
-        return room
+    return sorted(room_list(), key=lambda obj: obj['num_players'])[0]['room']
 
 
 @socketio.on('card_click')
