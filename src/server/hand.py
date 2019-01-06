@@ -13,7 +13,10 @@ from __future__ import annotations
 import numpy as np
 import pickle
 
-from .utils.utils import hand_hash
+try:
+    from .utils.utils import hand_hash
+except ImportError:
+    from utils.utils import hand_hash
 from typing import List, Dict, Union
 from json import dumps, loads
 from mypy_extensions import NoReturn

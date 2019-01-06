@@ -34,7 +34,7 @@
               @click="save"
               :loading='loading'
               :disabled="!this.room_dne || loading"
-            >create & join</v-btn>
+            >create</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>

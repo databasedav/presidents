@@ -1,6 +1,10 @@
 from __future__ import annotations
-from .hand import Hand
-from .chamber import Chamber, HandNode, HandPointerNode
+try:
+    from .hand import Hand
+    from .chamber import Chamber, HandNode, HandPointerNode
+except ImportError:
+    from hand import Hand
+    from chamber import Chamber, HandNode, HandPointerNode
 from typing import Dict, List, Any, Optional
 import numpy as np
 from flask_socketio import emit

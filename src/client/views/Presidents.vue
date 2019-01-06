@@ -19,7 +19,6 @@ export default {
   },
 
   created () {
-    console.log(this.namespace)
     this.$store.registerModule(this.namespace, createSinglePlayerStore())
     const plugin = create_namespaced_player_socket_plugin(this.socket, this.namespace)
     plugin(this.$store)

@@ -5,8 +5,12 @@ from typing import List
 import numpy as np
 from llist import dllistnode
 
-from .hand import Hand, CardNotInHandError
-from .utils.iternodes_dllist import IterNodesDLList
+try:
+    from .hand import Hand, CardNotInHandError
+    from .utils.iternodes_dllist import IterNodesDLList
+except ImportError:
+    from hand import Hand, CardNotInHandError
+    from utils.iternodes_dllist import IterNodesDLList
 
 
 # TODO: use del for removing nodes?

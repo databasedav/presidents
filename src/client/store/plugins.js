@@ -15,6 +15,10 @@ function create_room_browser_socket_plugin (socket) {
     socket.on('join_room', () => {
       router.push({ path: '/presidents' })
     })
+
+    socket.on('send_to_path', payload => {
+      router.push({ path: payload.path })
+    })
   }
 }
 

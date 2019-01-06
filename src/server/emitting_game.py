@@ -3,10 +3,16 @@ from typing import Dict, List, Optional, Set, Union
 from bidict import bidict
 from flask_socketio import emit
 
-from .game import Game, base_hand
-from .emitting_chamber import EmittingChamber
-from .chamber import CardNotInChamberError
-from .hand import Hand, DuplicateCardError, FullHandError
+try:
+    from .game import Game, base_hand
+    from .emitting_chamber import EmittingChamber
+    from .chamber import CardNotInChamberError
+    from .hand import Hand, DuplicateCardError, FullHandError
+except ImportError:
+    from game import Game, base_hand
+    from emitting_chamber import EmittingChamber
+    from chamber import CardNotInChamberError
+    from hand import Hand, DuplicateCardError, FullHandError
 
 
 class EmittingGame(Game):

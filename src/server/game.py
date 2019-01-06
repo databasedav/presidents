@@ -6,9 +6,14 @@ import numpy as np
 from bidict import bidict
 from flask_socketio import emit
 
-from .emitting_chamber import EmittingChamber
-from .chamber import Chamber, CardNotInChamberError
-from .hand import Hand, DuplicateCardError, FullHandError
+try:
+    from .emitting_chamber import EmittingChamber
+    from .chamber import Chamber, CardNotInChamberError
+    from .hand import Hand, DuplicateCardError, FullHandError
+except ImportError:
+    from emitting_chamber import EmittingChamber
+    from chamber import Chamber, CardNotInChamberError
+    from hand import Hand, DuplicateCardError, FullHandError
 
 
 # TODO: fix this class based on functional differences with emitting

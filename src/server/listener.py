@@ -1,10 +1,15 @@
 import eventlet
 eventlet.monkey_patch()
-from .emitting_game import EmittingGame
+try:
+    from .emitting_game import EmittingGame
+    from .utils.utils import main
+except ImportError:
+    from emitting_game import EmittingGame
+    from utils.utils import main
 from flask import request
 from flask import Flask, render_template
-from flask_socketio import SocketIO, emit, join_room, leave_room
-from .utils.utils import main
+from flask_socketio import SocketIO, emit, join_room, leave_room, close_room
+
 from typing import Dict, Tuple
 
 
@@ -73,7 +78,18 @@ def connect():
 def disconnect():
     sid = get_sid()
     print(f'{sid} disconnected.')
-    room_game_dict[sid_room_dict[sid]] = EmittingGame()
+    try:  # if in a game simply nuke the game TODO do not simply nuke the game
+        room = sid_room_dict[sid]
+        leave_room(room, sid)
+        send_non_leavers_back_to_browser(sid, room)
+        room_game_dict[room] = EmittingGame()
+    except KeyError:
+        pass
+
+
+def send_non_leavers_back_to_browser(sid: str, room: str) -> None:
+
+    emit('send_to_path', {'path': '/room_browser'}, room=room, include_self=False)
 
 
 @socketio.on('join_room')
@@ -99,10 +115,24 @@ def add_room(payload):
     room = payload['room']
     if room in room_game_dict:
         emit('set_room_dne', {'room_dne': False}, room=sid)
+        return      
     else:
+        if len(room_game_dict) >= 10:
+            remove_room(room_with_least_players())
         game = EmittingGame()
         room_game_dict[room] = game
         refresh()
+
+
+def remove_room(room: str) -> None:
+    emit('send_to_path', {'path': '/room_browser'}, room=room, include_self=False)
+    close_room(room)
+    del sid_room_dict[room]
+
+
+def room_with_least_players() -> str:
+    for room in {room: num_players for room, num_players in sorted(room_game_dict.items(), key=lambda x: x[1])}:
+        return room
 
 
 @socketio.on('card_click')
