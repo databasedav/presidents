@@ -19,8 +19,3 @@ npm run serve
 ```
 npm run build
 ```
-
-### lints and fixes files
-```
-npm run lint
-```

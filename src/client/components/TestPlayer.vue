@@ -60,6 +60,7 @@ export default {
     // create_namespaced_player_socket_plugin(this.$store)
     register_namespaced_module(this.namespace, createSinglePlayerStore())
     this.socket = io(`//${window.location.host}`, { forceNew: true })
+    this.socket.emit('join_room', {room: 'fuck', name: this.namespace})
   },
 
   methods: {

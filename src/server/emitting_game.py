@@ -69,8 +69,9 @@ class EmittingGame(Game):
 
     # card management related methods
 
-    def add_or_remove_card(self, spot: int, card: int) -> None:
-        chamber = self._chambers[spot]
+    def add_or_remove_card(self, sid: str, card: int) -> None:
+        spot: int = self._get_spot(sid)
+        chamber: EmittingChamber = self._chambers[spot]
         # TODO: verify to add or remove to be first empirically; may
         #       potentially justify looking before leaping if
         #       distribution is symmetric
@@ -124,7 +125,8 @@ class EmittingGame(Game):
             else:
                 self._alert_weaker_hand(spot)
 
-    def maybe_play_current_hand(self, spot: int) -> None:
+    def maybe_play_current_hand(self, sid: str) -> None:
+        spot: int = self._get_spot(sid)
         if not self._is_current_player(spot):
             self._alert_can_only_play_on_turn(spot)
             return
@@ -151,7 +153,8 @@ class EmittingGame(Game):
     # TODO
     # def maybe_unlock_pass_turn(self, spot: int) -> None:
 
-    def pass_turn(self, spot: int) -> None:
+    def pass_turn(self, sid: str) -> None:
+        spot: int = self._get_spot(sid)
         if not self._is_current_player(spot):
             self._alert_can_only_pass_on_turn(spot)
             return
@@ -193,7 +196,8 @@ class EmittingGame(Game):
         self._deal_cards()
         self._set_trading(True)
 
-    def update_selected_asking_option(self, spot: int, value: int) -> None:
+    def update_selected_asking_option(self, sid: str, value: int) -> None:
+        spot: int = self._get_spot(sid)
         if not self._is_asker(spot):
             self._alert_dont_use_console(spot)
             return
@@ -232,7 +236,8 @@ class EmittingGame(Game):
         else:
             self._unlock(spot)
 
-    def ask_for_card(self, spot: int) -> None:
+    def ask_for_card(self, sid: str) -> None:
+        spot: int = self._get_spot(sid)
         if not self.trading:
             self._alert_dont_use_console(spot)
             return
@@ -303,7 +308,8 @@ class EmittingGame(Game):
             else:
                 self._unlock(spot)
 
-    def give_card(self, spot: int) -> None:
+    def give_card(self, sid: str) -> None:
+        spot: int = self._get_spot(sid)
         card = self._get_current_hand(spot)[4]
         giver_chamber: EmittingChamber = self._chambers[spot]
         asker_chamber: EmittingChamber = self._chambers[self._get_opposing_position_spot(spot)]
@@ -345,6 +351,21 @@ class EmittingGame(Game):
         self._hand_in_play = base_hand
         self._make_and_set_turn_manager()
         self._next_player()
+
+    # misc
+
+    def unlock_handler(self, sid: str) -> None:
+        spot: int = self._get_spot(sid)
+        if self.trading:
+            if self.is_asking(spot):
+                self.maybe_unlock_ask(spot)
+            elif self.is_giving(spot):
+                self.maybe_unlock_give(spot)
+        else:
+            self.maybe_unlock_play(spot)
+
+    def lock_handler(self, sid: str) -> None:
+        self.lock(self._get_spot(sid))
 
     # getters
 

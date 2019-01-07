@@ -32,6 +32,8 @@ for room in ['fuck', 'shit']:
 
 sid_room_dict: Dict[str, str] = dict()
 
+sid_game_dict: Dict[str, EmittingGame] = dict()
+
 
 def get_sid() -> str:
     return request.sid
@@ -65,6 +67,9 @@ def get_game_spot_from_sid(sid: str) -> Tuple[EmittingGame, int]:
 def get_game_from_sid(sid: str) -> EmittingGame:
     return get_game_from_room(sid_room_dict[sid])
 
+def get_sid_and_game() -> Tuple[str, EmittingGame]:
+    return (lambda sid: (sid, get_game_from_sid(sid)))(get_sid())
+
 
 @socketio.on('connect')
 def connect():
@@ -88,7 +93,6 @@ def disconnect():
 
 
 def send_non_leavers_back_to_browser(sid: str, room: str) -> None:
-
     emit('send_to_path', {'path': '/room_browser'}, room=room, include_self=False)
 
 
@@ -100,12 +104,13 @@ def join_room_as_player(payload) -> None:
     join_room(room, sid)
     sid_room_dict[sid] = room
     game: EmittingGame = get_game_from_room(room)
+    sid_game_dict[sid] = game
     game.add_player(sid, name)
     # emit('join_room', room=sid)
 
     # TODO: this shouldn't be here
     if game.num_players == 4:
-        game._start_round(testing=False)
+        game._start_round(testing=True)
         # game.get_game_to_trading()
 
 
@@ -136,59 +141,42 @@ def room_with_least_players() -> str:
 
 @socketio.on('card_click')
 def card_click(payload):
-    game, spot = get_game_spot_from_sid(get_sid())
-    card = payload['card']
-    game.add_or_remove_card(spot, card)
+    (lambda sid: sid_game_dict[sid].add_or_remove_card(sid, payload['card']))(get_sid())
 
 
 @socketio.on('unlock')
 def unlock():
-    game, spot = get_game_spot_from_sid(get_sid())
-    # TODO: let the game take care of this
-    if game.trading:
-        if game.is_asking(spot):
-            game.maybe_unlock_ask(spot)
-        elif game.is_giving(spot):
-            game.maybe_unlock_give(spot)
-    else:
-        game.maybe_unlock_play(spot)
+    (lambda sid: sid_game_dict[sid].unlock_handler(sid))(get_sid())
 
 
 @socketio.on('lock')
 def lock():
-    game, spot = get_game_spot_from_sid(get_sid())
-    game.lock(spot)
+    (lambda sid: sid_game_dict[sid].lock_handler(sid))(get_sid())
 
 
 @socketio.on('play')
 def play():
-    game, spot = get_game_spot_from_sid(get_sid())
-    game.maybe_play_current_hand(spot)
+    (lambda sid: sid_game_dict[sid].maybe_play_current_hand(sid))(get_sid())
 
 
 @socketio.on('pass')
 def pass_turn():
-    game, spot = get_game_spot_from_sid(get_sid())
-    game.pass_turn(spot)
+    (lambda sid: sid_game_dict[sid].pass_turn(sid))(get_sid())
 
 
 @socketio.on('asking_click')
 def select_asking_option(payload):
-    game, spot = get_game_spot_from_sid(get_sid())
-    value = payload['value']
-    game.update_selected_asking_option(spot, value)
+    (lambda sid: sid_game_dict[sid].update_selected_asking_option(sid, payload['value']))(get_sid())
 
 
 @socketio.on('ask')
 def ask():
-    game, spot = get_game_spot_from_sid(get_sid())
-    game.ask_for_card(spot)
+    (lambda sid: sid_game_dict[sid].ask_for_card(sid))(get_sid())
 
 
 @socketio.on('give')
 def give():
-    game, spot = get_game_spot_from_sid(get_sid())
-    game.give_card(spot)
+    (lambda sid: sid_game_dict[sid].give_card(sid))(get_sid())
 
 
 @main

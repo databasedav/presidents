@@ -12,11 +12,11 @@ function namespaced_getter (namespace, getter) {
 function createSinglePlayerStore () {
   return {
     strict: process.env.NODE_ENV !== 'production',
-      namespaced: true,
-      state,
-      getters,
-      mutations,
-      // plugins: [create_namespaced_player_socket_plugin(socket, namespace)]
+    namespaced: true,
+    state,
+    getters,
+    mutations,
+    // plugins: [create_namespaced_player_socket_plugin(socket, namespace)]
   }
 }
 
