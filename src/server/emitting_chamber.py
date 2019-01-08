@@ -44,7 +44,7 @@ class EmittingChamber(Chamber):
     def add_card(self, card: np.uint8) -> None:
         self._emit('add_card', {'card': int(card)})
         super().add_card(card)
-        
+
     def remove_card(self, card: np.uint8, check: bool=True) -> None:
         super().remove_card(card, check)
         self._emit('remove_card', {'card': int(card)})

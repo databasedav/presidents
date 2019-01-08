@@ -205,16 +205,13 @@ class Game:
         hand = self._get_current_hand(spot)
         if hand.is_empty:
             raise PresidentsError('you must add cards before attempting to unlock')
-            return
         if not hand.is_valid:
             raise PresidentsError("you can't play invalid hands")
-            return
         hip = self._hand_in_play
         if hip is base_hand:  # start of the game
             if self._is_current_player(spot):  # player with 3 of clubs
                 if 1 not in hand:  # card 1 is the 3 of clubs
                     raise PresidentsError('the first hand must contain the 3 of clubs')
-                    return
                 else:
                     # any hand with the 3 of clubs is ok
                     self._unlock(spot)
@@ -235,13 +232,11 @@ class Game:
 
     def maybe_play_current_hand(self, spot: int) -> None:
         if not self._is_current_player(spot):
-            self._alert_can_only_play_on_turn(spot)
-            return
+            raise PresidentsError('you can only play a hand on your turn')
         elif not self._unlocked[spot]:
-            # store was modified to allow play emittal without unlocking
-            self._alert_dont_modify_dom(spot)
+            # TODO: console use or dom modification
             self.lock(spot)
-            return
+            raise PresidentsError('you must unlock before playing')
         else:
             chamber = self._chambers[spot]
             hand = Hand.copy(chamber.current_hand)
@@ -262,43 +257,37 @@ class Game:
         
     def pass_turn(self, spot: int) -> None:
         if not self._is_current_player(spot):
-            self._alert_can_only_pass_on_turn(spot)
-            return
-        hip = self._hand_in_play
-        if hip is base_hand:
-            self._alert_must_play_3_of_clubs(spot)
-            return
-        if hip is None:
-            self._alert_can_play_any_hand(spot)
-            return
+            raise PresidentsError('you can only pass on your turn')
+        if self._hand_in_play is base_hand:
+            raise PresidentsError('you cannot pass when you have the 3 of clubs')
+        if self._hand_in_play is None:
+            raise PresidentsError('you can play any hand')
         self._num_consecutive_passes += 1
         # TODO: self._message_passed(sid)
         # all remaining players passed on a winning hand
         if self._winning_last_played:
             if self._num_consecutive_passes == self._num_unfinished_players:
-                self._hand_in_play = None
-                self._emit_clear_hand_in_play()
+                self._clear_hand_in_play()
                 self._next_player()
-                return
             else:
                 self._next_player()
         # all other players passed on a hand
         elif self._num_consecutive_passes == self._num_unfinished_players - 1:
-            self._hand_in_play = None
-            self._emit_clear_hand_in_play()
+            self._clear_hand_in_play()
+            self._next_player()
             # TODO: self._message_hand_won(self._current_player)
-            self._next_player(hand_won=True)
-            return
         else:
             self._next_player()
+
+    def _clear_hand_in_play(self) -> None:
+        self._hand_in_play = None
 
     # trading related methods
 
     def _initiate_trading(self) -> None:
         # TODO: maybe just reset the entire game here
         self._current_player = None
-        self._emit_clear_hand_in_play()
-        self._all_off_turn()
+        self._clear_hand_in_play()
         self._deal_cards()
         self._set_trading(True)
 

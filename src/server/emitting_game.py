@@ -59,7 +59,7 @@ class EmittingGame(Game):
 
     # game flow related methods
 
-    def _next_player(self, hand_won=False):
+    def _next_player(self) -> None:
         try:  # current player is no longer on turn
             self._emit_set_on_turn(self._current_player, False)
         except KeyError:  # self._current_player is None (round start)
@@ -90,28 +90,10 @@ class EmittingGame(Game):
 
     def maybe_play_current_hand(self, sid: str) -> None:
         spot: int = self._get_spot(sid)
-        if not self._is_current_player(spot):
-            self._alert_can_only_play_on_turn(spot)
-            return
-        elif not self._unlocked[spot]:
-            # store was modified to allow play emittal without unlocking
-            self._alert_dont_modify_dom(spot)
-            self.lock(spot)
-            return
-        else:
-            chamber = self._chambers[spot]
-            hand = Hand.copy(chamber.current_hand)
-            chamber.remove_cards(hand)
-            self._num_consecutive_passes = 0
-            self.lock(spot)
-            self._set_hand_in_play(hand)
-            # TODO: self._message_hand_played(hand)
-            if chamber.is_empty:
-                # player_finish takes care of going to the next player
-                self._player_finish(spot)
-            else:
-                self._next_player()
-                self._winning_last_played = False
+        try:
+            super().maybe_play_current_hand(spot)
+        except PresidentsError as e:
+            self._emit_alert(str(e), sid)
 
     # TODO
     # def maybe_unlock_pass_turn(self, spot: int) -> None:
@@ -143,21 +125,22 @@ class EmittingGame(Game):
         elif self._num_consecutive_passes == self._num_unfinished_players - 1:
             self._hand_in_play = None
             self._emit_clear_hand_in_play_to_all_players()
-            self._next_player(hand_won=True)
+            self._next_player()
             # TODO: self._message_hand_won(self._current_player)
             return
         else:
             self._next_player()
 
+    def _clear_hand_in_play(self) -> None:
+        super()._clear_hand_in_play()
+        self._emit_to_all_players('clear_hand_in_play', {})
+
     # trading related methods
 
     def _initiate_trading(self) -> None:
         # TODO: maybe just reset the entire game here
-        self._current_player = None
-        self._emit_clear_hand_in_play_to_all_players()
-        self._emit_set_on_turn_to_all_players(False)
-        self._deal_cards()
-        self._set_trading(True)
+        super()._initiate_trading()
+        self._emit_to_all_players('set_on_turn', {'on_turn': False})
 
     def update_selected_asking_option(self, sid: str, value: int) -> None:
         spot: int = self._get_spot(sid)

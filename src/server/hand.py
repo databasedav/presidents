@@ -41,17 +41,17 @@ except FileNotFoundError:
 
 # TODO: should this be in the class?
 id_desc_dict = {
-    0: "empty hand",  # i.e. [0, 0, 0, 0, 0]
-    11: "single",  # e.g. [0, 0, 0, 0, 1]
-    20: "invalid hand (2)",  # e.g. [0, 0, 0, 1, 52]
-    21: "double",  # e.g. [0, 0, 0, 1, 2]
-    30: "invalid hand (3)",  # e.g. [0, 0, 1, 2, 52]
-    31: "triple",  # e.g. [0, 0, 1, 2, 3]
-    40: "invalid hand (4)",  # e.g. [0, 1, 2, 3, 4]
-    50: "invalid hand (5)",  # e.g. [1, 2, 3, 5, 52]
-    51: "fullhouse",  # e.g. [1, 2, 3, 51, 52]
-    52: "straight",  # e.g. [1, 5, 9, 13, 17]
-    53: "bomb",  # e.g. [1, 49, 50, 51, 52]
+    0: 'empty hand',  # i.e. [0, 0, 0, 0, 0]
+    11: 'single',  # e.g. [0, 0, 0, 0, 1]
+    20: 'invalid hand (2)',  # e.g. [0, 0, 0, 1, 52]
+    21: 'double',  # e.g. [0, 0, 0, 1, 2]
+    30: 'invalid hand (3)',  # e.g. [0, 0, 1, 2, 52]
+    31: 'triple',  # e.g. [0, 0, 1, 2, 3]
+    40: 'invalid hand (4)',  # e.g. [0, 1, 2, 3, 4]
+    50: 'invalid hand (5)',  # e.g. [1, 2, 3, 5, 52]
+    51: 'fullhouse',  # e.g. [1, 2, 3, 51, 52]
+    52: 'straight',  # e.g. [1, 5, 9, 13, 17]
+    53: 'bomb',  # e.g. [1, 49, 50, 51, 52]
 }
 
 # TODO: where to put these errors
@@ -157,7 +157,7 @@ class Hand(object):
         if not self._is_comparable(other):
             # TODO: should this be a runtime error?
             raise RuntimeError(
-                f"A {self.id_desc} cannot be played on a {other.id_desc}.")
+                f'a {self.id_desc} cannot be played on a {other.id_desc}')
         if self.is_bomb and other.is_bomb:
             return self[1] < other[1]  # second card is always part of the quad
         elif self.is_bomb:
@@ -174,7 +174,7 @@ class Hand(object):
     def __gt__(self, other: Hand) -> bool:
         if not self._is_comparable(other):
             raise RuntimeError(
-                f"A {self.id_desc} cannot be played on a {other.id_desc}.")
+                f'a {self.id_desc} cannot be played on a {other.id_desc}')
         if self.is_bomb and other.is_bomb:
             return self[1] > other[1]  # second card is always part of the quad
         elif self.is_bomb:
