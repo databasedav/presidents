@@ -242,8 +242,17 @@ class Game:
             hand = Hand.copy(chamber.current_hand)
             chamber.remove_cards(hand)
             self._num_consecutive_passes = 0
-            self.lock(spot)
             self._set_hand_in_play(hand)
+            self.lock(spot)
+            # lock others if their currently unlocked hand should no longer be unlocked
+            other_spots = {other_spot for other_spot in range(4) if other_spot != spot}
+            for other_spot in other_spots:
+                if self._unlocked[other_spot]:
+                    try:
+                        if self._get_current_hand(other_spot) < self._hand_in_play:
+                            self.lock(other_spot)
+                    except RuntimeError:  # can occur when a bomb is played on a non bomb
+                        self.lock(other_spot)
             # TODO: self._message_hand_played(hand)
             if chamber.is_empty:
                 # player_finish takes care of going to the next player
@@ -251,10 +260,10 @@ class Game:
             else:
                 self._next_player()
                 self._winning_last_played = False
-    
+
     # TODO
     # def maybe_unlock_pass_turn(self, spot: int) -> None:
-        
+
     def pass_turn(self, spot: int) -> None:
         if not self._is_current_player(spot):
             raise PresidentsError('you can only pass on your turn')
@@ -442,11 +451,9 @@ class Game:
     # misc
 
     def _unlock(self, spot: int) -> None:
-        self._emit_set_unlocked(spot, True)
         self._unlocked[spot] = True
 
     def lock(self, spot: int) -> None:
-        self._emit_set_unlocked(spot, False)
         self._unlocked[spot] = False
 
     # getters
@@ -503,7 +510,10 @@ class Game:
         self.trading = trading
 
     def _set_giver(self, spot: int, giver: bool) -> None:
-        self._emit_set_giver(spot, giver)
+        # TODO: is this the correct way to do this?; i.e. a case where
+        #       the base game class need not do anything when setting
+        #       the giver
+        pass
 
     def _set_takes_remaining(self, spot: int, takes_remaining: int) -> None:
         self._takes_remaining[spot] = takes_remaining

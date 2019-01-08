@@ -55,17 +55,17 @@ class EmittingGame(Game):
             chamber.reset()
             chamber.set_sid(sid)
             chamber.add_cards(decks[spot])
-            emit('set_spot', {'spot': spot}, sid)
+            self._emit('set_spot', {'spot': spot}, sid)
 
     # game flow related methods
 
     def _next_player(self) -> None:
         try:  # current player is no longer on turn
-            emit('set_on_turn', {'on_turn': False}, self._current_player_sid)
+            self._emit('set_on_turn', {'on_turn': False}, self._current_player_sid)
         except KeyError:  # self._current_player is None (round start)
             pass
         super()._next_player()
-        emit('set_on_turn', {'on_turn': True}, self._current_player_sid)
+        self._emit('set_on_turn', {'on_turn': True}, self._current_player_sid)
 
     # card management related methods
 
@@ -159,11 +159,11 @@ class EmittingGame(Game):
 
     def _set_giving_options(self, spot: int, giving_options: Set[int]) -> None:
         super()._set_giving_options(spot, giving_options)
-        self._emit_set_giving_options(spot, giving_options, False)
+        self._emit('set_giving_options', {'options': list(giving_options), 'highlight': False}, self._get_sid(spot))
 
     def _clear_giving_options(self, spot: int) -> None:
         super()._clear_giving_options(spot)
-        self._emit_set_giving_options(spot, self._giving_options[spot], False)
+        self._emit('set_giving_options', {'options': list(self._giving_options[spot]), 'highlight': False}, self._get_sid(spot))
 
     # misc
 
@@ -179,13 +179,16 @@ class EmittingGame(Game):
         else:
             self.maybe_unlock_play(spot, sid)
 
-    def _unlock(self, sid: str) -> None:
-        super()._unlock(self._get_spot(sid))
-        emit('set_unlocked', {'unlocked': True}, sid)
+    def lock_handler(self, sid: str) -> None:
+        self.lock(self._get_spot(sid))
 
-    def lock(self, sid: str) -> None:
-        super().lock(self._get_spot(sid))
-        emit('set_unlocked', {'unlocked': False}, sid)
+    def _unlock(self, spot: int) -> None:
+        super()._unlock(spot)
+        self._emit('set_unlocked', {'unlocked': True}, self._get_sid(spot))
+
+    def lock(self, spot: int) -> None:
+        super().lock(spot)
+        self._emit('set_unlocked', {'unlocked': False}, self._get_sid(spot))
 
     # getters
 
@@ -206,47 +209,38 @@ class EmittingGame(Game):
 
     def _set_asker(self, spot: int, asker: bool, takes_and_gives: int) -> None:
         super()._set_asker(spot, asker, takes_and_gives)
-        self._emit_set_asker(spot, asker)
+        self._emit('set_asker', {'asker': asker}, self._get_sid(spot))
 
     def _set_trading(self, trading: bool) -> None:
         super()._set_trading(trading)
-        self._emit_set_trading(trading)
+        self._emit_to_room('set_trading', {'trading': trading})
 
     def _set_giver(self, spot: int, giver: bool) -> None:
-        self._emit_set_giver(spot, giver)
+        self._emit('set_giver', {'giver': giver}, self._get_sid(spot))
 
     def _set_takes_remaining(self, spot: int, takes_remaining: int) -> None:
         super()._set_takes_remaining(spot, takes_remaining)
-        emit('set_takes_remaining', {'takes_remaining': takes_remaining}, self._get_sid(spot))
+        self._emit('set_takes_remaining', {'takes_remaining': takes_remaining}, self._get_sid(spot))
 
     def _set_gives_remaining(self, spot: int, gives_remaining: int) -> None:
         super()._set_gives_remaining(spot, gives_remaining)
-        emit('set_gives_remaining', {'gives_remaining': gives_remaining}, self._get_sid(spot))
-    
+        self._emit('set_gives_remaining', {'gives_remaining': gives_remaining}, self._get_sid(spot))
+
     def _add_to_already_asked(self, spot: int, value: int) -> None:
         super()._add_to_already_asked(spot, value)
         self._emit('remove_asking_option', {'value': value}, self._get_sid(spot))
 
     # emitters
 
+    def _emit(self, event: str, payload: Dict[str, Union[int, str, List[int]]], sid: str) -> None:
+        emit(event, payload, room=sid)
+
     def _emit_to_all_players(self, event: str, payload: Dict[str, Union[int, str, List[int]]]):
         for sid in self._spot_sid_bidict.values():
-            emit(event, payload, sid)
+            self._emit(event, payload, sid)
 
     def _emit_to_room(self, event: str, payload: Dict[str, Union[int, str, List[int]]]):
-        emit(event, payload, self._room)
-
-    def _emit_set_trading(self, trading: bool) -> None:
-        self._emit('set_trading', {'trading': trading}, self._room)
-
-    def _emit_set_asker(self, spot: int, asker: bool) -> None:
-        self._emit('set_asker', {'asker': asker}, spot)
-
-    def _emit_set_giver(self, spot: int, giver: bool) -> None:
-        self._emit('set_giver', {'giver': giver}, spot)
-
-    def _emit_set_giving_options(self, spot: int, giving_options: Set[int], highlight: bool) -> None:
-        self._emit('set_giving_options', {'options': list(giving_options), 'highlight': highlight}, spot)
+        self._emit(event, payload, self._room)
 
     # alerting related methods
 

@@ -60,7 +60,7 @@ export default {
   font-size: 20px;
   text-align: center;
   border-radius: 5px;
-  border-color: gold !important;
+  border-color: green !important;
   box-sizing: border-box !important;
 }
 .v-btn {
