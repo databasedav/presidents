@@ -175,50 +175,45 @@ class Game:
     # card control related methods
 
     def add_or_remove_card(self, spot: int, card: int) -> None:
-        chamber = self._chambers[spot]
+        chamber: Chamber = self._chambers[spot]
         # TODO: verify to add or remove to be first empirically; may
         #       potentially justify looking before leaping if
         #       distribution is symmetric
         try:
             chamber.select_card(card)
+            if self.is_asking(spot):
+                self._deselect_asking_option(spot, self._selected_asking_option[spot])
             self.lock(spot)
         except CardNotInChamberError:
-            self._alert_dont_modify_dom(spot)
+            # TODO: console use or dom modification
+            raise PresidentsError("you don't have this card")
             # TODO self._reset_card_values()
         except DuplicateCardError:
             # such an error can only occur if check passes
             chamber.deselect_card(card, check=False)
             self.lock(spot)
         except FullHandError:
-            self._alert_hand_full(spot)
+            raise PresidentsError('your current hand is full')
 
     # TODO
     def store_hand(self, spot: int) -> None:
         ...
 
-    def _unlock(self, spot: int) -> None:
-        self._emit_set_unlocked(spot, True)
-        self._unlocked[spot] = True
-
-    def lock(self, spot: int) -> None:
-        self._emit_set_unlocked(spot, False)
-        self._unlocked[spot] = False
-
     # playing and passing related methods
 
-    def maybe_unlock_play(self, spot: int): 
+    def maybe_unlock_play(self, spot: int):
         hand = self._get_current_hand(spot)
         if hand.is_empty:
-            self._alert_add_cards_before_unlocking(spot)
+            raise PresidentsError('you must add cards before attempting to unlock')
             return
         if not hand.is_valid:
-            self._alert_cannot_play_invalid_hand(spot)
+            raise PresidentsError("you can't play invalid hands")
             return
         hip = self._hand_in_play
         if hip is base_hand:  # start of the game
             if self._is_current_player(spot):  # player with 3 of clubs
                 if 1 not in hand:  # card 1 is the 3 of clubs
-                    self._alert_3_of_clubs(spot)
+                    raise PresidentsError('the first hand must contain the 3 of clubs')
                     return
                 else:
                     # any hand with the 3 of clubs is ok
@@ -230,10 +225,13 @@ class Game:
         elif hip is None:  # current player won last hand and can play any hand
             self._unlock(spot)
         else:
-            if hand > hip:
-                self._unlock(spot)
-            else:
-                self._alert_weaker_hand(spot)
+            try:
+                if hand > hip:
+                    self._unlock(spot)
+                else:
+                    raise PresidentsError('your current hand is weaker than the hand in play')
+            except RuntimeError:
+                raise PresidentsError(f'you can only play {hip.id_desc}s')
 
     def maybe_play_current_hand(self, spot: int) -> None:
         if not self._is_current_player(spot):
@@ -458,6 +456,16 @@ class Game:
         self._hand_in_play = base_hand
         self._next_player()
 
+    # misc
+
+    def _unlock(self, spot: int) -> None:
+        self._emit_set_unlocked(spot, True)
+        self._unlocked[spot] = True
+
+    def lock(self, spot: int) -> None:
+        self._emit_set_unlocked(spot, False)
+        self._unlocked[spot] = False
+
     # getters
 
     def _get_position(self, spot: int) -> int:
@@ -583,3 +591,7 @@ class TurnManager:
     def remove(self, spot: int) -> None:
         self._not_finished_dict[spot] = False
         self._num_unfinished_players -= 1
+
+
+class PresidentsError(RuntimeError):
+    pass

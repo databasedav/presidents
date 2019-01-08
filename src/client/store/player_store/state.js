@@ -13,6 +13,7 @@ export default function state () {
     current_hand_str: '',
     snackbar: false,
     alert: String,
+    message: String,
     hand_in_play: [],
     hand_in_play_desc: '',
     on_turn: false,

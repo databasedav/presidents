@@ -10,8 +10,6 @@
 </template>
 
 <script>
-
-
 // TODO: make cards a basic shape object (?) and then use it
 //       as a button or not as needed.
 

@@ -123,5 +123,9 @@ export default {
 
   set_gives_remaining (state, payload) {
     state.gives_remaining = payload.gives_remaining
+  },
+
+  set_message (state, payload) {
+    state.message = payload.message
   }
 }

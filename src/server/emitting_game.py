@@ -4,12 +4,12 @@ from bidict import bidict
 from flask_socketio import emit
 
 try:
-    from .game import Game, base_hand
+    from .game import Game, base_hand, PresidentsError
     from .emitting_chamber import EmittingChamber
     from .chamber import CardNotInChamberError
     from .hand import Hand, DuplicateCardError, FullHandError
 except ImportError:
-    from game import Game, base_hand
+    from game import Game, base_hand, PresidentsError
     from emitting_chamber import EmittingChamber
     from chamber import CardNotInChamberError
     from hand import Hand, DuplicateCardError, FullHandError
@@ -60,7 +60,7 @@ class EmittingGame(Game):
     # game flow related methods
 
     def _next_player(self, hand_won=False):
-        try:
+        try:  # current player is no longer on turn
             self._emit_set_on_turn(self._current_player, False)
         except KeyError:  # self._current_player is None (round start)
             pass
@@ -71,59 +71,22 @@ class EmittingGame(Game):
 
     def add_or_remove_card(self, sid: str, card: int) -> None:
         spot: int = self._get_spot(sid)
-        chamber: EmittingChamber = self._chambers[spot]
-        # TODO: verify to add or remove to be first empirically; may
-        #       potentially justify looking before leaping if
-        #       distribution is symmetric
         try:
-            chamber.select_card(card)
-            if self.is_asking(spot):
-                self._deselect_asking_option(spot, self._selected_asking_option[spot])
-            self.lock(spot)
-        except CardNotInChamberError:
-            self._alert_dont_modify_dom(spot)
-            # TODO self._reset_card_values()
-        except DuplicateCardError:
-            # such an error can only occur if check passes
-            chamber.deselect_card(card, check=False)
-            self.lock(spot)
-        except FullHandError:
-            self._alert_hand_full(spot)
+            super().add_or_remove_card(spot, card)
+        except PresidentsError as e:
+            self._emit_alert(str(e), sid)
 
     # TODO
     def store_hand(self, spot: int) -> None:
-        ...
+        super().store_hand(spot)
 
     # playing and passing related methods
 
-    def maybe_unlock_play(self, spot: int): 
-        hand = self._get_current_hand(spot)
-        if hand.is_empty:
-            self._alert_add_cards_before_unlocking(spot)
-            return
-        if not hand.is_valid:
-            self._alert_cannot_play_invalid_hand(spot)
-            return
-        hip = self._hand_in_play
-        if hip is base_hand:  # start of the game
-            if self._is_current_player(spot):  # player with 3 of clubs
-                if 1 not in hand:  # card 1 is the 3 of clubs
-                    self._alert_3_of_clubs(spot)
-                    return
-                else:
-                    # any hand with the 3 of clubs is ok
-                    self._unlock(spot)
-            else:
-                # other players (without the 3 of clubs) can unlock
-                # whatever hand they want
-                self._unlock(spot)
-        elif hip is None:  # current player won last hand and can play any hand
-            self._unlock(spot)
-        else:
-            if hand > hip:
-                self._unlock(spot)
-            else:
-                self._alert_weaker_hand(spot)
+    def maybe_unlock_play(self, spot: int, sid: str) -> None:
+        try:
+            super().maybe_unlock_play(spot)
+        except PresidentsError as e:
+            self._emit_alert(str(e), sid)
 
     def maybe_play_current_hand(self, sid: str) -> None:
         spot: int = self._get_spot(sid)
@@ -362,7 +325,7 @@ class EmittingGame(Game):
             elif self.is_giving(spot):
                 self.maybe_unlock_give(spot)
         else:
-            self.maybe_unlock_play(spot)
+            self.maybe_unlock_play(spot, sid)
 
     def lock_handler(self, sid: str) -> None:
         self.lock(self._get_spot(sid))
