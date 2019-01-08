@@ -110,7 +110,7 @@ def join_room_as_player(payload) -> None:
 
     # TODO: this shouldn't be here
     if game.num_players == 4:
-        game._start_round(testing=False)
+        game._start_round(testing=True)
         # game.get_game_to_trading()
 
 
@@ -151,7 +151,7 @@ def unlock():
 
 @socketio.on('lock')
 def lock():
-    (lambda sid: sid_game_dict[sid].lock_handler(sid))(get_sid())
+    (lambda sid: sid_game_dict[sid].lock(sid))(get_sid())
 
 
 @socketio.on('play')
@@ -166,7 +166,7 @@ def pass_turn():
 
 @socketio.on('asking_click')
 def select_asking_option(payload):
-    (lambda sid: sid_game_dict[sid].update_selected_asking_option(sid, payload['value']))(get_sid())
+    (lambda sid: sid_game_dict[sid].set_selected_asking_option(sid, payload['value']))(get_sid())
 
 
 @socketio.on('ask')
