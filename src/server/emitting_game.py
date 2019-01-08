@@ -100,36 +100,10 @@ class EmittingGame(Game):
 
     def pass_turn(self, sid: str) -> None:
         spot: int = self._get_spot(sid)
-        if not self._is_current_player(spot):
-            self._alert_can_only_pass_on_turn(spot)
-            return
-        hip = self._hand_in_play
-        if hip is base_hand:
-            self._alert_must_play_3_of_clubs(spot)
-            return
-        if hip is None:
-            self._alert_can_play_any_hand(spot)
-            return
-        self._num_consecutive_passes += 1
-        # TODO: self._message_passed(sid)
-        # all remaining players passed on a winning hand
-        if self._winning_last_played:
-            if self._num_consecutive_passes == self._num_unfinished_players:
-                self._hand_in_play = None
-                self._emit_clear_hand_in_play_to_all_players()
-                self._next_player()
-                return
-            else:
-                self._next_player()
-        # all other players passed on a hand
-        elif self._num_consecutive_passes == self._num_unfinished_players - 1:
-            self._hand_in_play = None
-            self._emit_clear_hand_in_play_to_all_players()
-            self._next_player()
-            # TODO: self._message_hand_won(self._current_player)
-            return
-        else:
-            self._next_player()
+        try:
+            super().pass_turn(spot)
+        except PresidentsError as e:
+            self._emit_alert(str(e), sid)
 
     def _clear_hand_in_play(self) -> None:
         super()._clear_hand_in_play()
@@ -350,6 +324,7 @@ class EmittingGame(Game):
 
     def _emit(self, event: str, payload: Dict[str, Union[int, str, List[int]]], spot_or_sid_or_room: Union[int, str]):
         # TODO: verify EAFP or LBYL empirically
+        # TODO: normalize to sid only
         try:  # is a spot
             emit(event, payload, room=self._get_sid(spot_or_sid_or_room))
         except KeyError:  # is an sid or room
@@ -402,8 +377,8 @@ class EmittingGame(Game):
 
     # alerting-related methods
 
-    def _emit_alert(self, alert, spot: int) -> None:
-        self._emit('alert', {'alert': alert}, spot)
+    def _emit_alert(self, alert, sid: str) -> None:
+        self._emit('alert', {'alert': alert}, sid)
 
     def _alert_cannot_play_invalid_hand(self, spot: int) -> None:
         self._emit_alert("you can't play invalid hands", spot)
