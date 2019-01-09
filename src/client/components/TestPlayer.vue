@@ -70,6 +70,11 @@ export default {
     plugin(this.$store)
   },
 
+  // mounted () {
+  //   const textarea = document.getElementById('message_box')
+  //   textarea.scrollTop = textarea.scrollHeight
+  // },
+
   methods: {
     restart () {
       this.socket.emit('restart')

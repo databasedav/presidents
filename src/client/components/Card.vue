@@ -45,7 +45,7 @@ export default {
     },
 
     outline () {
-      return this.is_option_for_giving
+      return this.is_giving_option
     }
   }
 }
@@ -60,7 +60,7 @@ export default {
   font-size: 20px;
   text-align: center;
   border-radius: 5px;
-  border-color: green !important;
+  border-color: purple !important;
   box-sizing: border-box !important;
 }
 .v-btn {

@@ -5,6 +5,7 @@
       v-for='value in this.asking_options'
       :key='52 + value'
       :outline='asking_options_selected_arr[value]'
+      :style="asking_options_selected_arr[value] ? '' : { border: '1px solid transparent' }"
       @click='$emit("asking_click", value)'
     >
       {{ ranks[value] }}

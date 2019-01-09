@@ -7,7 +7,7 @@
     >
     </AskingOptions>
 
-    <v-btn
+    <!-- <v-btn
       v-if='!unlocked'
       @click="$emit('unlock')"
       color='error'
@@ -21,6 +21,15 @@
       color='error'
     >
       lock
+    </v-btn> -->
+
+    <v-btn
+      @click="$emit(lock_unlock_str)"
+      color='error'
+    >
+      {{ lock_unlock_str }}
+      <v-icon v-if='!unlocked' small right>fa-lock</v-icon>
+      <v-icon v-else small right>fa-unlock</v-icon>
     </v-btn>
 
     <v-btn
@@ -35,6 +44,7 @@
       color='warning'
     >
       pass
+      <v-icon right>skip_next</v-icon>
     </v-btn>
 
     <v-btn
@@ -44,6 +54,11 @@
       color='success'
     >
       {{ alt_play_button_str }}
+      <v-icon v-if='alt_play_button_str === "ask"' small right>fa-question</v-icon>
+      <v-icon v-else-if='alt_play_button_str === "give"' small right>fa-gift</v-icon>
+      <template v-else>
+        <v-icon small right>fa-question</v-icon><v-icon small right>fa-gift</v-icon>
+      </template>
     </v-btn>
 
     <v-btn
@@ -62,6 +77,7 @@
       color='success'
     >
       play
+      <v-icon right>play_arrow</v-icon>
     </v-btn>
   </div>
 </template>
@@ -86,6 +102,10 @@ export default {
   computed: {
     unlocked () {
       return this.$store.state[this.namespace].unlocked
+    },
+
+    lock_unlock_str () {
+      return this.unlocked ? 'lock' : 'unlock'
     },
 
     asker () {

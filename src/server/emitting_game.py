@@ -165,9 +165,9 @@ class EmittingGame(Game):
         self._emit('set_giving_options', {'options': list(giving_options), 'highlight': True}, self._get_sid(spot))
 
     def _clear_giving_options(self, spot: int) -> None:
-        super()._clear_giving_options(spot)
         self._emit('set_giving_options', {'options': list(self._giving_options[spot]), 'highlight': False}, self._get_sid(spot))
-
+        super()._clear_giving_options(spot)
+        
     # misc
 
     def unlock_handler(self, sid: str) -> None:
