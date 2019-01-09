@@ -3,8 +3,6 @@ from itertools import cycle
 from typing import Any, Callable, Dict, List, Optional, Set, Union
 
 import numpy as np
-from bidict import bidict
-from flask_socketio import emit
 
 try:
     from .emitting_chamber import EmittingChamber
@@ -427,7 +425,7 @@ class Game:
 
     def _set_giving_options(self, spot: int, giving_options: Set[int]) -> None:
         self._giving_options[spot] = giving_options
-    
+
     def _clear_giving_options(self, spot: int) -> None:
         self._giving_options[spot].clear()
 
@@ -526,7 +524,7 @@ class Game:
 
     def _add_to_already_asked(self, spot: int, value: int) -> None:
         self._already_asked[spot].add(value)
-    
+
     def _add_to_taken(self, spot: int, card: int) -> None:
         self._taken[spot].add(card)
 
