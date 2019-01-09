@@ -94,7 +94,7 @@ class EmittingGame(Game):
         spot: int = self._get_spot(sid)
         try:
             super().maybe_play_current_hand(spot)
-            self._emit_to_all_players('set_cards_remaining', {'spot': spot, 'cards_remaining': self._chambers[spot].num_cards}, sid)
+            self._emit_to_all_players('set_cards_remaining', {'spot': spot, 'cards_remaining': self._chambers[spot].num_cards})
         except PresidentsError as e:
             self._emit_alert(str(e), sid)
 
@@ -238,12 +238,9 @@ class EmittingGame(Game):
     def _emit(self, event: str, payload: Dict[str, Union[int, str, List[int]]], sid: str) -> None:
         emit(event, payload, room=sid)
 
-    def _emit_to_all_players(self, event: str, payload: Dict[str, Union[int, str, List[int]]], skip_sid: str=None):
+    def _emit_to_all_players(self, event: str, payload: Dict[str, Union[int, str, List[int]]]):
         for sid in self._spot_sid_bidict.values():
-            if skip_sid and sid == skip_sid:
-                continue
-            else:
-                self._emit(event, payload, sid)
+            self._emit(event, payload, sid)
 
     def _emit_to_room(self, event: str, payload: Dict[str, Union[int, str, List[int]]]):
         self._emit(event, payload, self._room)
