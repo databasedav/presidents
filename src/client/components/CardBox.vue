@@ -4,7 +4,7 @@
       <span 
         v-if='current_hand_str.length === 0 || current_hand_str === ": empty hand"'
       >
-        Click on cards to add them to your current hand!
+        click on cards to add them to your current hand
       </span>
 
       <span
@@ -21,7 +21,7 @@
       :key='card'
       :card='card'
       :is_selected='cards_selected_arr[card]'
-      :is_option_for_giving='giving_options_arr[card]'
+      :is_giving_option='giving_options_arr[card]'
       @card_click='$emit("card_click", $event)'
       :namespace='namespace'
     ></Card>

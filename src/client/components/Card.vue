@@ -23,7 +23,7 @@ export default {
   props: {
     card: Number,
     is_selected: Boolean,
-    is_option_for_giving: Boolean
+    is_giving_option: Boolean
   },
 
   computed: {

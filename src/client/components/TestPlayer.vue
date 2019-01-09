@@ -8,6 +8,10 @@
     <div v-else class='circle-red'>{{ spot }}</div>
     <AlertSnackbar :namespace='namespace'></AlertSnackbar>
     <InPlayBox :namespace='namespace'></InPlayBox>
+    <MessageBox
+      :namespace='namespace'
+    >
+    </MessageBox>
     <CardBox
       :namespace='namespace'
       @card_click='card_click'
@@ -31,7 +35,8 @@ import CardBox from './CardBox.vue'
 import ButtonBox from './ButtonBox.vue'
 import Listener from './Listener.vue'
 import InPlayBox from './InPlayBox.vue'
-import AlertSnackbar from './AlertSnackbar'
+import AlertSnackbar from './AlertSnackbar.vue'
+import MessageBox from './MessageBox.vue'
 
 import { create_namespaced_player_socket_plugin } from '../store/plugins'
 import { createSinglePlayerStore, register_namespaced_module } from '../utils/utils'
@@ -53,7 +58,8 @@ export default {
     Listener,
     ButtonBox,
     InPlayBox,
-    AlertSnackbar
+    AlertSnackbar,
+    MessageBox
   },
 
   created () {

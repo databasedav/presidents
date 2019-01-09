@@ -110,7 +110,7 @@ def join_room_as_player(payload) -> None:
 
     # TODO: this shouldn't be here
     if game.num_players == 4:
-        game._start_round(testing=False)
+        game._start_round(testing=True)
         # game.get_game_to_trading()
 
 

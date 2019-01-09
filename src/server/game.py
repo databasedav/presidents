@@ -8,10 +8,12 @@ try:
     from .emitting_chamber import EmittingChamber
     from .chamber import Chamber, CardNotInChamberError
     from .hand import Hand, DuplicateCardError, FullHandError
+    from .utils.utils import rank_articler
 except ImportError:
     from emitting_chamber import EmittingChamber
     from chamber import Chamber, CardNotInChamberError
     from hand import Hand, DuplicateCardError, FullHandError
+    from utils.utils import rank_articler
 
 
 # TODO: fix this class based on functional differences with emitting
@@ -145,11 +147,13 @@ class Game:
     def _start_round(self, testing: bool=False) -> None:
         self._deal_cards(testing)
         self._make_and_set_turn_manager()
+        self._num_consecutive_rounds += 1
+        self._message(f'round {self._num_consecutive_rounds} has begun')
         self._next_player()
 
     def _next_player(self):
         self._current_player = next(self._turn_manager)
-        # TODO: self._message_announce_turn()
+        self._message(f"it's {self._names[self._current_player]}'s turn")
 
     def _player_finish(self, spot: int) -> None:
         # TODO: self._message_player_finished_position(spot)
@@ -159,15 +163,18 @@ class Game:
         num_unfinished_players = self._num_unfinished_players
         if num_unfinished_players == 3:
             self._set_president(spot)
+            self._message(f'{self._names[spot]} is president')
             self._next_player()
         elif num_unfinished_players == 2:
             self._set_vice_president(spot)
+            self._message(f'{self._names[spot]} is vice president')
             self._next_player()
         else:
             self._set_vice_asshole(spot)
             self._current_player = next(self._turn_manager)
             self._positions.append(self._current_player)
             self._set_asshole(self._current_player)
+            self._message(f'{self._names[spot]} is vice asshole and {self._names[self._current_player]} is asshole')
             self._initiate_trading()
 
     # card control related methods
@@ -181,7 +188,7 @@ class Game:
             chamber.select_card(card)
             if self._is_asking(spot):
                 self._deselect_asking_option(spot, self._selected_asking_option[spot])
-            self.lock(spot)
+            self._lock_if_unlocked(spot)
         except CardNotInChamberError:
             # TODO: console use or dom modification
             raise PresidentsError("you don't have this card")
@@ -189,7 +196,7 @@ class Game:
         except DuplicateCardError:
             # such an error can only occur if check passes
             chamber.deselect_card(card, check=False)
-            self.lock(spot)
+            self._lock_if_unlocked(spot)
         except FullHandError:
             raise PresidentsError('your current hand is full')
 
@@ -241,9 +248,10 @@ class Game:
             chamber.remove_cards(hand)
             self._num_consecutive_passes = 0
             self._set_hand_in_play(hand)
+            self._message(f'{self._names[spot]} played a {hand.id_desc}')
             self.lock(spot)
             # lock others if their currently unlocked hand should no longer be unlocked
-            other_spots = {other_spot for other_spot in range(4) if other_spot != spot}
+            other_spots = [other_spot for other_spot in range(4) if other_spot != spot]
             for other_spot in other_spots:
                 if self._unlocked[other_spot]:
                     try:
@@ -270,7 +278,7 @@ class Game:
         if self._hand_in_play is None:
             raise PresidentsError('you can play any hand')
         self._num_consecutive_passes += 1
-        # TODO: self._message_passed(sid)
+        self._message(f'{self._names[spot]} passed')
         # all remaining players passed on a winning hand
         if self._winning_last_played:
             if self._num_consecutive_passes == self._num_unfinished_players:
@@ -297,6 +305,7 @@ class Game:
         self._clear_hand_in_play()
         self._deal_cards()
         self._set_trading(True)
+        self._message('trading has begun')
 
     def set_selected_asking_option(self, spot: int, value: int) -> None:
         if not self._is_asker(spot):
@@ -348,13 +357,16 @@ class Game:
             raise PresidentsError('you must unlock before asking')
         # TODO: remove trading options when takes run out
         value = self._selected_asking_option[spot]
+        articled_rank = rank_articler(value)
         asked_spot = self._get_opposing_position_spot(spot)
+        self._message(f'{self._names[spot]} asks {self._names[asked_spot]} for {articled_rank}')
         # chamber for asked
         chamber = self._chambers[asked_spot]
         giving_options = {
             card for card in range((value - 1) * 4 + 1, value * 4 + 1) if card in chamber and card not in self._given[spot]
         }
         if not giving_options:
+            self._message(f'{self._names[asked_spot]} does not have such a card')
             self.lock(spot)
             self._add_to_already_asked(spot, value)
         else:
@@ -364,18 +376,17 @@ class Game:
     def _select_asking_option(self, spot: int, value: int) -> None:
         self._selected_asking_option[spot] = value
         self._chambers[spot].deselect_selected()
-        self.lock(spot)
+        self._lock_if_unlocked(spot)
 
     def _deselect_asking_option(self, spot: int, value: int) -> None:
         self._selected_asking_option[spot] = None
-        self.lock(spot)
+        self._lock_if_unlocked(spot)
 
     def _deselect_selected_asking_option(self, spot: int) -> None:
         self._deselect_asking_option(spot, self._selected_asking_option[spot])
 
     def _wait_for_reply(self, spot: int) -> None:
         self._deselect_selected_asking_option(spot)
-        self.lock(spot)
         self._waiting[spot] = True
 
     def maybe_unlock_give(self, spot: int) -> None:
@@ -409,18 +420,19 @@ class Game:
             raise PresidentsError('you must unlock before giving')
         card = self._get_current_hand(spot)[4]
         giver_chamber: Chamber = self._chambers[spot]
-        asker_chamber: Chamber = self._chambers[self._get_opposing_position_spot(spot)]
+        receiver_spot: int = self._get_opposing_position_spot(spot)
+        receiver_chamber: Chamber = self._chambers[receiver_spot]
         giver_chamber.remove_card(card)
-        asker_chamber.add_card(card)
+        receiver_chamber.add_card(card)
+        self._message(f'{self._names[spot]} gives {self._names[receiver_spot]} a card')
         if self._is_asker(spot):
             self._add_to_given(spot, card)
             self._decrement_gives_remaining(spot)
         elif self._is_giver(spot):
             self._clear_giving_options(spot)
-            asker_spot = self._get_opposing_position_spot(spot)
-            self._add_to_taken(asker_spot, card)
-            self._decrement_takes_remaining(asker_spot)
-            self._waiting[asker_spot] = False
+            self._add_to_taken(receiver_spot, card)
+            self._decrement_takes_remaining(receiver_spot)
+            self._waiting[receiver_spot] = False
         self.lock(spot)
 
     def _set_giving_options(self, spot: int, giving_options: Set[int]) -> None:
@@ -453,6 +465,13 @@ class Game:
 
     def lock(self, spot: int) -> None:
         self._unlocked[spot] = False
+
+    def _lock_if_unlocked(self, spot: int) -> None:
+        if self._unlocked[spot]:
+            self.lock(spot)
+
+    def _message(self, message: str) -> None:
+        print(message)
 
     # getters
 
@@ -523,6 +542,7 @@ class Game:
         self._given[spot].add(card)
 
     def _add_to_already_asked(self, spot: int, value: int) -> None:
+        self._deselect_asking_option(spot, value)  # TODO: this results in an extra emit
         self._already_asked[spot].add(value)
 
     def _add_to_taken(self, spot: int, card: int) -> None:

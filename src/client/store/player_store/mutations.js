@@ -131,5 +131,9 @@ export default {
 
   set_cards_remaining (state, payload) {
     state.cards_remaining.splice(payload.spot, 1, payload.cards_remaining)
+  },
+
+  message (state, payload) {
+    state.message += `\n${payload.message}`
   }
 }

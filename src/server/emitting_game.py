@@ -162,7 +162,7 @@ class EmittingGame(Game):
 
     def _set_giving_options(self, spot: int, giving_options: Set[int]) -> None:
         super()._set_giving_options(spot, giving_options)
-        self._emit('set_giving_options', {'options': list(giving_options), 'highlight': False}, self._get_sid(spot))
+        self._emit('set_giving_options', {'options': list(giving_options), 'highlight': True}, self._get_sid(spot))
 
     def _clear_giving_options(self, spot: int) -> None:
         super()._clear_giving_options(spot)
@@ -192,6 +192,9 @@ class EmittingGame(Game):
     def lock(self, spot: int) -> None:
         super().lock(spot)
         self._emit('set_unlocked', {'unlocked': False}, self._get_sid(spot))
+
+    def _message(self, message: str) -> None:
+        self._emit_to_room('message', {'message': message})
 
     # getters
 
