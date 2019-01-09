@@ -78,7 +78,8 @@ class EmittingGame(Game):
 
     # TODO
     def store_hand(self, spot: int) -> None:
-        super().store_hand(spot)
+        # super().store_hand(spot)
+        # self._emit(...)
 
     # playing and passing related methods
 

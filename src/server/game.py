@@ -470,7 +470,7 @@ class Game:
             deck.extend(chamber)
         try:
             return np.array(deck).reshape(4, 13)
-        except:
+        except:  # TODO: this is caught during testing
             return np.array(deck).reshape(4, 1)
 
     def _get_president_and_vice_president(self) -> List[int]:
