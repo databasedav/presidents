@@ -130,6 +130,6 @@ export default {
   },
 
   set_cards_remaining (state, payload) {
-    state.cards_reamining.splice(payload.spot, 1, payload.cards_remaining)
+    state.cards_remaining.splice(payload.spot, 1, payload.cards_remaining)
   }
 }

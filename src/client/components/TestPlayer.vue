@@ -1,9 +1,9 @@
 <template>
   <div>
-    <Listener
+    <!-- <Listener
       :socket='socket'
       :namespace='namespace'
-    ></Listener>
+    ></Listener> -->
     <div v-if='on_turn' class='circle-green'>{{ spot }}</div>
     <div v-else class='circle-red'>{{ spot }}</div>
     <AlertSnackbar :namespace='namespace'></AlertSnackbar>
@@ -33,7 +33,7 @@ import Listener from './Listener.vue'
 import InPlayBox from './InPlayBox.vue'
 import AlertSnackbar from './AlertSnackbar'
 
-// import { create_namespaced_player_socket_plugin } from '../store/plugins'
+import { create_namespaced_player_socket_plugin } from '../store/plugins'
 import { createSinglePlayerStore, register_namespaced_module } from '../utils/utils'
 
 
@@ -57,10 +57,11 @@ export default {
   },
 
   created () {
-    // create_namespaced_player_socket_plugin(this.$store)
     register_namespaced_module(this.namespace, createSinglePlayerStore())
     this.socket = io(`//${window.location.host}`, { forceNew: true })
     this.socket.emit('join_room', {room: 'fuck', name: this.namespace})
+    const plugin = create_namespaced_player_socket_plugin(this.socket, this.namespace)
+    plugin(this.$store)
   },
 
   methods: {
