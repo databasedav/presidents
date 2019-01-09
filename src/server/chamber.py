@@ -29,12 +29,12 @@ class Chamber:
     """
     def __init__(self, cards: np.ndarray=None) -> None:
         self.current_hand: Hand = Hand()
-        self._num_cards: int = 0
+        self.num_cards: int = 0
         self._cards: np.ndarray = np.empty(shape=53, dtype=np.object)
         if cards:
             for card in cards:
                 self._cards[card] = HandPointerDLList()
-                self._num_cards += 1
+                self.num_cards += 1
         self._hands: HandNodeDLList = HandNodeDLList()
 
     def __contains__(self, card) -> bool:
@@ -49,18 +49,18 @@ class Chamber:
 
     @property
     def is_empty(self) -> bool:
-        return self._num_cards == 0
+        return self.num_cards == 0
 
     def reset(self) -> None:
         self.current_hand.reset()
-        self._num_cards = 0
+        self.num_cards = 0
         self._cards = np.empty(shape=53, dtype=np.object)
         self._hands.clear()
 
     def add_card(self, card: np.uint8) -> None:
         assert card not in self, 'Bug: attempting to add dupe card to chamber.'
         self._cards[card] = HandPointerDLList()
-        self._num_cards += 1
+        self.num_cards += 1
 
     def add_cards(self, cards: np.ndarray) -> None:
         for card in cards:
@@ -96,7 +96,7 @@ class Chamber:
                     hand_pointer_node.owner().remove(hand_pointer_node)
             hand_node.owner().remove(hand_node)
         self._cards[card] = None
-        self._num_cards -= 1
+        self.num_cards -= 1
 
     def remove_cards(self, cards):
         self._check_cards(cards)

@@ -125,6 +125,10 @@ function create_namespaced_player_socket_plugin (socket, namespace) {
     socket.on('set_gives_remaining', payload => {
       commit(namespace, 'set_gives_remaining', payload)
     })
+
+    socket.on('set_cards_remaining', payload => {
+      commit(namespace, 'set_cards_remaining', payload)
+    })
   }
 }
 

@@ -127,5 +127,9 @@ export default {
 
   set_message (state, payload) {
     state.message = payload.message
+  },
+
+  set_cards_remaining (state, payload) {
+    state.cards_reamining.splice(payload.spot, 1, payload.cards_remaining)
   }
 }

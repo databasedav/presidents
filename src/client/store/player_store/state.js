@@ -29,6 +29,7 @@ export default function state () {
     alt_play_button_str: String,
     giving_options_arr: Array(53).fill(false),
     takes_remaining: Number,
-    gives_remaining: Number
+    gives_remaining: Number,
+    cards_remaining: Array(4).fill(13)
   }
 }
