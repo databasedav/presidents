@@ -64,7 +64,10 @@ class EmittingGame(Game):
             self._emit('set_on_turn', {'on_turn': False}, self._current_player_sid)
         except KeyError:  # self._current_player is None (round start)
             pass
-        super()._next_player()
+        try:
+            super()._next_player()
+        except PresidentsError as e:
+            self._emit_alert(str(e), self._get_sid(self._current_player))
         self._emit('set_on_turn', {'on_turn': True}, self._current_player_sid)
 
     # card management related methods

@@ -1,4 +1,6 @@
 import random
+from eventlet import sleep
+from eventlet.timeout import Timeout
 from itertools import cycle
 from typing import Any, Callable, Dict, List, Optional, Set, Union
 
@@ -58,6 +60,7 @@ class Game:
         self._winning_last_played: bool = False
         self._positions: List[int] = list()
         self._unlocked: List[bool] = [False for _ in range(4)]
+        self._timers: List[Optional[Timeout]] = [None for _ in range(4)]
 
         # trading related attributes
         self.trading: bool = False
@@ -154,6 +157,25 @@ class Game:
     def _next_player(self):
         self._current_player = next(self._turn_manager)
         self._message(f"it's {self._names[self._current_player]}'s turn")
+        self._start_timer(self._current_player, 2)
+
+    def _start_timer(self, spot: int, seconds: int) -> None:
+        self._timers[spot] = Timeout(seconds, PresidentsError('you ran out of time; using reserve time'))
+        try:
+            sleep(seconds + 1)
+        finally:
+            self._auto_play_or_pass(spot)
+
+    def _auto_play_or_pass(self, spot: int) -> None:
+        if self._hand_in_play is base_hand:
+            self._chambers[spot].deselect_selected()
+            self.add_or_remove_card(spot, 1)
+            self._unlock(spot)
+            self.maybe_play_current_hand(spot)
+    
+    def _stop_timer(self, spot: int) -> None:
+        self._timers[spot].cancel()
+
 
     def _player_finish(self, spot: int) -> None:
         # TODO: self._message_player_finished_position(spot)
