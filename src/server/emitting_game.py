@@ -187,13 +187,13 @@ class EmittingGame(Game):
             self.maybe_unlock_play(spot, sid)
 
     def lock_handler(self, sid: str) -> None:
-        self._lock(self._get_spot(sid))
+        self.lock(self._get_spot(sid))
 
     def _unlock(self, spot: int) -> None:
         super()._unlock(spot)
         self._emit('set_unlocked', {'unlocked': True}, self._get_sid(spot))
 
-    def _lock(self, spot: int) -> None:
+    def lock(self, spot: int) -> None:
         super().lock(spot)
         self._emit('set_unlocked', {'unlocked': False}, self._get_sid(spot))
 
