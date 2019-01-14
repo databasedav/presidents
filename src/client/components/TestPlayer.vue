@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <v-container>
     <!-- <Listener
       :socket='socket'
       :namespace='namespace'
@@ -16,17 +16,21 @@
       :namespace='namespace'
       @card_click='card_click'
     ></CardBox>
-    <ButtonBox
-      :namespace='namespace'
-      @unlock='unlock'
-      @lock='lock'
-      @play='play'
-      @pass='pass'
-      @ask='ask'
-      @give='give'
-      @asking_click='asking_click'
-    ></ButtonBox>
-  </div>
+    <v-layout>
+      <v-flex xs12>
+        <ButtonBox
+        :namespace='namespace'
+        @unlock='unlock'
+        @lock='lock'
+        @play='play'
+        @pass='pass'
+        @ask='ask'
+        @give='give'
+        @asking_click='asking_click'
+      ></ButtonBox>
+      </v-flex>
+    </v-layout>
+  </v-container>
 </template>
 
 <script>

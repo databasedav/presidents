@@ -54,10 +54,10 @@ export default {
 <style scoped>
 /* TODO: border should not increase width of cards */
 .card {
-  height:60px;
-  width: 30px;
-  margin: 4px;
-  font-size: 20px;
+  height:80px;
+  width: 40px;
+  margin: 5px;
+  font-size: 25px;
   text-align: center;
   border-radius: 5px;
   border-color: purple !important;

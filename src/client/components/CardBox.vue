@@ -4,7 +4,7 @@
       <span 
         v-if='current_hand_str.length === 0 || current_hand_str === ": empty hand"'
       >
-        click on cards to add them to your current hand
+        select cards to add them to your current hand
       </span>
 
       <span
@@ -15,7 +15,7 @@
 
     <br>
     <br>
-
+    
     <Card
       v-for='card in this.cards'
       :key='card'

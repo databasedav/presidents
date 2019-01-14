@@ -67,6 +67,7 @@ def get_game_spot_from_sid(sid: str) -> Tuple[EmittingGame, int]:
 def get_game_from_sid(sid: str) -> EmittingGame:
     return get_game_from_room(sid_room_dict[sid])
 
+
 def get_sid_and_game() -> Tuple[str, EmittingGame]:
     return (lambda sid: (sid, get_game_from_sid(sid)))(get_sid())
 
@@ -81,6 +82,7 @@ def disconnect():
     sid = get_sid()
     print(f'{sid} disconnected.')
     try:  # if in a game simply nuke the game TODO do not simply nuke the game
+        del sid_game_dict[sid]
         room = sid_room_dict[sid]
         leave_room(room, sid)
         send_non_leavers_back_to_browser(sid, room)
@@ -117,7 +119,7 @@ def add_room(payload):
     room = payload['room']
     if room in room_game_dict:
         emit('set_room_dne', {'room_dne': False}, room=sid)
-        return      
+        return
     else:
         if len(room_game_dict) >= 10:
             remove_room(room_with_least_players())

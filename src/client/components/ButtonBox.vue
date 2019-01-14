@@ -1,85 +1,95 @@
 <template>
-  <div>
-    <AskingOptions
-      v-if='trading && asker'
-      :namespace='this.namespace'
-      @asking_click='$emit("asking_click", $event)'
-    >
-    </AskingOptions>
+  <v-container grid-list-md>
+    <v-layout>
+      <v-flex xs12>
+        <AskingOptions
+          v-if='trading && asker'
+          :namespace='this.namespace'
+          @asking_click='$emit("asking_click", $event)'
+        >
+        </AskingOptions>
+      </v-flex>
+    </v-layout>
+      
+    <v-layout row wrap justify-space-around height='100%'>
+      <!-- lock/unlock button -->
+      <v-flex xs5>
+        <v-btn
+          @click="$emit(lock_unlock_str)"
+          block
+          color='error'
+        >
+          {{ lock_unlock_str }}
+          <v-icon v-if='!unlocked' small right>fa-lock</v-icon>
+          <v-icon v-else small right>fa-unlock</v-icon>
+        </v-btn>
+      </v-flex>
 
-    <!-- <v-btn
-      v-if='!unlocked'
-      @click="$emit('unlock')"
-      color='error'
-    >
-      unlock
-    </v-btn>
+      <v-flex xs5>
+        <v-btn
+          v-if='trading && asker'
+          @click="$emit(alt_play_button_str)"
+          block
+          :disabled='!unlocked'
+          color='success'
+        >
+          {{ alt_play_button_str }}
+          <v-icon v-if='alt_play_button_str === "ask"' small right>fa-question</v-icon>
+          <v-icon v-else-if='alt_play_button_str === "give"' small right>fa-gift</v-icon>
+          <template v-else>
+            <v-icon small right>fa-question</v-icon><v-icon small right>fa-gift</v-icon>
+          </template>
+        </v-btn>
 
-    <v-btn
-      v-else
-      @click="$emit('lock')"
-      color='error'
-    >
-      lock
-    </v-btn> -->
+        <v-btn
+          v-else-if='trading && giver'
+          @click='$emit("give")'
+          block
+          :disabled='!unlocked'
+          color='success'
+        >
+          give
+        </v-btn>
 
-    <v-btn
-      @click="$emit(lock_unlock_str)"
-      color='error'
-    >
-      {{ lock_unlock_str }}
-      <v-icon v-if='!unlocked' small right>fa-lock</v-icon>
-      <v-icon v-else small right>fa-unlock</v-icon>
-    </v-btn>
+        <v-btn
+          v-else
+          @click="$emit('play')"
+          block
+          :disabled='!unlocked'
+          color='success'
+        >
+          play
+          <v-icon right>play_arrow</v-icon>
+        </v-btn>
+      </v-flex>
+    </v-layout>
 
-    <v-btn
-      color='info'
-      :disabled='true'
-    >
-      store hand
-    </v-btn>
+    <v-layout row wrap justify-space-around>
 
-    <v-btn
-      @click='$emit("pass")'
-      color='warning'
-    >
-      pass
-      <v-icon right>skip_next</v-icon>
-    </v-btn>
+      <v-flex xs5>
+         <v-btn
+          color='info'
+          block
+          :disabled='true'
+        >
+          store hand
+        </v-btn>
+      </v-flex>
 
-    <v-btn
-      v-if='trading && asker'
-      @click="$emit(alt_play_button_str)"
-      :disabled='!unlocked'
-      color='success'
-    >
-      {{ alt_play_button_str }}
-      <v-icon v-if='alt_play_button_str === "ask"' small right>fa-question</v-icon>
-      <v-icon v-else-if='alt_play_button_str === "give"' small right>fa-gift</v-icon>
-      <template v-else>
-        <v-icon small right>fa-question</v-icon><v-icon small right>fa-gift</v-icon>
-      </template>
-    </v-btn>
+      <v-flex xs5>
+        <v-btn
+          @click='$emit("pass")'
+          block
+          color='warning'
+        >
+          pass
+          <v-icon right>skip_next</v-icon>
+        </v-btn>
+      </v-flex>
 
-    <v-btn
-      v-else-if='trading && giver'
-      @click='$emit("give")'
-      :disabled='!unlocked'
-      color='success'
-    >
-      give
-    </v-btn>
-
-    <v-btn
-      v-else
-      @click="$emit('play')"
-      :disabled='!unlocked'
-      color='success'
-    >
-      play
-      <v-icon right>play_arrow</v-icon>
-    </v-btn>
-  </div>
+      
+    </v-layout>
+  </v-container>
 </template>
 
 <script>
@@ -129,6 +139,7 @@ export default {
 
 <style scoped>
 .v-btn {
+  height: 60px;
   text-transform: lowercase !important;
 }
 </style>
