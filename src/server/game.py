@@ -1,5 +1,6 @@
 import random
-from eventlet import sleep
+from eventlet import sleep, monkey_patch
+monkey_patch()
 from eventlet.timeout import Timeout
 from itertools import cycle
 from typing import Any, Callable, Dict, List, Optional, Set, Union
@@ -157,21 +158,27 @@ class Game:
     def _next_player(self):
         self._current_player = next(self._turn_manager)
         self._message(f"it's {self._names[self._current_player]}'s turn")
-        self._start_timer(self._current_player, 2)
+        # self._start_timer(self._current_player, 3)
 
     def _start_timer(self, spot: int, seconds: int) -> None:
-        self._timers[spot] = Timeout(seconds, PresidentsError('you ran out of time; using reserve time'))
+        self._timers[spot] = Timeout(seconds)
+        # current_player: int = self._current_player
+        # with Timeout(seconds, False):
         try:
-            sleep(seconds + 1)
-        finally:
+            sleep(seconds)
+        except Timeout:
             self._auto_play_or_pass(spot)
 
     def _auto_play_or_pass(self, spot: int) -> None:
         if self._hand_in_play is base_hand:
-            self._chambers[spot].deselect_selected()
-            self.add_or_remove_card(spot, 1)
+            chamber: Chamber = self._chambers[spot]
+            chamber.deselect_selected()
+            chamber.select_card(1)
             self._unlock(spot)
-            self.maybe_play_current_hand(spot)
+            self._play_current_hand(spot)
+
+    def _force_play(self):
+        ...
     
     def _stop_timer(self, spot: int) -> None:
         self._timers[spot].cancel()
@@ -265,29 +272,33 @@ class Game:
             self.lock(spot)
             raise PresidentsError('you must unlock before playing')
         else:
-            chamber = self._chambers[spot]
-            hand = Hand.copy(chamber.current_hand)
-            chamber.remove_cards(hand)
-            self._num_consecutive_passes = 0
-            self._set_hand_in_play(hand)
-            self._message(f'{self._names[spot]} played a {hand.id_desc}')
-            self.lock(spot)
-            # lock others if their currently unlocked hand should no longer be unlocked
-            other_spots = [other_spot for other_spot in range(4) if other_spot != spot]
-            for other_spot in other_spots:
-                if self._unlocked[other_spot]:
-                    try:
-                        if self._get_current_hand(other_spot) < self._hand_in_play:
-                            self.lock(other_spot)
-                    except RuntimeError:  # can occur when a bomb is played on a non bomb
+            self._play_current_hand(spot)
+
+    def _play_current_hand(self, spot: int) -> None:
+        # self._stop_timer(spot)
+        chamber = self._chambers[spot]
+        hand = Hand.copy(chamber.current_hand)
+        chamber.remove_cards(hand)
+        self._num_consecutive_passes = 0
+        self._set_hand_in_play(hand)
+        self._message(f'{self._names[spot]} played a {hand.id_desc}')
+        self.lock(spot)
+        # lock others if their currently unlocked hand should no longer be unlocked
+        other_spots = [other_spot for other_spot in range(4) if other_spot != spot]
+        for other_spot in other_spots:
+            if self._unlocked[other_spot]:
+                try:
+                    if self._get_current_hand(other_spot) < self._hand_in_play:
                         self.lock(other_spot)
-            # TODO: self._message_hand_played(hand)
-            if chamber.is_empty:
-                # player_finish takes care of going to the next player
-                self._player_finish(spot)
-            else:
-                self._next_player()
-                self._winning_last_played = False
+                except RuntimeError:  # can occur when a bomb is played on a non bomb
+                    self.lock(other_spot)
+        # TODO: self._message_hand_played(hand)
+        if chamber.is_empty:
+            # player_finish takes care of going to the next player
+            self._player_finish(spot)
+        else:
+            self._next_player()
+            self._winning_last_played = False
 
     # TODO
     # def maybe_unlock_pass_turn(self, spot: int) -> None:

@@ -25,7 +25,7 @@ def catch_all(path):
 
 room_game_dict: Dict[str, EmittingGame] = dict()
 
-for room in ['fuck', 'shit']:
+for room in ['hello', 'world']:
     game = EmittingGame()
     game.set_room(room)
     room_game_dict[room] = game
@@ -74,9 +74,6 @@ def get_sid_and_game() -> Tuple[str, EmittingGame]:
 @socketio.on('connect')
 def connect():
     print(f'{get_sid()} connected.')
-#     refresh()
-#     room = 'fuck'
-#     join_room_as_player(sid, room)
 
 
 @socketio.on('disconnect')
@@ -110,7 +107,7 @@ def join_room_as_player(payload) -> None:
 
     # TODO: this shouldn't be here
     if game.num_players == 4:
-        game._start_round(testing=True)
+        game._start_round(testing=False)
         # game.get_game_to_trading()
 
 

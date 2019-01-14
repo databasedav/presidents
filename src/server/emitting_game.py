@@ -1,5 +1,6 @@
-from typing import Dict, List, Optional, Set, Union
+from typing import Callable, Dict, List, Optional, Set, Union
 
+from eventlet import Timeout
 from bidict import bidict
 from flask_socketio import emit
 
@@ -70,7 +71,7 @@ class EmittingGame(Game):
             self._emit_alert(str(e), self._get_sid(self._current_player))
         self._emit('set_on_turn', {'on_turn': True}, self._current_player_sid)
 
-    # card management related methods
+    # card management relat ed methods
 
     def add_or_remove_card(self, sid: str, card: int) -> None:
         spot: int = self._get_spot(sid)
@@ -170,7 +171,7 @@ class EmittingGame(Game):
     def _clear_giving_options(self, spot: int) -> None:
         self._emit('set_giving_options', {'options': list(self._giving_options[spot]), 'highlight': False}, self._get_sid(spot))
         super()._clear_giving_options(spot)
-        
+
     # misc
 
     def unlock_handler(self, sid: str) -> None:
@@ -186,13 +187,13 @@ class EmittingGame(Game):
             self.maybe_unlock_play(spot, sid)
 
     def lock_handler(self, sid: str) -> None:
-        self.lock(self._get_spot(sid))
+        self._lock(self._get_spot(sid))
 
     def _unlock(self, spot: int) -> None:
         super()._unlock(spot)
         self._emit('set_unlocked', {'unlocked': True}, self._get_sid(spot))
 
-    def lock(self, spot: int) -> None:
+    def _lock(self, spot: int) -> None:
         super().lock(spot)
         self._emit('set_unlocked', {'unlocked': False}, self._get_sid(spot))
 
@@ -241,8 +242,8 @@ class EmittingGame(Game):
 
     # emitters
 
-    def _emit(self, event: str, payload: Dict[str, Union[int, str, List[int]]], sid: str) -> None:
-        emit(event, payload, room=sid)
+    def _emit(self, event: str, payload: Dict[str, Union[int, str, List[int]]], sid: str, callback: Callable=None) -> None:
+        emit(event, payload, room=sid, callback=callback)
 
     def _emit_to_all_players(self, event: str, payload: Dict[str, Union[int, str, List[int]]]):
         for sid in self._spot_sid_bidict.values():
