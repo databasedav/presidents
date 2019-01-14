@@ -1,5 +1,5 @@
 import random
-from eventlet import sleep, monkey_patch
+from eventlet import sleep, monkey_patch, greenthread
 monkey_patch()
 from eventlet.timeout import Timeout
 from itertools import cycle
@@ -8,12 +8,10 @@ from typing import Any, Callable, Dict, List, Optional, Set, Union
 import numpy as np
 
 try:
-    from .emitting_chamber import EmittingChamber
     from .chamber import Chamber, CardNotInChamberError
     from .hand import Hand, DuplicateCardError, FullHandError
     from .utils.utils import rank_articler
 except ImportError:
-    from emitting_chamber import EmittingChamber
     from chamber import Chamber, CardNotInChamberError
     from hand import Hand, DuplicateCardError, FullHandError
     from utils.utils import rank_articler
@@ -158,16 +156,10 @@ class Game:
     def _next_player(self):
         self._current_player = next(self._turn_manager)
         self._message(f"it's {self._names[self._current_player]}'s turn")
-        # self._start_timer(self._current_player, 3)
+        self._start_timer(self._current_player, 3)
 
     def _start_timer(self, spot: int, seconds: int) -> None:
-        self._timers[spot] = Timeout(seconds)
-        # current_player: int = self._current_player
-        # with Timeout(seconds, False):
-        try:
-            sleep(seconds)
-        except Timeout:
-            self._auto_play_or_pass(spot)
+        self._timers[spot] = greenthread.spawn_after(seconds, self._auto_play_or_pass, spot)
 
     def _auto_play_or_pass(self, spot: int) -> None:
         if self._hand_in_play is base_hand:

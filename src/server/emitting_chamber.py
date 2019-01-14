@@ -2,9 +2,12 @@ from __future__ import annotations
 try:
     from .hand import Hand
     from .chamber import Chamber, HandNode, HandPointerNode
+    from .listener import socketio
 except ImportError:
     from hand import Hand
     from chamber import Chamber, HandNode, HandPointerNode
+    from listener import socketio
+
 from typing import Dict, List, Any, Optional
 import numpy as np
 from flask_socketio import emit
@@ -19,13 +22,15 @@ class EmittingChamber(Chamber):
     Chamber that emits socketio events. Allows the base data structure
     to be debugged without needing an active HTTP request.
     """
+
+    
     
     def __init__(self, cards: np.ndarray=None) -> None:
         super().__init__(cards)
         self._sid: str = None
 
     def _emit(self, event: str, payload: Dict[str, Any]):
-        emit(event, payload, room=self._sid)
+        socketio.emit(event, payload, room=self._sid)
 
     def reset(self) -> None:
         self._emit('clear_cards', {})
@@ -94,7 +99,7 @@ class EmittingHandNode(HandNode):
         return 'EmittingHandNode'
 
     def _emit(self, event, paylaod) -> None:
-        emit(event, {'id': self._id}, room=self._sid)
+        socketio.emit(event, {'id': self._id}, room=self._sid)
 
     def set_sid(self, sid: str) -> None:
         self._sid = sid

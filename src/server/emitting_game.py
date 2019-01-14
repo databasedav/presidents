@@ -1,7 +1,8 @@
 from typing import Callable, Dict, List, Optional, Set, Union
 
-from eventlet import Timeout
+from eventlet import Timeout, greenthread
 from bidict import bidict
+from flask import current_app, copy_current_request_context, request
 from flask_socketio import emit
 
 try:
@@ -9,11 +10,13 @@ try:
     from .emitting_chamber import EmittingChamber
     from .chamber import CardNotInChamberError
     from .hand import Hand, DuplicateCardError, FullHandError
+    from .listener import socketio
 except ImportError:
     from game import Game, base_hand, PresidentsError
     from emitting_chamber import EmittingChamber
     from chamber import CardNotInChamberError
     from hand import Hand, DuplicateCardError, FullHandError
+    from listener import socketio
 
 
 class EmittingGame(Game):
@@ -41,6 +44,7 @@ class EmittingGame(Game):
 
     def add_player(self, sid: str, name: str) -> None:
         rand_open_spot: int = self._rand_open_spot()
+        self._chambers[rand_open_spot].set_sid(sid)
         self._spot_sid_bidict.inv[sid] = rand_open_spot
         self._names[rand_open_spot] = name
         self.num_players += 1
@@ -70,6 +74,26 @@ class EmittingGame(Game):
         except PresidentsError as e:
             self._emit_alert(str(e), self._get_sid(self._current_player))
         self._emit('set_on_turn', {'on_turn': True}, self._current_player_sid)
+
+    def _start_timer(self, spot: int, seconds: int) -> None:
+        self._timers[spot] = greenthread.spawn_after(seconds, self._auto_play_or_pass, spot)
+
+    # def _auto_play_or_pass(self, spot: int, app, environ) -> None:
+    #     with app.app_context(), app.request_context(environ):
+    #         if self._hand_in_play is base_hand:
+    #             chamber: Chamber = self._chambers[spot]
+    #             chamber.deselect_selected()
+    #             chamber.select_card(1)
+    #             self._unlock(spot)
+    #             self._play_current_hand(spot)
+
+    def _auto_play_or_pass(self, spot: int) -> None:
+        if self._hand_in_play is base_hand:
+            chamber: Chamber = self._chambers[spot]
+            chamber.deselect_selected()
+            chamber.select_card(1)
+            self._unlock(spot)
+            self._play_current_hand(spot)
 
     # card management relat ed methods
 
@@ -242,8 +266,8 @@ class EmittingGame(Game):
 
     # emitters
 
-    def _emit(self, event: str, payload: Dict[str, Union[int, str, List[int]]], sid: str, callback: Callable=None) -> None:
-        emit(event, payload, room=sid, callback=callback)
+    def _emit(self, event: str, payload: Dict[str, Union[int, str, List[int]]], sid: str) -> None:
+        socketio.emit(event, payload, room=sid)
 
     def _emit_to_all_players(self, event: str, payload: Dict[str, Union[int, str, List[int]]]):
         for sid in self._spot_sid_bidict.values():

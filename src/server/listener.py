@@ -1,12 +1,12 @@
+from __future__ import annotations
 import eventlet
-# eventlet.monkey_patch()
+eventlet.monkey_patch()
 try:
-    from .emitting_game import EmittingGame
     from .utils.utils import main
 except ImportError:
-    from emitting_game import EmittingGame
+    
     from utils.utils import main
-from flask import request
+from flask import request, copy_current_request_context
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit, join_room, leave_room, close_room
 
@@ -15,7 +15,7 @@ from typing import Dict, Tuple
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app)
+socketio = SocketIO(app, logger=True)
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
@@ -26,6 +26,7 @@ def catch_all(path):
 room_game_dict: Dict[str, EmittingGame] = dict()
 
 for room in ['hello', 'world']:
+    from emitting_game import EmittingGame
     game = EmittingGame()
     game.set_room(room)
     room_game_dict[room] = game
@@ -178,6 +179,6 @@ def give():
     (lambda sid: sid_game_dict[sid].give_card(sid))(get_sid())
 
 
-@main
-def main():
-    socketio.run(app, host='0.0.0.0', debug=True)
+# @main
+# def main():
+#     socketio.run(app, host='0.0.0.0', debug=True)
