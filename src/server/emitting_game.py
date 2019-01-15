@@ -64,6 +64,9 @@ class EmittingGame(Game):
 
     # game flow related methods
 
+    def ack(self):
+        print('fuck')
+
     def _next_player(self) -> None:
         try:  # current player is no longer on turn
             self._emit('set_on_turn', {'on_turn': False}, self._current_player_sid)
@@ -73,10 +76,7 @@ class EmittingGame(Game):
             super()._next_player(timer=False)
         except PresidentsError as e:
             self._emit_alert(str(e), self._get_sid(self._current_player))
-        self._emit('set_on_turn', {'on_turn': True}, self._current_player_sid, callback=self.shit)
-
-    def shit(self):
-        print('fuck')
+        self._emit('set_on_turn', {'on_turn': True}, self._current_player_sid, callback=self.ack)
 
     # card management relat ed methods
 
