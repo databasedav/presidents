@@ -70,10 +70,13 @@ class EmittingGame(Game):
         except KeyError:  # self._current_player is None (round start)
             pass
         try:
-            super()._next_player()
+            super()._next_player(timer=False)
         except PresidentsError as e:
             self._emit_alert(str(e), self._get_sid(self._current_player))
-        self._emit('set_on_turn', {'on_turn': True}, self._current_player_sid)
+        self._emit('set_on_turn', {'on_turn': True}, self._current_player_sid, callback=self.shit)
+
+    def shit(self):
+        print('fuck')
 
     # card management relat ed methods
 
@@ -109,10 +112,25 @@ class EmittingGame(Game):
     # TODO
     # def maybe_unlock_pass_turn(self, spot: int) -> None:
 
-    def pass_turn(self, sid: str) -> None:
+    def maybe_unlock_pass_turn(self, sid: str) -> None:
         spot: int = self._get_spot(sid)
         try:
-            super().pass_turn(spot)
+            super().maybe_unlock_pass_turn(spot)
+        except PresidentsError as e:
+            self._emit_alert(str(e), sid)
+
+    def _unlock_pass(self, spot: int) -> None:
+        super()._unlock_pass(spot)
+        self._emit('set_pass_unlocked', {'pass_unlocked': True}, self._get_sid(spot))
+
+    def _lock_pass(self, spot: int) -> None:
+        super()._lock_pass(spot)
+        self._emit('set_pass_unlocked', {'pass_unlocked': False}, self._get_sid(spot))
+
+    def maybe_pass_turn(self, sid: str) -> None:
+        spot: int = self._get_spot(sid)
+        try:
+            super().maybe_pass_turn(spot)
         except PresidentsError as e:
             self._emit_alert(str(e), sid)
 
@@ -202,6 +220,7 @@ class EmittingGame(Game):
         self._emit('set_unlocked', {'unlocked': False}, self._get_sid(spot))
 
     def _message(self, message: str) -> None:
+        super()._message(message)
         self._emit_to_room('message', {'message': message})
 
     # getters
@@ -246,8 +265,8 @@ class EmittingGame(Game):
 
     # emitters
 
-    def _emit(self, event: str, payload: Dict[str, Union[int, str, List[int]]], sid: str) -> None:
-        socketio.emit(event, payload, room=sid)
+    def _emit(self, event: str, payload: Dict[str, Union[int, str, List[int]]], sid: str, *, callback: Callable=None) -> None:
+        socketio.emit(event, payload, room=sid, callback=callback)
 
     def _emit_to_all_players(self, event: str, payload: Dict[str, Union[int, str, List[int]]]):
         for sid in self._spot_sid_bidict.values():

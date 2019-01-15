@@ -15,7 +15,7 @@ from typing import Dict, Tuple
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app, logger=True)
+socketio = SocketIO(app)#, logger=True)
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
@@ -159,9 +159,14 @@ def play():
     (lambda sid: sid_game_dict[sid].maybe_play_current_hand(sid))(get_sid())
 
 
+@socketio.on('unlock_pass')
+def unlock_pass():
+    (lambda sid: sid_game_dict[sid].maybe_unlock_pass_turn(sid))(get_sid())
+
+
 @socketio.on('pass')
 def pass_turn():
-    (lambda sid: sid_game_dict[sid].pass_turn(sid))(get_sid())
+    (lambda sid: sid_game_dict[sid].maybe_pass_turn(sid))(get_sid())
 
 
 @socketio.on('asking_click')

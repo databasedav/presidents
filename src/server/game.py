@@ -155,30 +155,33 @@ class Game:
         self._message(f'round {self._num_consecutive_rounds} has begun')
         self._next_player()
 
-    def _next_player(self):
+    def _next_player(self, timer: bool=True):
         self._current_player = next(self._turn_manager)
         self._message(f"it's {self._names[self._current_player]}'s turn")
-        self._start_timer(self._current_player, 3)
+        if timer:
+            self._start_timer(self._current_player, .5)
 
     def _start_timer(self, spot: int, seconds: int) -> None:
         self._timers[spot] = greenthread.spawn_after(seconds, self._auto_play_or_pass, spot)
 
     def _auto_play_or_pass(self, spot: int) -> None:
+        chamber: Chamber = self._chambers[spot]
+        chamber.deselect_selected()
         if self._hand_in_play is base_hand:
-            chamber: Chamber = self._chambers[spot]
-            chamber.deselect_selected()
             chamber.select_card(1)
-            self._unlock(spot)
             self._play_current_hand(spot)
         else:
-            self._pass_turn(spot)
+            if self._hand_in_play is None:
+                # select smallest card
+                for card in chamber:
+                    chamber.select_card(card)
+                    break
+                self._play_current_hand(spot)
+            else:
+                self._pass_turn(spot)
 
-    def _force_play(self):
-        ...
-    
     def _stop_timer(self, spot: int) -> None:
         self._timers[spot].cancel()
-
 
     def _player_finish(self, spot: int) -> None:
         # TODO: self._message_player_finished_position(spot)
@@ -294,12 +297,11 @@ class Game:
             # player_finish takes care of going to the next player
             self._player_finish(spot)
         else:
-            self._next_player()
             self._winning_last_played = False
+            self._next_player()
 
-    # TODO
     def maybe_unlock_pass_turn(self, spot: int) -> None:
-        if self.is_current_player(spot):
+        if self._is_current_player(spot):
             if self._hand_in_play is base_hand:
                 raise PresidentsError('you cannot pass when you have the 3 of clubs')
             if self._hand_in_play is None:
@@ -307,6 +309,7 @@ class Game:
         self._unlock_pass(spot)
 
     def _unlock_pass(self, spot: int) -> None:
+        self._lock_if_unlocked(spot)
         self._pass_unlocked[spot] = True
 
     def _lock_pass(self, spot: int) -> None:
@@ -317,8 +320,8 @@ class Game:
             raise PresidentsError('you can only pass on your turn')
         elif not self._pass_unlocked[spot]:
             # TODO: console use or dom modification
-            self.lock(spot)
-            raise PresidentsError('you must unlock before playing')
+            self._lock_pass(spot)
+            raise PresidentsError('you must unlock pass before passing')
         else: 
             self._pass_turn(spot)
 
@@ -507,6 +510,7 @@ class Game:
     # misc
 
     def _unlock(self, spot: int) -> None:
+        self._lock_if_pass_unlocked(spot)
         self._unlocked[spot] = True
 
     def lock(self, spot: int) -> None:
@@ -514,7 +518,15 @@ class Game:
 
     def _lock_if_unlocked(self, spot: int) -> None:
         if self._unlocked[spot]:
-            self.lock(spot)
+            self.lock(spot) 
+
+    def _lock_if_pass_unlocked(self, spot: int) -> None:
+        if self._pass_unlocked[spot]:
+            self._lock_pass(spot)
+
+    def _both_lock_if_unlocked(self, spot: int) -> None:
+        self._lock_if_unlocked(spot)
+        self._lock_if_pass_unlocked(spot)
 
     def _message(self, message: str) -> None:
         print(message)

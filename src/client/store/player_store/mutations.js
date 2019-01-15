@@ -10,20 +10,8 @@ export default {
     state.on_turn = payload.on_turn
   },
 
-  unlock (state, payload) {
-    state.unlocked = true
-  },
-
-  lock (state, payload) {
-    state.unlocked = false
-  },
-
-  unlock_pass(state, payload) {
-    state.pass_unlocked = true
-  },
-
-  lock_pass(state, payload) {
-    state.pass_unlocked = false
+  set_pass_unlocked(state, payload) {
+    state.pass_unlocked = payload.pass_unlocked
   },
 
   set_unlocked (state, payload) {

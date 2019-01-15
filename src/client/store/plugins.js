@@ -64,7 +64,7 @@ function create_namespaced_player_socket_plugin (socket, namespace) {
 
     socket.on('set_on_turn', payload => {
       commit(namespace, 'set_on_turn', payload)
-    })
+    }, {})
 
     socket.on('set_unlocked', payload => {
       commit(namespace, 'set_unlocked', payload)

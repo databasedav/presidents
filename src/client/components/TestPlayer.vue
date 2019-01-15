@@ -23,6 +23,7 @@
         @unlock='unlock'
         @lock='lock'
         @play='play'
+        @unlock_pass='unlock_pass'
         @pass='pass'
         @ask='ask'
         @give='give'
@@ -98,6 +99,10 @@ export default {
 
     play () {
       this.socket.emit('play')
+    },
+
+    unlock_pass () {
+      this.socket.emit('unlock_pass')
     },
 
     pass () {

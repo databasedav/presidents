@@ -40,6 +40,7 @@ class Chamber:
     def __contains__(self, card) -> bool:
         return self._cards[card] is not None
 
+    # TODO: make this generator based
     def __iter__(self):
         return [card for card in range(1, 53) if card in self].__iter__()
 

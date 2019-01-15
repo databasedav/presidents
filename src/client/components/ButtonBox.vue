@@ -11,7 +11,7 @@
       </v-flex>
     </v-layout>
       
-    <v-layout row wrap justify-space-around height='100%'>
+    <v-layout row wrap justify-space-around>
       <!-- lock/unlock button -->
       <v-flex xs5>
         <v-btn
@@ -49,6 +49,7 @@
           color='success'
         >
           give
+          <v-icon small right>fa-gift</v-icon>
         </v-btn>
 
         <v-btn
@@ -73,17 +74,22 @@
           :disabled='true'
         >
           store hand
+          <br>
+          (coming soon)
+          <v-icon small right>fa-save</v-icon>
         </v-btn>
       </v-flex>
 
       <v-flex xs5>
         <v-btn
-          @click='$emit("pass")'
+          @click='$emit(pass_button_action)'
           block
+          :disabled='trading'
           color='warning'
         >
           pass
-          <v-icon right>skip_next</v-icon>
+          <v-icon v-if='!pass_unlocked' small right>fa-lock</v-icon>
+          <v-icon v-else small right>skip_next</v-icon>
         </v-btn>
       </v-flex>
 
@@ -116,6 +122,10 @@ export default {
 
     lock_unlock_str () {
       return this.unlocked ? 'lock' : 'unlock'
+    },
+
+    pass_button_action() {
+      return this.pass_unlocked ? 'pass' : 'unlock_pass'
     },
 
     pass_unlocked () {
