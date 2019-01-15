@@ -27,7 +27,8 @@ except ImportError:
 # TODO: how to manage base Game alerts? Runtime errors?
 # TODO: get rid of trivial getters and setters; only functional setters
 #       should be those that also emit in EmittingGame
-
+# TODO: can unlock if the unlocked action can potentially be taken;
+#       else, cannot unlock
 
 class Game:
 
@@ -59,6 +60,7 @@ class Game:
         self._winning_last_played: bool = False
         self._positions: List[int] = list()
         self._unlocked: List[bool] = [False for _ in range(4)]
+        self._pass_unlocked: List[bool] = [False for _ in range(4)]
         self._timers: List[Optional[Timeout]] = [None for _ in range(4)]
 
         # trading related attributes
@@ -101,7 +103,7 @@ class Game:
                 if self._unlocked[spot]:
                     self.maybe_play_current_hand(spot)
                 else:
-                    self.pass_turn(spot)
+                    self._pass_turn(spot)
 
     # setup related methods
 
@@ -168,6 +170,8 @@ class Game:
             chamber.select_card(1)
             self._unlock(spot)
             self._play_current_hand(spot)
+        else:
+            self._pass_turn(spot)
 
     def _force_play(self):
         ...
@@ -257,6 +261,7 @@ class Game:
                 raise PresidentsError(str(e))
 
     def maybe_play_current_hand(self, spot: int) -> None:
+        # TODO: maybe switch order of first 2 cases (throughout)
         if not self._is_current_player(spot):
             raise PresidentsError('you can only play a hand on your turn')
         elif not self._unlocked[spot]:
@@ -267,7 +272,7 @@ class Game:
             self._play_current_hand(spot)
 
     def _play_current_hand(self, spot: int) -> None:
-        # self._stop_timer(spot)
+        self._stop_timer(spot)
         chamber = self._chambers[spot]
         hand = Hand.copy(chamber.current_hand)
         chamber.remove_cards(hand)
@@ -293,15 +298,31 @@ class Game:
             self._winning_last_played = False
 
     # TODO
-    # def maybe_unlock_pass_turn(self, spot: int) -> None:
+    def maybe_unlock_pass_turn(self, spot: int) -> None:
+        if self.is_current_player(spot):
+            if self._hand_in_play is base_hand:
+                raise PresidentsError('you cannot pass when you have the 3 of clubs')
+            if self._hand_in_play is None:
+                raise PresidentsError('you can play any hand')
+        self._unlock_pass(spot)
 
-    def pass_turn(self, spot: int) -> None:
+    def _unlock_pass(self, spot: int) -> None:
+        self._pass_unlocked[spot] = True
+
+    def _lock_pass(self, spot: int) -> None:
+        self._pass_unlocked[spot] = False
+
+    def maybe_pass_turn(self, spot: int) -> None:
         if not self._is_current_player(spot):
             raise PresidentsError('you can only pass on your turn')
-        if self._hand_in_play is base_hand:
-            raise PresidentsError('you cannot pass when you have the 3 of clubs')
-        if self._hand_in_play is None:
-            raise PresidentsError('you can play any hand')
+        elif not self._pass_unlocked[spot]:
+            # TODO: console use or dom modification
+            self.lock(spot)
+            raise PresidentsError('you must unlock before playing')
+        else: 
+            self._pass_turn(spot)
+
+    def _pass_turn(self, spot: int) -> None:
         self._num_consecutive_passes += 1
         self._message(f'{self._names[spot]} passed')
         # all remaining players passed on a winning hand

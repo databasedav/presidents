@@ -75,26 +75,6 @@ class EmittingGame(Game):
             self._emit_alert(str(e), self._get_sid(self._current_player))
         self._emit('set_on_turn', {'on_turn': True}, self._current_player_sid)
 
-    def _start_timer(self, spot: int, seconds: int) -> None:
-        self._timers[spot] = greenthread.spawn_after(seconds, self._auto_play_or_pass, spot)
-
-    # def _auto_play_or_pass(self, spot: int, app, environ) -> None:
-    #     with app.app_context(), app.request_context(environ):
-    #         if self._hand_in_play is base_hand:
-    #             chamber: Chamber = self._chambers[spot]
-    #             chamber.deselect_selected()
-    #             chamber.select_card(1)
-    #             self._unlock(spot)
-    #             self._play_current_hand(spot)
-
-    def _auto_play_or_pass(self, spot: int) -> None:
-        if self._hand_in_play is base_hand:
-            chamber: Chamber = self._chambers[spot]
-            chamber.deselect_selected()
-            chamber.select_card(1)
-            self._unlock(spot)
-            self._play_current_hand(spot)
-
     # card management relat ed methods
 
     def add_or_remove_card(self, sid: str, card: int) -> None:

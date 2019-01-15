@@ -18,6 +18,14 @@ export default {
     state.unlocked = false
   },
 
+  unlock_pass(state, payload) {
+    state.pass_unlocked = true
+  },
+
+  lock_pass(state, payload) {
+    state.pass_unlocked = false
+  },
+
   set_unlocked (state, payload) {
     state.unlocked = payload.unlocked
   },

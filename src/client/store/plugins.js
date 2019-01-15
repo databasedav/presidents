@@ -66,16 +66,12 @@ function create_namespaced_player_socket_plugin (socket, namespace) {
       commit(namespace, 'set_on_turn', payload)
     })
 
-    socket.on('unlock', payload => {
-      commit(namespace, 'unlock', payload)
-    })
-
-    socket.on('lock', payload => {
-      commit(namespace, 'lock', payload)
-    })
-
     socket.on('set_unlocked', payload => {
       commit(namespace, 'set_unlocked', payload)
+    })
+
+    socket.on('set_pass_unlocked', payload => {
+      commit(namespace, 'set_pass_unlocked', payload)
     })
 
     socket.on('remove_card', payload => {

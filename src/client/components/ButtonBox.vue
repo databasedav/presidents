@@ -118,6 +118,10 @@ export default {
       return this.unlocked ? 'lock' : 'unlock'
     },
 
+    pass_unlocked () {
+      return this.$store.state[this.namespace].pass_unlocked
+    },
+
     asker () {
       return this.$store.state[this.namespace].asker
     },

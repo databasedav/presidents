@@ -10,6 +10,7 @@ export default function state () {
     current_hand: Array,
     stored_hands: new Map(),
     unlocked: false,
+    pass_unlocked: false,
     current_hand_str: '',
     snackbar: false,
     alert: String,
