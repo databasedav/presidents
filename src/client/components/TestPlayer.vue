@@ -12,7 +12,11 @@
       :namespace='namespace'
     >
     </MessageBox>
-    <countdown :time="2 * 24 * 60 * 60 * 1000">
+    <countdown
+      :ref='namespace + "countdown"'
+      :time='time'
+      :auto-start='false'
+    >
       <template slot-scope="props">{{ props.seconds }}</template>
     </countdown>
     <CardBox
@@ -125,6 +129,12 @@ export default {
     }
   },
 
+  watch: {
+    time: function (val, oldVal) {
+      this.$refs[`${this.namespace}countdown`].start()
+    }
+  },
+
   computed: {
     on_turn () {
       return this.$store.state[this.namespace].on_turn
@@ -132,6 +142,10 @@ export default {
 
     spot () {
       return this.$store.state[this.namespace].spot
+    },
+
+    time () {
+      return this.$store.state[this.namespace].time
     }
   },
 }

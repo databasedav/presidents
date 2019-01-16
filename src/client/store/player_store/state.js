@@ -31,6 +31,7 @@ export default function state () {
     giving_options_arr: Array(53).fill(false),
     takes_remaining: Number,
     gives_remaining: Number,
-    cards_remaining: Array(4).fill(13)
+    cards_remaining: Array(4).fill(13),
+    time: 0
   }
 }

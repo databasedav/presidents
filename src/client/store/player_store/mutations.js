@@ -8,6 +8,7 @@ export default {
 
   set_on_turn (state, payload) {
     state.on_turn = payload.on_turn
+    state.time = 5
   },
 
   set_pass_unlocked(state, payload) {
@@ -131,5 +132,5 @@ export default {
 
   message (state, payload) {
     state.message += `\n${payload.message}`
-  }
+  },
 }
