@@ -166,19 +166,23 @@ class Game:
 
     def _auto_play_or_pass(self, spot: int) -> None:
         chamber: Chamber = self._chambers[spot]
+        currently_selected_cards: List[int] = chamber.current_hand.to_list()
         chamber.deselect_selected()
         if self._hand_in_play is base_hand:
             chamber.select_card(1)
             self._play_current_hand(spot)
         else:
             if self._hand_in_play is None:
-                # select smallest card
+                # select smallest card TODO: why do it like this
                 for card in chamber:
                     chamber.select_card(card)
                     break
                 self._play_current_hand(spot)
             else:
                 self._pass_turn(spot)
+        for card in currently_selected_cards:
+            if card in chamber:
+                chamber.select_card(card)
 
     def _stop_timer(self, spot: int) -> None:
         self._timers[spot].cancel()

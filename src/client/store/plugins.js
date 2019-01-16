@@ -62,9 +62,11 @@ function create_namespaced_player_socket_plugin (socket, namespace) {
       commit(namespace, 'clear_cards', payload)
     })
 
-    socket.on('set_on_turn', (payload, cb) => {
+    socket.on('set_on_turn', (payload, callback) => {
       commit(namespace, 'set_on_turn', payload)
-      cb()
+      if (callback) {
+        callback()
+      }
     })
 
     socket.on('set_unlocked', payload => {

@@ -12,6 +12,9 @@
       :namespace='namespace'
     >
     </MessageBox>
+    <countdown :time="2 * 24 * 60 * 60 * 1000">
+      <template slot-scope="props">{{ props.seconds }}</template>
+    </countdown>
     <CardBox
       :namespace='namespace'
       @card_click='card_click'
