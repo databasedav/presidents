@@ -107,11 +107,9 @@ class EmittingGame(Game):
             self._emit_alert(str(e), sid)
 
     def _play_current_hand(self, spot):
-        super()._play_current_hand(spot)
+        super()._play_current_hand(spot, handle_post=False)
         self._emit_to_all_players('set_cards_remaining', {'spot': spot, 'cards_remaining': self._chambers[spot].num_cards})
-
-    # TODO
-    # def maybe_unlock_pass_turn(self, spot: int) -> None:
+        self._post_play_handler(spot)
 
     def maybe_unlock_pass_turn(self, sid: str) -> None:
         spot: int = self._get_spot(sid)

@@ -18,13 +18,13 @@
         align-center
         justify-start
       >
-        cards remaining: {{ this.cards_remaining }}
+        {{ this.cards_remaining }}
       </v-layout>
       <v-layout
         align-center
         justify-end
       >
-        time remaining: {{ this.time }}
+        {{ this.time }}
       </v-layout>
     </v-card-actions>
   </v-card>

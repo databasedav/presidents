@@ -278,7 +278,7 @@ class Game:
         else:
             self._play_current_hand(spot)
 
-    def _play_current_hand(self, spot: int) -> None:
+    def _play_current_hand(self, spot: int, handle_post: bool=True) -> None:
         self._stop_timer(spot)
         chamber = self._chambers[spot]
         hand = Hand.copy(chamber.current_hand)
@@ -297,7 +297,11 @@ class Game:
                 except RuntimeError:  # can occur when a bomb is played on a non bomb
                     self.lock(other_spot)
         # TODO: self._message_hand_played(hand)
-        if chamber.is_empty:
+        if handle_post:
+            self._post_play_handler(spot)
+
+    def _post_play_handler(self, spot: int) -> None:
+        if self._chambers[spot].is_empty:
             # player_finish takes care of going to the next player
             self._player_finish(spot)
         else:

@@ -1,5 +1,5 @@
 <template>
-  <v-container>
+  <div>
     <v-layout>
       <v-flex>
         <OtherPlayer
@@ -23,7 +23,7 @@
         </OtherPlayer>
       </v-flex>
     </v-layout>
-  </v-container>
+  </div>
 </template>
 
 <script>

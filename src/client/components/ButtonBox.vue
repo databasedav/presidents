@@ -1,5 +1,5 @@
 <template>
-  <v-container grid-list-md>
+  <div>
     <v-layout>
       <v-flex xs12>
         <AskingOptions
@@ -92,10 +92,8 @@
           <v-icon v-else small right>skip_next</v-icon>
         </v-btn>
       </v-flex>
-
-      
     </v-layout>
-  </v-container>
+  </div>
 </template>
 
 <script>
