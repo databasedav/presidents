@@ -132,6 +132,10 @@ function create_namespaced_player_socket_plugin (socket, namespace) {
     socket.on('message', payload => {
       commit(namespace, 'message', payload)
     })
+
+    socket.on('set_names', payload => {
+      commit(namespace, 'set_names', payload)
+    })
   }
 }
 

@@ -10,7 +10,8 @@ export default new Vuex.Store({
     socket: io.Socket,
     namespace: String,  // sid
     rooms: [],
-    room_dne: true
+    room_dne: true,
+    time: 8000
   },
 
   mutations: {

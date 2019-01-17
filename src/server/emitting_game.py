@@ -46,7 +46,7 @@ class EmittingGame(Game):
         rand_open_spot: int = self._rand_open_spot()
         self._chambers[rand_open_spot].set_sid(sid)
         self._spot_sid_bidict.inv[sid] = rand_open_spot
-        self._names[rand_open_spot] = name
+        self._set_name(rand_open_spot, name)
         self.num_players += 1
 
     def remove_player(self, sid: str) -> None:
@@ -73,9 +73,10 @@ class EmittingGame(Game):
             super()._next_player(timer=False)
         except PresidentsError as e:
             self._emit_alert(str(e), self._get_sid(self._current_player))
-        self._emit('set_on_turn', {'on_turn': True}, self._current_player_sid, callback=lambda: self._start_timer(self._current_player, 5))
+        time: int = .1
+        self._emit('set_on_turn', {'on_turn': True, 'spot': self._current_player, 'time': time * 1000}, self._current_player_sid, callback=lambda: self._start_timer(self._current_player, time))
 
-    # card management relat ed methods
+    # card management related methods
 
     def add_or_remove_card(self, sid: str, card: int) -> None:
         spot: int = self._get_spot(sid)
@@ -102,9 +103,12 @@ class EmittingGame(Game):
         spot: int = self._get_spot(sid)
         try:
             super().maybe_play_current_hand(spot)
-            self._emit_to_all_players('set_cards_remaining', {'spot': spot, 'cards_remaining': self._chambers[spot].num_cards})
         except PresidentsError as e:
             self._emit_alert(str(e), sid)
+
+    def _play_current_hand(self, spot):
+        super()._play_current_hand(spot)
+        self._emit_to_all_players('set_cards_remaining', {'spot': spot, 'cards_remaining': self._chambers[spot].num_cards})
 
     # TODO
     # def maybe_unlock_pass_turn(self, spot: int) -> None:
@@ -229,6 +233,10 @@ class EmittingGame(Game):
         return self._spot_sid_bidict.inv[sid]
 
     # setters
+
+    def _set_name(self, spot: int, name: str) -> None:
+        self._names[spot] = name
+        self._emit_to_all_players('set_names', {'names': self._names})
 
     def _set_hand_in_play(self, hand: Hand) -> None:
         super()._set_hand_in_play(hand)

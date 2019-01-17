@@ -32,6 +32,7 @@ export default function state () {
     takes_remaining: Number,
     gives_remaining: Number,
     cards_remaining: Array(4).fill(13),
-    time: 0
+    times: Array(4).fill(0),
+    names: Array(4).fill('')
   }
 }

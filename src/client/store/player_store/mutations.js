@@ -8,7 +8,9 @@ export default {
 
   set_on_turn (state, payload) {
     state.on_turn = payload.on_turn
-    state.time = 5
+    if (payload.spot) {
+      state.times.splice(payload.spot, 1, payload.time)
+    }
   },
 
   set_pass_unlocked(state, payload) {
@@ -133,4 +135,8 @@ export default {
   message (state, payload) {
     state.message += `\n${payload.message}`
   },
+
+  set_names(state, payload) {
+    state.names = payload.names
+  }
 }
