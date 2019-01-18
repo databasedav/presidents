@@ -1,31 +1,78 @@
 <template>
-  <div>
-    <AlertSnackbar :namespace='this.namespace'></AlertSnackbar>
-    <InPlayBox :namespace='this.namespace'></InPlayBox>
-    <CardBox
-      :namespace='this.namespace'
-      @card_click='this.card_click'
-    ></CardBox>
-    <ButtonBox
-      :namespace='this.namespace'
-      @unlock='this.unlock'
-      @lock='this.lock'
-      @play='this.play'
-      @pass='this.pass'
-      @ask='this.ask'
-      @give='this.give'
-      @asking_click='this.asking_click'
-    ></ButtonBox>
-  </div>
+  <v-container>
+    
+    <v-layout column>
+      <v-flex xs12>
+        <OtherPlayerBox
+          :namespace='this.namespace'
+        >
+        </OtherPlayerBox>
+      </v-flex>
+      
+      <v-flex xs12>
+        <AlertSnackbar
+          :namespace='this.namespace'
+        >
+        </AlertSnackbar>
+      </v-flex>
+      
+      <v-flex xs12>
+        <InPlayBox
+          :namespace='this.namespace'
+        >
+        </InPlayBox>
+      </v-flex>
+      
+      <v-flex xs12>
+        <MessageBox
+          :namespace='this.namespace'
+        >
+        </MessageBox>
+      </v-flex>
+
+      <v-layout justify-center>
+        <v-flex xs8>
+          <PlayerStrip
+            :namespace='this.namespace'
+            :spot='this.spot'
+          >
+          </PlayerStrip>
+        </v-flex>
+      </v-layout>
+
+      <CardBox
+        :namespace='this.namespace'
+        @card_click='this.card_click'
+      >
+      </CardBox>
+
+      <v-flex xs12>
+        <ButtonBox
+          :namespace='this.namespace'
+          @unlock='this.unlock'
+          @lock='this.lock'
+          @play='this.play'
+          @unlock_pass='this.unlock_pass'
+          @pass='this.pass'
+          @ask='this.ask'
+          @give='this.give'
+          @asking_click='this.asking_click'
+        >
+        </ButtonBox>
+      </v-flex>
+    </v-layout>
+    
+  </v-container>
 </template>
 
 <script>
 import CardBox from './CardBox.vue'
 import ButtonBox from './ButtonBox.vue'
-import Listener from './Listener.vue'
 import InPlayBox from './InPlayBox.vue'
-import AlertSnackbar from './AlertSnackbar'
-
+import AlertSnackbar from './AlertSnackbar.vue'
+import MessageBox from './MessageBox.vue'
+import PlayerStrip from './PlayerStrip.vue'
+import OtherPlayerBox from './OtherPlayerBox.vue'
 
 export default {
 
@@ -33,10 +80,12 @@ export default {
   
   components: {
     CardBox,
-    Listener,
     ButtonBox,
     InPlayBox,
-    AlertSnackbar
+    AlertSnackbar,
+    MessageBox,
+    PlayerStrip,
+    OtherPlayerBox
   },
 
   methods: {
@@ -58,6 +107,10 @@ export default {
 
     play () {
       this.socket.emit('play')
+    },
+
+    unlock_pass () {
+      this.socket.emit('unlock_pass')
     },
 
     pass () {
@@ -98,23 +151,5 @@ export default {
 </script>
 
 <style>
-.circle-green {
-  height: 50px;
-  width: 50px;
-  position: relative;
-  left: 20px;
-  top: 20px;
-  background-color: rgb(54, 179, 16);
-  border-radius: 50%;
-}
 
-.circle-red {
-  height: 50px;
-  width: 50px;
-  position: relative;
-  left: 20px;
-  top: 20px;
-  background-color: rgb(195, 15, 39);
-  border-radius: 50%;
-}
 </style>

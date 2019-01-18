@@ -105,10 +105,9 @@ def join_room_as_player(payload) -> None:
     sid_room_dict[sid] = room
     game: EmittingGame = get_game_from_room(room)
     sid_game_dict[sid] = game
+    emit('send_to_path', {'path': '/presidents'}, room=sid)
     game.add_player(sid, name)
-    # emit('join_room', room=sid)
-
-    # TODO: this shouldn't be here
+    # TODO: this shouldn't be here ?
     if game.num_players == 4:
         game._start_round(testing=False)
         # game.get_game_to_trading()

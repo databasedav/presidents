@@ -83,7 +83,7 @@ class EmittingGame(Game):
 
         TODO: clean
         """
-        time: int = 1
+        time: int = 30
         self._set_dot_color(self._current_player, 'green')
         self._emit('set_on_turn', {'on_turn': True, 'spot': self._current_player, 'time': time * 1000}, self._current_player_sid, callback=lambda: self._start_timer(self._current_player, time))
         self._emit_to_all_players('set_time', {'spot': self._current_player, 'time': time * 1000}, skip_sid=self._current_player_sid)

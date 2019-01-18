@@ -44,21 +44,21 @@
 
       <CardBox
         :namespace='this.namespace'
-        @card_click='card_click'
+        @card_click='this.card_click'
       >
       </CardBox>
 
       <v-flex xs12>
         <ButtonBox
-          :namespace='namespace'
-          @unlock='unlock'
-          @lock='lock'
-          @play='play'
-          @unlock_pass='unlock_pass'
-          @pass='pass'
-          @ask='ask'
-          @give='give'
-          @asking_click='asking_click'
+          :namespace='this.namespace'
+          @unlock='this.unlock'
+          @lock='this.lock'
+          @play='this.play'
+          @unlock_pass='this.unlock_pass'
+          @pass='this.pass'
+          @ask='this.ask'
+          @give='this.give'
+          @asking_click='this.asking_click'
         >
         </ButtonBox>
       </v-flex>
@@ -71,7 +71,6 @@
 import io from 'socket.io-client'
 import CardBox from './CardBox.vue'
 import ButtonBox from './ButtonBox.vue'
-import Listener from './Listener.vue'
 import InPlayBox from './InPlayBox.vue'
 import AlertSnackbar from './AlertSnackbar.vue'
 import MessageBox from './MessageBox.vue'
@@ -85,8 +84,7 @@ import { createSinglePlayerStore, register_namespaced_module } from '../utils/ut
 export default {
   data () {
     return {
-      socket: io.Socket,
-      registered: false
+      socket: io.Socket
     }
   },
 
@@ -96,7 +94,6 @@ export default {
 
   components: {
     CardBox,
-    Listener,
     ButtonBox,
     InPlayBox,
     AlertSnackbar,
@@ -107,17 +104,11 @@ export default {
 
   created () {
     this.$store.registerModule(this.namespace, createSinglePlayerStore())
-    this.registered = true
     this.socket = io(`//${window.location.host}`, { forceNew: true })
     this.socket.emit('join_room', {room: 'world', name: this.namespace})
     const plugin = create_namespaced_player_socket_plugin(this.socket, this.namespace)
     plugin(this.$store)
   },
-
-  // mounted () {
-  //   const textarea = document.getElementById('message_box')
-  //   textarea.scrollTop = textarea.scrollHeight
-  // },
 
   methods: {
     restart () {
@@ -196,9 +187,5 @@ export default {
   top: 20px;
   background-color: rgb(195, 15, 39);
   border-radius: 50%;
-}
-
-.v-flex.InPlayBox {
-  min-height: 400px
 }
 </style>

@@ -17,18 +17,15 @@ except ImportError:
     from utils.utils import rank_articler
 
 
-# TODO: fix this class based on functional differences with emitting
-#       version, i.e. not having to emit
 # TODO: nice way to remove asking options after takes are exhausted
 # TODO: deal with mypy's treatment of nonetypes being passed into
 #       functions that do not take them
 # TODO: make Game JSON-serializable
 # TODO: make class more manageable (or not)
-# TODO: how to manage base Game alerts? Runtime errors?
-# TODO: get rid of trivial getters and setters; only functional setters
-#       should be those that also emit in EmittingGame
 # TODO: can unlock if the unlocked action can potentially be taken;
 #       else, cannot unlock
+# TODO: shuffle player spots after every round
+
 
 class Game:
 
@@ -149,6 +146,7 @@ class Game:
     # game flow related methods
 
     def _start_round(self, testing: bool=False) -> None:
+        self._positions.clear()
         self._deal_cards(testing)
         self._make_and_set_turn_manager()
         self._num_consecutive_rounds += 1
@@ -361,7 +359,16 @@ class Game:
     # trading related methods
 
     def _initiate_trading(self) -> None:
-        # TODO: just reset the entire game here
+        self._num_consecutive_passes: int = 0
+        self._winning_last_played: bool = False
+        self._timers: List[Optional[Timeout]] = [None for _ in range(4)]
+        self._selected_asking_option: List[Optional[int]] = [None for _ in range(4)]
+        self._already_asked: List[Set[int]] = [set() for _ in range(4)]
+        self._giving_options: List[Optional[Set[int]]] = [
+            set() for _ in range(4)
+        ]
+        self._given: List[Set[int]] = [set() for _ in range(4)]
+        self._taken: List[Set[int]] = [set() for _ in range(4)]
         self._current_player = None
         self._clear_hand_in_play()
         self._deal_cards()

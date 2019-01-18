@@ -26,7 +26,7 @@ export default {
 @import url('https://fonts.googleapis.com/css?family=Pacifico');
 
 .logo {
-  color: black;
+  color: white;
   font-family: 'Pacifico', cursive;
   font-size: 25pt
 }

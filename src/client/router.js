@@ -2,7 +2,6 @@ import Vue from 'vue'
 import Router from 'vue-router'
 import Home from './views/Home.vue'
 import RoomBrowser from './views/RoomBrowser.vue'
-import Player from './components/Player.vue'
 import Presidents from './views/Presidents.vue'
 import Tester from './views/Tester.vue'
 
@@ -15,7 +14,7 @@ export default new Router({
     {
       path: '/',
       name: 'home',
-      component: Tester
+      component: Home
     },
     {
       path: '/room_browser',

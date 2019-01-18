@@ -157,7 +157,6 @@ export default {
 
     join_room (room) {
       this.socket.emit('join_room', {room: room, name: this.nickname})
-      this.$router.push({ path: '/presidents' })
     }
   }
 };

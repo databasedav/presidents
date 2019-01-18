@@ -51,5 +51,7 @@ export default {
 </script>
 
 <style>
-
+.v-textarea.v-text-field--enclosed textarea {
+  margin-top: 0px !important;
+}
 </style>
