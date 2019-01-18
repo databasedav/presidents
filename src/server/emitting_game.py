@@ -20,6 +20,7 @@ except ImportError:
 
 
 # TODO: decide what to do for the removal of asking options
+# TODO: add reserve time
 
 
 class EmittingGame(Game):

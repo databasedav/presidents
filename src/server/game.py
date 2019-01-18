@@ -152,12 +152,12 @@ class Game:
         self._deal_cards(testing)
         self._make_and_set_turn_manager()
         self._num_consecutive_rounds += 1
-        self._message(f'round {self._num_consecutive_rounds} has begun')
+        self._message(f'🏁 round {self._num_consecutive_rounds} has begun')
         self._next_player()
 
     def _next_player(self, timer: bool=True):
         self._current_player = next(self._turn_manager)
-        self._message(f"it's {self._names[self._current_player]}'s turn")
+        self._message(f"🎲 it's {self._names[self._current_player]}'s turn")
         if timer:
             self._start_timer(self._current_player, .5)
 
@@ -194,18 +194,18 @@ class Game:
         num_unfinished_players = self._num_unfinished_players
         if num_unfinished_players == 3:
             self._set_president(spot)
-            self._message(f'{self._names[spot]} is president')
+            self._message(f'🏆 {self._names[spot]} is president 🥇')
             self._next_player()
         elif num_unfinished_players == 2:
             self._set_vice_president(spot)
-            self._message(f'{self._names[spot]} is vice president')
+            self._message(f'🏆 {self._names[spot]} is vice president 🥈')
             self._next_player()
         else:
             self._set_vice_asshole(spot)
             self._current_player = next(self._turn_manager)
             self._positions.append(self._current_player)
             self._set_asshole(self._current_player)
-            self._message(f'{self._names[spot]} is vice asshole and {self._names[self._current_player]} is asshole')
+            self._message(f'🏆 {self._names[spot]} is vice asshole 🥉 and {self._names[self._current_player]} is asshole 💩')
             self._initiate_trading()
 
     # card control related methods
@@ -285,7 +285,7 @@ class Game:
         chamber.remove_cards(hand)
         self._num_consecutive_passes = 0
         self._set_hand_in_play(hand)
-        self._message(f'{self._names[spot]} played a {hand.id_desc}')
+        self._message(f'▶️ {self._names[spot]} played a {hand.id_desc}')
         self.lock(spot)
         # lock others if their currently unlocked hand should no longer be unlocked
         other_spots = [other_spot for other_spot in range(4) if other_spot != spot]
@@ -296,7 +296,6 @@ class Game:
                         self.lock(other_spot)
                 except RuntimeError:  # can occur when a bomb is played on a non bomb
                     self.lock(other_spot)
-        # TODO: self._message_hand_played(hand)
         if handle_post:
             self._post_play_handler(spot)
 
@@ -337,7 +336,7 @@ class Game:
         self._stop_timer(spot)
         self._lock_pass(spot)
         self._num_consecutive_passes += 1
-        self._message(f'{self._names[spot]} passed')
+        self._message(f'⏭️ {self._names[spot]} passed')
         if handle_post:
             self._post_pass_handler()
 
@@ -353,7 +352,6 @@ class Game:
         elif self._num_consecutive_passes == self._num_unfinished_players - 1:
             self._clear_hand_in_play()
             self._next_player()
-            # TODO: self._message_hand_won(self._current_player)
         else:
             self._next_player()
 
@@ -368,7 +366,7 @@ class Game:
         self._clear_hand_in_play()
         self._deal_cards()
         self._set_trading(True)
-        self._message('trading has begun')
+        self._message('💱 trading has begun')
 
     def set_selected_asking_option(self, spot: int, value: int) -> None:
         if not self._is_asker(spot):
@@ -423,14 +421,14 @@ class Game:
         value = self._selected_asking_option[spot]
         articled_rank = rank_articler(value)
         asked_spot = self._get_opposing_position_spot(spot)
-        self._message(f'{self._names[spot]} asks {self._names[asked_spot]} for {articled_rank}')
+        self._message(f'❓ {self._names[spot]} asks {self._names[asked_spot]} for {articled_rank}')
         # chamber for asked
         chamber = self._chambers[asked_spot]
         giving_options = {
             card for card in range((value - 1) * 4 + 1, value * 4 + 1) if card in chamber and card not in self._given[spot]
         }
         if not giving_options:
-            self._message(f'{self._names[asked_spot]} does not have such a card')
+            self._message(f'❎ {self._names[asked_spot]} does not have such a card')
             self.lock(spot)
             self._add_to_already_asked(spot, value)
         else:
@@ -488,7 +486,7 @@ class Game:
         receiver_chamber: Chamber = self._chambers[receiver_spot]
         giver_chamber.remove_card(card)
         receiver_chamber.add_card(card)
-        self._message(f'{self._names[spot]} gives {self._names[receiver_spot]} a card')
+        self._message(f'🎁 {self._names[spot]} gives {self._names[receiver_spot]} a card')
         if self._is_asker(spot):
             self._add_to_given(spot, card)
             self._decrement_gives_remaining(spot)
