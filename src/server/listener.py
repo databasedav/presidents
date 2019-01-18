@@ -4,7 +4,6 @@ eventlet.monkey_patch()
 try:
     from .utils.utils import main
 except ImportError:
-    
     from utils.utils import main
 from flask import request, copy_current_request_context
 from flask import Flask, render_template
@@ -26,7 +25,10 @@ def catch_all(path):
 room_game_dict: Dict[str, EmittingGame] = dict()
 
 for room in ['hello', 'world']:
-    from emitting_game import EmittingGame
+    try:
+        from .emitting_game import EmittingGame
+    except ImportError:
+        from emitting_game import EmittingGame
     game = EmittingGame()
     game.set_room(room)
     room_game_dict[room] = game
@@ -109,7 +111,7 @@ def join_room_as_player(payload) -> None:
     game.add_player(sid, name)
     # TODO: this shouldn't be here ?
     if game.num_players == 4:
-        game._start_round(testing=False)
+        game._start_round(testing=True)
         # game.get_game_to_trading()
 
 

@@ -146,7 +146,6 @@ class Game:
     # game flow related methods
 
     def _start_round(self, testing: bool=False) -> None:
-        self._positions.clear()
         self._deal_cards(testing)
         self._make_and_set_turn_manager()
         self._num_consecutive_rounds += 1
@@ -523,7 +522,10 @@ class Game:
 
     def _end_trading(self) -> None:
         self._set_trading(False)
+        self._positions.clear()
         self._hand_in_play = base_hand
+        self._num_consecutive_rounds += 1
+        self._message(f'🏁 round {self._num_consecutive_rounds} has begun')
         self._make_and_set_turn_manager()
         self._next_player()
 

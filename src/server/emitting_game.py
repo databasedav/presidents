@@ -296,6 +296,9 @@ class EmittingGame(Game):
     def _set_dot_color(self, spot: int, dot_color: str) -> None:
         self._emit_to_all_players('set_dot_color', {'spot': spot, 'dot_color': dot_color})
 
+    def _set_vice_asshole(self, spot):
+        self._emit_to_all_players('set_on_turn', {'on_turn': False, 'spot': spot, 'time': 0})
+        super()._set_vice_asshole(spot)
 
     # emitters
 
