@@ -184,6 +184,6 @@ def give():
     (lambda sid: sid_game_dict[sid].give_card(sid))(get_sid())
 
 
-# @main
-# def main():
-#     socketio.run(app, host='0.0.0.0', debug=True)
+@main
+def main():
+    socketio.run(app, host='0.0.0.0')

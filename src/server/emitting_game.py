@@ -19,6 +19,9 @@ except ImportError:
     from listener import socketio
 
 
+# TODO: decide what to do for the removal of asking options
+
+
 class EmittingGame(Game):
 
     def __init__(self):
@@ -64,13 +67,6 @@ class EmittingGame(Game):
 
     # game flow related methods
 
-    # def _start_round(self, testing: bool=False) -> None:
-    #     self._deal_cards(testing)
-    #     self._make_and_set_turn_manager()
-    #     self._num_consecutive_rounds += 1
-    #     self._message(f'round {self._num_consecutive_rounds} has begun')
-    #     super()._next_player()
-
     def _next_player(self) -> None:
         try:  # current player is no longer on turn
             self._emit_to_all_players('set_on_turn', {'on_turn': False, 'spot': self._current_player, 'time': 0})
@@ -83,11 +79,17 @@ class EmittingGame(Game):
         """
         handles callback timer for player whose turn it is and updates
         other players' views of that timer as well
+
+        TODO: clean
         """
-        time: int = 10
+        time: int = 1
+        self._set_dot_color(self._current_player, 'green')
         self._emit('set_on_turn', {'on_turn': True, 'spot': self._current_player, 'time': time * 1000}, self._current_player_sid, callback=lambda: self._start_timer(self._current_player, time))
-        for sid in [sid for sid in self._spot_sid_bidict.values() if sid != self._current_player_sid]:
-            self._emit('set_time', {'spot': self._current_player, 'time': time * 1000}, sid)
+        self._emit_to_all_players('set_time', {'spot': self._current_player, 'time': time * 1000}, skip_sid=self._current_player_sid)
+
+    def _player_finish(self, spot: int) -> None:
+        self._set_dot_color(spot, 'purple')
+        super()._player_finish(spot)
 
     # card management related methods
 
@@ -121,6 +123,11 @@ class EmittingGame(Game):
 
     def _play_current_hand(self, spot):
         super()._play_current_hand(spot, handle_post=False)
+        self._set_dot_color(spot, 'blue')
+        for other_spot in range(4):
+            if other_spot == spot or other_spot in self._positions:
+                continue
+            self._set_dot_color(other_spot, 'red')
         self._emit_to_all_players('set_cards_remaining', {'spot': spot, 'cards_remaining': self._chambers[spot].num_cards})
         self._post_play_handler(spot)
 
@@ -146,6 +153,11 @@ class EmittingGame(Game):
         except PresidentsError as e:
             self._emit_alert(str(e), sid)
 
+    def _pass_turn(self, spot):
+        super()._pass_turn(spot, handle_post=False)
+        self._set_dot_color(spot, 'yellow')
+        self._post_pass_handler()
+
     def _clear_hand_in_play(self) -> None:
         super()._clear_hand_in_play()
         self._emit_to_all_players('clear_hand_in_play', {})
@@ -153,8 +165,9 @@ class EmittingGame(Game):
     # trading related methods
 
     def _initiate_trading(self) -> None:
-        # TODO: maybe just reset the entire game here
         super()._initiate_trading()
+        for spot in range(4):
+            self._set_dot_color(spot, 'red')
         self._emit_to_all_players('set_on_turn', {'on_turn': False})
 
     def set_selected_asking_option(self, sid: str, value: int) -> None:
@@ -277,15 +290,21 @@ class EmittingGame(Game):
 
     def _add_to_already_asked(self, spot: int, value: int) -> None:
         super()._add_to_already_asked(spot, value)
-        self._emit('remove_asking_option', {'value': value}, self._get_sid(spot))
+        # self._emit('remove_asking_option', {'value': value}, self._get_sid(spot))
+
+    def _set_dot_color(self, spot: int, dot_color: str) -> None:
+        self._emit_to_all_players('set_dot_color', {'spot': spot, 'dot_color': dot_color})
+
 
     # emitters
 
-    def _emit(self, event: str, payload: Dict[str, Union[int, str, List[int]]], sid: str, *, callback: Callable=None) -> None:
+    def _emit(self, event: str, payload: Dict[str, Union[int, str, List[int]]], sid: str, *, callback: Optional[Callable]=None) -> None:
         socketio.emit(event, payload, room=sid, callback=callback)
 
-    def _emit_to_all_players(self, event: str, payload: Dict[str, Union[int, str, List[int]]]):
+    def _emit_to_all_players(self, event: str, payload: Dict[str, Union[int, str, List[int]]], *, skip_sid: Optional[str]=None):
         for sid in self._spot_sid_bidict.values():
+            if sid == skip_sid:
+                continue
             self._emit(event, payload, sid)
 
     def _emit_to_room(self, event: str, payload: Dict[str, Union[int, str, List[int]]]):

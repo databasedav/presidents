@@ -140,5 +140,9 @@ export default {
 
   set_time(state, payload) {
     state.times.splice(payload.spot, 1, payload.time)
+  },
+
+  set_dot_color (state, payload) {
+    state.dot_colors.splice(payload.spot, 1, payload.dot_color)
   }
 }

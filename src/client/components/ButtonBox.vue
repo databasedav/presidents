@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <v-container grid-list-md>
     <v-layout>
       <v-flex xs12>
         <AskingOptions
@@ -11,21 +11,21 @@
       </v-flex>
     </v-layout>
       
-    <v-layout row wrap justify-space-around>
+    <v-layout row wrap>
       <!-- lock/unlock button -->
-      <v-flex xs5>
+      <v-flex xs6>
         <v-btn
           @click="$emit(lock_unlock_str)"
           block
           color='error'
         >
           {{ lock_unlock_str }}
-          <v-icon v-if='!unlocked' small right>fa-lock</v-icon>
-          <v-icon v-else small right>fa-unlock</v-icon>
+          <v-icon v-if='!unlocked'right>fa-lock</v-icon>
+          <v-icon v-else right>fa-unlock</v-icon>
         </v-btn>
       </v-flex>
 
-      <v-flex xs5>
+      <v-flex xs6>
         <v-btn
           v-if='trading && asker'
           @click="$emit(alt_play_button_str)"
@@ -34,10 +34,10 @@
           color='success'
         >
           {{ alt_play_button_str }}
-          <v-icon v-if='alt_play_button_str === "ask"' small right>fa-question</v-icon>
-          <v-icon v-else-if='alt_play_button_str === "give"' small right>fa-gift</v-icon>
+          <v-icon v-if='alt_play_button_str === "ask"' right>fa-question</v-icon>
+          <v-icon v-else-if='alt_play_button_str === "give"' right>fa-gift</v-icon>
           <template v-else>
-            <v-icon small right>fa-question</v-icon><v-icon small right>fa-gift</v-icon>
+            <v-icon right>fa-question</v-icon><v-icon right>fa-gift</v-icon>
           </template>
         </v-btn>
 
@@ -49,7 +49,7 @@
           color='success'
         >
           give
-          <v-icon small right>fa-gift</v-icon>
+          <v-icon right>fa-gift</v-icon>
         </v-btn>
 
         <v-btn
@@ -60,14 +60,11 @@
           color='success'
         >
           play
-          <v-icon right>play_arrow</v-icon>
+          <v-icon x-large right>play_arrow</v-icon>
         </v-btn>
       </v-flex>
-    </v-layout>
 
-    <v-layout row wrap justify-space-around>
-
-      <v-flex xs5>
+      <v-flex xs6>
          <v-btn
           color='info'
           block
@@ -76,11 +73,11 @@
           store hand
           <br>
           (coming soon)
-          <v-icon small right>fa-save</v-icon>
+          <v-icon right>fa-save</v-icon>
         </v-btn>
       </v-flex>
 
-      <v-flex xs5>
+      <v-flex xs6>
         <v-btn
           @click='$emit(pass_button_action)'
           block
@@ -88,12 +85,12 @@
           color='warning'
         >
           pass
-          <v-icon v-if='!pass_unlocked' small right>fa-lock</v-icon>
-          <v-icon v-else small right>skip_next</v-icon>
+          <v-icon v-if='!pass_unlocked' right>fa-lock</v-icon>
+          <v-icon v-else x-large right>skip_next</v-icon>
         </v-btn>
       </v-flex>
     </v-layout>
-  </div>
+  </v-container>
 </template>
 
 <script>
@@ -151,7 +148,7 @@ export default {
 
 <style scoped>
 .v-btn {
-  height: 60px;
+  height: 70px;
   text-transform: lowercase !important;
 }
 </style>

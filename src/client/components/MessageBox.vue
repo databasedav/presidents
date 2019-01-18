@@ -1,5 +1,6 @@
 <template>
   <v-textarea
+    dark
     :id='this.id'
     :value='message'
     rows='2'

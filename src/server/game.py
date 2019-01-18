@@ -69,7 +69,7 @@ class Game:
         self._already_asked: List[Set[int]] = [set() for _ in range(4)]
         self._waiting: List[bool] = [False for _ in range(4)]
         self._giving_options: List[Optional[Set[int]]] = [
-            None for _ in range(4)
+            set() for _ in range(4)
         ]
         self._takes_remaining: List[int] = [0 for _ in range(4)]
         self._gives_remaining: List[int] = [0 for _ in range(4)]
@@ -188,7 +188,6 @@ class Game:
         self._timers[spot].cancel()
 
     def _player_finish(self, spot: int) -> None:
-        # TODO: self._message_player_finished_position(spot)
         self._positions.append(self._current_player)
         self._winning_last_played = True
         self._turn_manager.remove(self._current_player)
@@ -334,11 +333,15 @@ class Game:
         else: 
             self._pass_turn(spot)
 
-    def _pass_turn(self, spot: int) -> None:
+    def _pass_turn(self, spot: int, handle_post: bool=True) -> None:
         self._stop_timer(spot)
         self._lock_pass(spot)
         self._num_consecutive_passes += 1
         self._message(f'{self._names[spot]} passed')
+        if handle_post:
+            self._post_pass_handler()
+
+    def _post_pass_handler(self) -> None:
         # all remaining players passed on a winning hand
         if self._winning_last_played:
             if self._num_consecutive_passes == self._num_unfinished_players:
@@ -360,7 +363,7 @@ class Game:
     # trading related methods
 
     def _initiate_trading(self) -> None:
-        # TODO: maybe just reset the entire game here
+        # TODO: just reset the entire game here
         self._current_player = None
         self._clear_hand_in_play()
         self._deal_cards()
@@ -376,7 +379,8 @@ class Game:
             raise PresidentsError('you cannot ask for this value')
         if self._is_already_asked(spot, value):
             # TODO: console use or dom modification
-            raise PresidentsError('you already asked for this value')
+            # raise PresidentsError('you already asked for this value')
+            raise PresidentsError(f"{self._names[self._get_opposing_position_spot(spot)]} doesn't have any cards of this rank")
         selected_asking_option: int = self._selected_asking_option[spot]
         if selected_asking_option is None:
             self._select_asking_option(spot, value)

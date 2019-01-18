@@ -33,6 +33,7 @@ export default function state () {
     gives_remaining: Number,
     cards_remaining: Array(4).fill(13),
     times: Array(4).fill(0),
-    names: Array(4).fill('')
+    names: Array(4).fill(''),
+    dot_colors: Array(4).fill('red')
   }
 }

@@ -18,7 +18,7 @@ import { namespaced_getter } from '../utils/utils'
 
 export default {
 
-  name: 'CardBox',
+  name: 'InPlayBox',
 
   components: {
     Card
@@ -39,3 +39,9 @@ export default {
   },
 }
 </script>
+
+<style>
+div.Card {
+  position: absolute;
+}
+</style>

@@ -1,37 +1,39 @@
 <template>
-  <div>
-    <v-layout justify-space-around>
-      <v-flex id='left' xs3>
-        <OtherPlayer
-         :namespace='this.namespace'
-         :spot='this.left_spot'
-        >
-        </OtherPlayer>
-      </v-flex>
-      <v-flex id='center' xs3>
-        <OtherPlayer
+  <v-container grid-list-xl pa-0>
+    <v-layout justify-center>
+      <v-flex id='center' xs6>
+        <PlayerStrip
          :namespace='this.namespace'
          :spot='this.center_spot'
         >
-        </OtherPlayer>
+        </PlayerStrip>
       </v-flex>
-      <v-flex id='right' xs3>
-        <OtherPlayer
+    </v-layout>
+    <v-layout justify-space-between>
+      <v-flex id='left' xs6>
+        <PlayerStrip
+         :namespace='this.namespace'
+         :spot='this.left_spot'
+        >
+        </PlayerStrip>
+      </v-flex>
+      <v-flex id='right' xs6>
+        <PlayerStrip
          :namespace='this.namespace'
          :spot='this.right_spot'
         >
-        </OtherPlayer>
+        </PlayerStrip>
       </v-flex>
     </v-layout>
-  </div>
+  </v-container>
 </template>
 
 <script>
-import OtherPlayer from "./OtherPlayer.vue";
+import PlayerStrip from "./PlayerStrip.vue";
 
 export default {
   components: {
-    OtherPlayer
+    PlayerStrip
   },
   props: {
     namespace: String
@@ -55,10 +57,3 @@ export default {
   }
 };
 </script>
-
-<style>
-/* TODO: maybe do the rotation thing */
-/* #left {
-  transform: rotate(-20deg);
-} */
-</style>

@@ -140,6 +140,10 @@ function create_namespaced_player_socket_plugin (socket, namespace) {
     socket.on('set_time', payload => {
       commit(namespace, 'set_time', payload)
     })
+
+    socket.on('set_dot_color', payload => {
+      commit(namespace, 'set_dot_color', payload)
+    })
   }
 }
 

@@ -1,7 +1,7 @@
 <template>
     <v-snackbar
       v-model='snackbar'
-      :timeout='1000'
+      :timeout='1500'
       :top='true'
     >
       {{ alert }}
@@ -20,24 +20,10 @@ import { mapGetters } from 'vuex'
 
 export default {
   name: 'AlertSnackbar',
-  // data () {  
-  //   return {
-  //     snackbar: false,
-  //     alert: ''
-  //   }
-  // },
 
   props: {
     namespace: String
   },
-
-  // methods: {
-  //   onClick_flush() {
-  //     this.$snackbar.show(this.alert, {
-  //       flushAll: true
-  //     })
-  //   }
-  // },
   
   computed: {
     snackbar () {
@@ -46,15 +32,7 @@ export default {
     alert () {
       return this.$store.state[this.namespace].alert
     },
-  },
-
-  // watch: {
-  //   alert () {
-  //     this.$snackbar.show(this.alert, {
-  //       flushAll: true
-  //     })
-  //   }
-  // }
+  }
 }
 
 

@@ -23,8 +23,6 @@ class EmittingChamber(Chamber):
     to be debugged without needing an active HTTP request.
     """
 
-    
-    
     def __init__(self, cards: np.ndarray=None) -> None:
         super().__init__(cards)
         self._sid: str = None

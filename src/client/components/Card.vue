@@ -2,8 +2,8 @@
   <v-btn
     class='card'
     @click='$emit("card_click", card)'
-    :outline='this.outline'
     :style='{color, transform}'
+    :outline='outline'
   >
     {{ this.rank }}<br>{{ this.suit }}
   </v-btn>
@@ -44,6 +44,10 @@ export default {
       return this.is_selected ? 'rotate(15deg)': 'rotate(0deg)'
     },
 
+    // border () {
+    //   return this.is_giving_option ? 'border-color: #84FFFF !important' : null
+    // },
+
     outline () {
       return this.is_giving_option
     }
@@ -53,17 +57,16 @@ export default {
 
 <style scoped>
 /* TODO: border should not increase width of cards */
-.card {
-  height:80px;
-  width: 40px;
+.v-btn.card {
+  min-width: 0;
+  height:70px;
+  width: 35px;
   margin: 5px;
-  font-size: 25px;
+  font-size: 20px;
   text-align: center;
   border-radius: 5px;
-  border-color: purple !important;
   box-sizing: border-box !important;
-}
-.v-btn {
-  min-width: 0;
+  background-color: #E0E0E0 !important;
+  border-color: #18FFFF !important;
 }
 </style>
