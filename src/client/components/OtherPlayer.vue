@@ -24,7 +24,11 @@
         align-center
         justify-end
       >
-        {{ this.time }}
+        <countdown
+          :time='this.time'
+        >
+          <template slot-scope="props">{{ props.seconds }}</template>
+        </countdown>
       </v-layout>
     </v-card-actions>
   </v-card>

@@ -8,9 +8,7 @@ export default {
 
   set_on_turn (state, payload) {
     state.on_turn = payload.on_turn
-    if (payload.spot) {
-      state.times.splice(payload.spot, 1, payload.time)
-    }
+    state.times.splice(payload.spot, 1, payload.time)
   },
 
   set_pass_unlocked(state, payload) {
@@ -138,5 +136,9 @@ export default {
 
   set_names(state, payload) {
     state.names = payload.names
+  },
+
+  set_time(state, payload) {
+    state.times.splice(payload.spot, 1, payload.time)
   }
 }

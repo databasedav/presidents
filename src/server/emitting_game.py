@@ -64,17 +64,30 @@ class EmittingGame(Game):
 
     # game flow related methods
 
+    # def _start_round(self, testing: bool=False) -> None:
+    #     self._deal_cards(testing)
+    #     self._make_and_set_turn_manager()
+    #     self._num_consecutive_rounds += 1
+    #     self._message(f'round {self._num_consecutive_rounds} has begun')
+    #     super()._next_player()
+
     def _next_player(self) -> None:
         try:  # current player is no longer on turn
-            self._emit('set_on_turn', {'on_turn': False}, self._current_player_sid)
+            self._emit_to_all_players('set_on_turn', {'on_turn': False, 'spot': self._current_player, 'time': 0})
         except KeyError:  # self._current_player is None (round start)
             pass
-        try:
-            super()._next_player(timer=False)
-        except PresidentsError as e:
-            self._emit_alert(str(e), self._get_sid(self._current_player))
-        time: int = .1
+        super()._next_player(timer=False)
+        self._emit_set_on_turn_handler()
+
+    def _emit_set_on_turn_handler(self):
+        """
+        handles callback timer for player whose turn it is and updates
+        other players' views of that timer as well
+        """
+        time: int = 10
         self._emit('set_on_turn', {'on_turn': True, 'spot': self._current_player, 'time': time * 1000}, self._current_player_sid, callback=lambda: self._start_timer(self._current_player, time))
+        for sid in [sid for sid in self._spot_sid_bidict.values() if sid != self._current_player_sid]:
+            self._emit('set_time', {'spot': self._current_player, 'time': time * 1000}, sid)
 
     # card management related methods
 

@@ -7,21 +7,19 @@
     <div v-if='on_turn' class='circle-green'>{{ spot }}</div>
     <div v-else class='circle-red'>{{ spot }}</div>
     <OtherPlayerBox :namespace='this.namespace'></OtherPlayerBox>
-    <AlertSnackbar :namespace='namespace'></AlertSnackbar>
-    <InPlayBox :namespace='namespace'></InPlayBox>
+    <AlertSnackbar :namespace='this.namespace'></AlertSnackbar>
+    <InPlayBox :namespace='this.namespace'></InPlayBox>
     <MessageBox
-      :namespace='namespace'
+      :namespace='this.namespace'
     >
     </MessageBox>
     <countdown
-      :ref='namespace + "countdown"'
       :time='this.time'
-      :auto-start='false'
     >
       <template slot-scope="props">{{ props.seconds }}</template>
     </countdown>
     <CardBox
-      :namespace='namespace'
+      :namespace='this.namespace'
       @card_click='card_click'
     ></CardBox>
     <v-layout>
@@ -59,7 +57,8 @@ import { createSinglePlayerStore, register_namespaced_module } from '../utils/ut
 export default {
   data () {
     return {
-      socket: io.Socket
+      socket: io.Socket,
+      registered: false
     }
   },
 
@@ -79,6 +78,7 @@ export default {
 
   created () {
     this.$store.registerModule(this.namespace, createSinglePlayerStore())
+    this.registered = true
     this.socket = io(`//${window.location.host}`, { forceNew: true })
     this.socket.emit('join_room', {room: 'world', name: this.namespace})
     const plugin = create_namespaced_player_socket_plugin(this.socket, this.namespace)
@@ -144,11 +144,7 @@ export default {
     time () {
       return this.$store.state[this.namespace].times[this.spot]
     }
-  },
-
-  // watch: {
-  //   time (val) {}
-  // },
+  }
 }
 </script>
 

@@ -334,6 +334,8 @@ class Game:
             self._pass_turn(spot)
 
     def _pass_turn(self, spot: int) -> None:
+        self._stop_timer(spot)
+        self._lock_pass(spot)
         self._num_consecutive_passes += 1
         self._message(f'{self._names[spot]} passed')
         # all remaining players passed on a winning hand
