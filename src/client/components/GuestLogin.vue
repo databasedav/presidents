@@ -5,7 +5,7 @@
       v-model='nickname'
       clearable
       counter
-      maxlength='20'
+      maxlength='10'
       color='grey'
     ></v-text-field>
     <v-btn
@@ -36,7 +36,7 @@ export default {
 }
 </script>
 
-<style scoped>
+<style scoped> 
 .v-btn {
   text-transform: lowercase !important;
 }

@@ -1,36 +1,46 @@
 <template>
-  <v-card>
-    <v-card-title>
+  <v-card class='pa-0 ma-0'>
+    <v-card-title wrap>
       <v-icon
         left
+        small
         :color='"red"'
       >
         fa-circle
       </v-icon>
+      {{ this.name }}
     </v-card-title>
 
-    <v-card-text>
-      {{ this.name }}
+    <v-card-text class='pa-0 ma-0'>
+      cards: {{ this.cards_remaining }}
+      <br>
+      time: 
+        <countdown
+          :time='this.time'
+        >
+          <template slot-scope="props">{{ props.seconds }}</template>
+        </countdown>
     </v-card-text>
 
-    <v-card-actions>
+    <!-- <v-card-actions>
       <v-layout
         align-center
         justify-start
       >
-        {{ this.cards_remaining }}
+        cards: {{ this.cards_remaining }}
       </v-layout>
       <v-layout
         align-center
         justify-end
       >
+        time: 
         <countdown
           :time='this.time'
         >
           <template slot-scope="props">{{ props.seconds }}</template>
         </countdown>
       </v-layout>
-    </v-card-actions>
+    </v-card-actions> -->
   </v-card>
 </template>
 

@@ -2,7 +2,7 @@
   <v-textarea
     :id='this.id'
     :value='message'
-    rows='10'
+    rows='2'
     no-resize
     readonly
     outline

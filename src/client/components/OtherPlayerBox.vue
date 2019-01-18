@@ -1,21 +1,21 @@
 <template>
   <div>
-    <v-layout>
-      <v-flex>
+    <v-layout justify-space-around>
+      <v-flex id='left' xs3>
         <OtherPlayer
          :namespace='this.namespace'
          :spot='this.left_spot'
         >
         </OtherPlayer>
       </v-flex>
-      <v-flex>
+      <v-flex id='center' xs3>
         <OtherPlayer
          :namespace='this.namespace'
          :spot='this.center_spot'
         >
         </OtherPlayer>
       </v-flex>
-      <v-flex>
+      <v-flex id='right' xs3>
         <OtherPlayer
          :namespace='this.namespace'
          :spot='this.right_spot'
@@ -57,4 +57,8 @@ export default {
 </script>
 
 <style>
+/* TODO: maybe do the rotation thing */
+/* #left {
+  transform: rotate(-20deg);
+} */
 </style>

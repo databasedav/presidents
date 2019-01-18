@@ -1,11 +1,5 @@
 <template>
   <div>
-    <!-- <Listener
-      :socket='this.socket'
-      :namespace='this.namespace'
-    ></Listener> -->
-    <div v-if='this.on_turn' class='circle-green'>{{ this.spot }}</div>
-    <div v-else class='circle-red'>{{ this.spot }}</div>
     <AlertSnackbar :namespace='this.namespace'></AlertSnackbar>
     <InPlayBox :namespace='this.namespace'></InPlayBox>
     <CardBox

@@ -1,9 +1,9 @@
 <template>
     <div>
-        <TestPlayer :namespace='"a"'></TestPlayer>
-        <TestPlayer :namespace='"b"'></TestPlayer>
-        <TestPlayer :namespace='"c"'></TestPlayer>
-        <TestPlayer :namespace='"d"'></TestPlayer>
+        <TestPlayer :namespace='"adsaijflasjdf"'></TestPlayer>
+        <TestPlayer :namespace='"bsadfasdfasdf"'></TestPlayer>
+        <TestPlayer :namespace='"cdfsasdfasdf"'></TestPlayer>
+        <TestPlayer :namespace='"ddgsadfhadfg"'></TestPlayer>
     </div>
 </template>
 

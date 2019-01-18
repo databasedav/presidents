@@ -42,7 +42,7 @@ class Game:
 
         # instance related attributes
         self.num_players: int = 0
-        self._num_consecutive_rounds: int = 0  # TODO
+        self._num_consecutive_rounds: int = 0
 
         # setup and ID related attributes
         self._open_spots = {i for i in range(4)}
@@ -239,6 +239,7 @@ class Game:
     # playing and passing related methods
 
     def maybe_unlock_play(self, spot: int):
+        self._lock_if_pass_unlocked(spot)
         hand = self._get_current_hand(spot)
         if hand.is_empty:
             raise PresidentsError('you must add cards before attempting to unlock')
