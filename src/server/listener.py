@@ -89,16 +89,14 @@ def join_room_as_player(payload) -> None:
 
 @socketio.on('create_room')
 def add_room(payload):
-    sid = request.sid
     room = payload['room']
     if room in room_game_dict:
-        emit('set_room_dne', {'room_dne': False}, room=sid)
+        emit('set_room_dne', {'room_dne': False}, room=request.sid)
         return
     else:
         if len(room_game_dict) >= 10:
             remove_room(room_with_least_players())
-        game = EmittingGame()
-        room_game_dict[room] = game
+        room_game_dict[room] = EmittingGame()
         refresh()
 
 
