@@ -38,51 +38,23 @@ sid_room_dict: Dict[str, str] = dict()
 sid_game_dict: Dict[str, EmittingGame] = dict()
 
 
-def get_sid() -> str:
-    return request.sid
-
-
 def room_list():
     return [{'room': room, 'num_players': game.num_players} for room, game in room_game_dict.items()]
 
 
 @socketio.on('refresh')
 def refresh():
-    emit('refresh', {'rooms': room_list()}, room=get_sid())
-
-
-def get_game_from_room(room: str) -> EmittingGame:
-    return room_game_dict[room]
-
-
-def get_room(sid: str) -> str:
-    return sid_room_dict[sid]
-
-
-def get_game_spot_from_sid(sid: str) -> Tuple[EmittingGame, int]:
-    room: str = get_room(sid)
-    game: EmittingGame = get_game_from_room(room)
-    # TODO: check that sid is a player and not a spectator
-    spot: int = game._get_spot(sid)
-    return game, spot
-
-
-def get_game_from_sid(sid: str) -> EmittingGame:
-    return get_game_from_room(sid_room_dict[sid])
-
-
-def get_sid_and_game() -> Tuple[str, EmittingGame]:
-    return (lambda sid: (sid, get_game_from_sid(sid)))(get_sid())
+    emit('refresh', {'rooms': room_list()}, room=request.sid)
 
 
 @socketio.on('connect')
 def connect():
-    print(f'{get_sid()} connected.')
+    print(f'{request.sid} connected.')
 
 
 @socketio.on('disconnect')
 def disconnect():
-    sid = get_sid()
+    sid = request.sid
     print(f'{sid} disconnected.')
     try:  # if in a game simply nuke the game TODO do not simply nuke the game
         del sid_game_dict[sid]
@@ -100,12 +72,12 @@ def send_non_leavers_back_to_browser(sid: str, room: str) -> None:
 
 @socketio.on('join_room')
 def join_room_as_player(payload) -> None:
-    sid = get_sid()
+    sid = request.sid
     room = payload['room']
     name = payload['name']
     join_room(room, sid)
     sid_room_dict[sid] = room
-    game: EmittingGame = get_game_from_room(room)
+    game: EmittingGame = room_game_dict[room]
     sid_game_dict[sid] = game
     emit('send_to_path', {'path': '/presidents'}, room=sid)
     game.add_player(sid, name)
@@ -117,7 +89,7 @@ def join_room_as_player(payload) -> None:
 
 @socketio.on('create_room')
 def add_room(payload):
-    sid = get_sid()
+    sid = request.sid
     room = payload['room']
     if room in room_game_dict:
         emit('set_room_dne', {'room_dne': False}, room=sid)
@@ -142,47 +114,47 @@ def room_with_least_players() -> str:
 
 @socketio.on('card_click')
 def card_click(payload):
-    (lambda sid: sid_game_dict[sid].add_or_remove_card(sid, payload['card']))(get_sid())
+    (lambda sid: sid_game_dict[sid].add_or_remove_card(sid, payload['card']))(request.sid)
 
 
 @socketio.on('unlock')
 def unlock():
-    (lambda sid: sid_game_dict[sid].unlock_handler(sid))(get_sid())
+    (lambda sid: sid_game_dict[sid].unlock_handler(sid))(request.sid)
 
 
 @socketio.on('lock')
 def lock():
-    (lambda sid: sid_game_dict[sid].lock_handler(sid))(get_sid())
+    (lambda sid: sid_game_dict[sid].lock_handler(sid))(request.sid)
 
 
 @socketio.on('play')
 def play():
-    (lambda sid: sid_game_dict[sid].maybe_play_current_hand(sid))(get_sid())
+    (lambda sid: sid_game_dict[sid].maybe_play_current_hand(sid))(request.sid)
 
 
 @socketio.on('unlock_pass')
 def unlock_pass():
-    (lambda sid: sid_game_dict[sid].maybe_unlock_pass_turn(sid))(get_sid())
+    (lambda sid: sid_game_dict[sid].maybe_unlock_pass_turn(sid))(request.sid)
 
 
 @socketio.on('pass')
 def pass_turn():
-    (lambda sid: sid_game_dict[sid].maybe_pass_turn(sid))(get_sid())
+    (lambda sid: sid_game_dict[sid].maybe_pass_turn(sid))(request.sid)
 
 
 @socketio.on('asking_click')
 def select_asking_option(payload):
-    (lambda sid: sid_game_dict[sid].set_selected_asking_option(sid, payload['value']))(get_sid())
+    (lambda sid: sid_game_dict[sid].set_selected_asking_option(sid, payload['value']))(request.sid)
 
 
 @socketio.on('ask')
 def ask():
-    (lambda sid: sid_game_dict[sid].ask_for_card(sid))(get_sid())
+    (lambda sid: sid_game_dict[sid].ask_for_card(sid))(request.sid)
 
 
 @socketio.on('give')
 def give():
-    (lambda sid: sid_game_dict[sid].give_card(sid))(get_sid())
+    (lambda sid: sid_game_dict[sid].give_card(sid))(request.sid)
 
 
 @main
