@@ -1,20 +1,14 @@
 import random
 from eventlet import sleep, monkey_patch, greenthread
 monkey_patch()
-from eventlet.timeout import Timeout
 from itertools import cycle
 from typing import Any, Callable, Dict, List, Optional, Set, Union
 
 import numpy as np
 
-try:
-    from .chamber import Chamber, CardNotInChamberError
-    from .hand import Hand, DuplicateCardError, FullHandError
-    from .utils.utils import rank_articler
-except ImportError:
-    from chamber import Chamber, CardNotInChamberError
-    from hand import Hand, DuplicateCardError, FullHandError
-    from utils.utils import rank_articler
+from .chamber import Chamber, CardNotInChamberError
+from .hand import Hand, DuplicateCardError, FullHandError
+from ..utils import rank_articler
 
 
 # TODO: nice way to remove asking options after takes are exhausted

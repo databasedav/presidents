@@ -1,12 +1,9 @@
 from __future__ import annotations
-try:
-    from .hand import Hand
-    from .chamber import Chamber, HandNode, HandPointerNode
-    from .listener import socketio
-except ImportError:
-    from hand import Hand
-    from chamber import Chamber, HandNode, HandPointerNode
-    from listener import socketio
+
+from .hand import Hand
+from .chamber import Chamber, HandNode, HandPointerNode
+
+from .. import socketio
 
 from typing import Dict, List, Any, Optional
 import numpy as np

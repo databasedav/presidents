@@ -5,18 +5,12 @@ from bidict import bidict
 from flask import current_app, copy_current_request_context, request
 from flask_socketio import emit
 
-try:
-    from .game import Game, base_hand, PresidentsError
-    from .emitting_chamber import EmittingChamber
-    from .chamber import CardNotInChamberError
-    from .hand import Hand, DuplicateCardError, FullHandError
-    from .listener import socketio
-except ImportError:
-    from game import Game, base_hand, PresidentsError
-    from emitting_chamber import EmittingChamber
-    from chamber import CardNotInChamberError
-    from hand import Hand, DuplicateCardError, FullHandError
-    from listener import socketio
+from .game import Game, base_hand, PresidentsError
+from .emitting_chamber import EmittingChamber
+from .chamber import CardNotInChamberError
+from .hand import Hand, DuplicateCardError, FullHandError
+
+from .. import socketio
 
 
 # TODO: decide what to do for the removal of asking options

@@ -10,28 +10,28 @@
 # TODO: wrtie tests  # keeping this typo cuz I love irony
 
 from __future__ import annotations
+
 import numpy as np
 import pickle
 
-try:
-    from .utils.utils import hand_hash, card_names, id_desc_dict
-except ImportError:
-    from utils.utils import hand_hash, card_names, id_desc_dict
+from ..utils import hand_hash, card_names, id_desc_dict
 from typing import List, Dict, Union
 from json import dumps, loads
 from mypy_extensions import NoReturn
 
 
 # hash table for identifying hands
-try:
-    with open('./src/server/hand_table.pkl', 'rb') as file:
-        hand_table = pickle.load(file)
-except FileNotFoundError:
-    with open('hand_table.pkl', 'rb') as file:
-        hand_table = pickle.load(file)
+# try:
+with open('src/server/app/components/hand_table.pkl', 'rb') as file:
+    hand_table = pickle.load(file)
+# except FileNotFoundError:
+#     import subprocess
+#     subprocess.Popen('python hand_hash_table.py', shell=True)
+#     with open('hand_table.pkl', 'rb') as file:
+#         hand_table = pickle.load(file)
 
 
-class Hand(object):
+class Hand:
     """
     Base class for president's hands and the core data structure of
     Presidents. Refactoring from original Hand class found in class

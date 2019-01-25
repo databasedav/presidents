@@ -1,26 +1,12 @@
 from __future__ import annotations
-import eventlet
-eventlet.monkey_patch()
-try:
-    from .utils.utils import main
-except ImportError:
-    from utils.utils import main
-from flask import request, copy_current_request_context
-from flask import Flask, render_template
+
+from .. import socketio
+from ..utils import main
+
+from flask import request, Flask
 from flask_socketio import SocketIO, emit, join_room, leave_room, close_room
 
 from typing import Dict, Tuple
-
-
-app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app)#, logger=True)
-
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def catch_all(path):
-    return render_template('index.html')
-
 
 room_game_dict: Dict[str, EmittingGame] = dict()
 
@@ -153,8 +139,3 @@ def ask():
 @socketio.on('give')
 def give():
     (lambda sid: sid_game_dict[sid].give_card(sid))(request.sid)
-
-
-@main
-def main():
-    socketio.run(app, host='0.0.0.0')
