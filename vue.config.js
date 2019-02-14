@@ -21,7 +21,7 @@ module.exports = {
     config
       .entry('app')
         .clear()
-        .add('./src/client/main.js')
+        .add('./src/front/main.js')
         .end()
   },
   configureWebpack: {
