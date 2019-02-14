@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, Tuple
 from flask import request, Flask
-from flask_socketio import SocketIO, emit, join_room, leave_room, close_room
+from flask_socketio import emit, join_room, leave_room, close_room
 
 from .. import socketio
 from ..components import EmittingGame

@@ -22,7 +22,7 @@ from mypy_extensions import NoReturn
 
 # hash table for identifying hands
 # try:
-with open('src/server/app/components/hand_table.pkl', 'rb') as file:
+with open('src/back/app/components/hand_table.pkl', 'rb') as file:
     hand_table = pickle.load(file)
 # except FileNotFoundError:
 #     import subprocess

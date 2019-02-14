@@ -5,6 +5,6 @@ COPY . .
 RUN npm run setup
 RUN npm run build
 RUN chmod +x boot.sh
-ENV FLASK_APP ./src/server/listener.py
+ENV FLASK_APP ./src/back/presidents.py
 EXPOSE 5000
 CMD ["./boot.sh"]

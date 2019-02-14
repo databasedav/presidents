@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
-    "build": "rm -rf src/server/static src/server/templates && vue-cli-service build --no-clean",
+    "build": "rm -rf src/back/static src/back/templates && vue-cli-service build --no-clean",
     "lint": "vue-cli-service lint",
-    "flask": "venv/bin/python src/server/events.py",
+    "flask": "venv/bin/python src/back/presidents.py",
     "start": "npm run flask & npm run serve",
     "setup": "python -m venv venv && venv/bin/pip install -r requirements.txt && npm install"
   },
