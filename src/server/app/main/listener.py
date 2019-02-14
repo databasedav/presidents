@@ -1,20 +1,15 @@
 from __future__ import annotations
 
-from .. import socketio
-from ..utils import main
-
+from typing import Dict, Tuple
 from flask import request, Flask
 from flask_socketio import SocketIO, emit, join_room, leave_room, close_room
 
-from typing import Dict, Tuple
+from .. import socketio
+from ..components import EmittingGame
 
 room_game_dict: Dict[str, EmittingGame] = dict()
 
 for room in ['hello', 'world']:
-    try:
-        from .emitting_game import EmittingGame
-    except ImportError:
-        from emitting_game import EmittingGame
     game = EmittingGame()
     game.set_room(room)
     room_game_dict[room] = game
