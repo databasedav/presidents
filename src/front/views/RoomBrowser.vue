@@ -1,6 +1,6 @@
 <template>
   <div>
-    <v-toolbar flat color="white">
+    <v-toolbar flat>
       <v-toolbar-title class="logo">presidents</v-toolbar-title>
       <v-divider class="mx-2" inset vertical></v-divider>
       <v-spacer></v-spacer>
@@ -164,9 +164,9 @@ export default {
 
 <style scoped>
 .logo {
-  color: black;
+  color: white;
   font-family: "Pacifico", cursive;
-  font-size: 25pt;
+  font-size: 40pt;
 }
 
 .v-btn {
