@@ -63,7 +63,6 @@ class Hand:
             self._cards: np.ndarray[np.uint8] = cards.copy()
             self._id: int = identity
             self._insertion_index: int = insertion_index
-            self._cards: np.ndarray[np.uint8] = np.array(cards, dtype=np.uint8)
         # testing constructor (i.e. Hand([...])); auto identifies
         # list requirements: length <= 5, ints between 0 and 52
         #   inclusive, non-zero values must be unique

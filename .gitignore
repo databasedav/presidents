@@ -26,3 +26,5 @@ __pycache__
 .cache
 # .pkl
 .mypy_cache
+
+playground.py

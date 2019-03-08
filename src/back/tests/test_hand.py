@@ -97,3 +97,9 @@ def test_testing_constructor():
 
     with pytest.raises(AssertionError, match=r'unique'):
         hand = Hand([0, 1, 0, 1, 0])
+
+def test_copy_constructor():
+    hand: Hand = Hand([1, 2, 3, 4, 5])
+    hand_copy = Hand.copy(hand)
+    assert hand == hand_copy
+
