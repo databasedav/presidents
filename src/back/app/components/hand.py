@@ -15,7 +15,7 @@ import numpy as np
 import pickle
 
 from ..utils import hand_hash, card_names, id_desc_dict
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Optional
 from json import dumps, loads
 from mypy_extensions import NoReturn
 
@@ -55,29 +55,35 @@ class Hand:
     """
 
     def __init__(self,
-                 _cards: np.ndarray=None,
-                 _id: int=None,
-                 _insertion_index: int=None) -> None:
-        if _cards is None:  # default empty hand
-            self._cards = np.zeros(shape=5, dtype=np.uint8)
-            self._id = 0
-            self._insertion_index = 4
+                 cards: Optional[np.ndarray[np.uint8]]=None,
+                 identity: Optional[int]=None,
+                 insertion_index: Optional[int]=None) -> None:
+        if cards is None:  # default constructor; empty hand
+            self._cards: np.ndarray[np.uint8] = (
+                np.zeros(shape=5, dtype=np.uint8)
+            )
+            self._id: int = 0
+            self._insertion_index: int = 4
+        # .copy classmethod constructor; should not be used manually
+        elif insertion_index is not None:
+            self._cards: np.ndarray[np.uint8] = cards.copy()
+            self._id: int = identity
+            self._insertion_index: int = insertion_index
+            self._cards: np.ndarray[np.uint8] = np.array(cards, dtype=np.uint8)
+        # testing constructor (i.e. Hand([...]))
+        # list need not be sorted but must be length <= 5, e.g. [52, 1, 13]
         else:
-            assert len(_cards) == 5
-            self._cards = np.array(_cards, dtype=np.uint8)
-            if _id is not None and _insertion_index is not None:
-                self._id = _id
-                self._insertion_index = _insertion_index
-            # this case should only be used for testing and debugging
-            # TODO: I don't like this, mostly because of the number of
-            #       cards hack, ultimately I think the amount it will
-            #       make testing easier is probably worth it
-            elif _id is None and _insertion_index is None:
-                self._identify()
-                self._insertion_index = 4 - self._id // 10
-            else:
-                raise AssertionError("Bug: only id or insertion index is " +
-                                     "given with custom hand constructor.")
+            self._insertion_index = 4 - len(cards)
+            assert self._insertion_index >= -1, 'hands can have up to 5 cards'
+            assert all(map(lambda x: isinstance(x, int), cards)), (
+                'cards must be ints'
+            )
+
+            self._identify()
+            self._insertion_index = 4 - self._id // 10
+        else:
+            raise AssertionError("Bug: only id or insertion index is " +
+                                    "given with custom hand constructor.")
 
     @classmethod
     def from_json(cls, json_hand: str):
@@ -115,7 +121,7 @@ class Hand:
                f"{self._insertion_index}"
 
     def __len__(self) -> int:
-        return self._number_of_cards
+        return self._num_cards
 
     def __eq__(self, other: Hand) -> bool:
         return (np.array_equal(self._cards, other._cards) and  # type: ignore
@@ -204,11 +210,9 @@ class Hand:
         return self._id % 10 > 0
 
     @property
-    def _number_of_cards(self) -> int:
-        try:
-            return 4 - self._insertion_index
-        except AttributeError:
-            return 5 - np.argmax(self._cards)
+    def _num_cards(self) -> int:
+        return 4 - self._insertion_index
+
 
     @property
     def id_desc(self) -> str:
@@ -252,7 +256,7 @@ class Hand:
         try:
             self._id = hand_table[hash(self)]
         except KeyError:
-            self._id = self._number_of_cards * 10
+            self._id = self._num_cards * 10
 
     # TODO: is there any benefit to doing this recursively?
     def _insert_pos(self, card: int, current_index: int) -> int:

@@ -7,6 +7,7 @@ bidict
 gunicorn
 eventlet
 xxhash
+pytest
 
 # for linting
 pylint
