@@ -20,15 +20,10 @@ from json import dumps, loads
 from mypy_extensions import NoReturn
 
 
+# TODO create the .pkl if it doesn't exist
 # hash table for identifying hands
-# try:
 with open('src/back/app/components/hand_table.pkl', 'rb') as file:
     hand_table = pickle.load(file)
-# except FileNotFoundError:
-#     import subprocess
-#     subprocess.Popen('python hand_hash_table.py', shell=True)
-#     with open('hand_table.pkl', 'rb') as file:
-#         hand_table = pickle.load(file)
 
 
 class Hand:
@@ -59,9 +54,8 @@ class Hand:
                  identity: Optional[int]=None,
                  insertion_index: Optional[int]=None) -> None:
         if cards is None:  # default constructor; empty hand
-            self._cards: np.ndarray[np.uint8] = (
-                np.zeros(shape=5, dtype=np.uint8)
-            )
+            self._cards: np.ndarray[np.uint8] = np.zeros(shape=5,
+                                                         dtype=np.uint8)
             self._id: int = 0
             self._insertion_index: int = 4
         # .copy classmethod constructor; should not be used manually
@@ -70,20 +64,24 @@ class Hand:
             self._id: int = identity
             self._insertion_index: int = insertion_index
             self._cards: np.ndarray[np.uint8] = np.array(cards, dtype=np.uint8)
-        # testing constructor (i.e. Hand([...]))
-        # list need not be sorted but must be length <= 5, e.g. [52, 1, 13]
+        # testing constructor (i.e. Hand([...])); auto identifies
+        # list requirements: length <= 5, ints between 0 and 52
+        #   inclusive, non-zero values must be unique
         else:
-            self._insertion_index = 4 - len(cards)
-            assert self._insertion_index >= -1, 'hands can have up to 5 cards'
-            assert all(map(lambda x: isinstance(x, int), cards)), (
-                'cards must be ints'
-            )
-
+            assert len(cards) <= 5, 'hands can have up to 5 cards'
+            filtered: List[int] = list(filter((0).__ne__, cards))
+            len_filtered = len(filtered)
+            self._insertion_index = 4 - len_filtered
+            assert all(map(lambda x: isinstance(x, int) and 1 <= x <= 52,
+                           filtered)), ('cards must be ints between 0 and 52 i'
+                                        'nclusive')
+            # cards with the zeroes removed
+            # checks uniqueness of non-zero values
+            assert len(filtered) == len(set(filtered)), 'cards must be unique'
+            # pads cards to length 5
+            self._cards = np.pad(np.array(sorted(filtered), dtype=np.uint8),
+                                 (5 - len_filtered, 0), 'constant')
             self._identify()
-            self._insertion_index = 4 - self._id // 10
-        else:
-            raise AssertionError("Bug: only id or insertion index is " +
-                                    "given with custom hand constructor.")
 
     @classmethod
     def from_json(cls, json_hand: str):
@@ -212,7 +210,6 @@ class Hand:
     @property
     def _num_cards(self) -> int:
         return 4 - self._insertion_index
-
 
     @property
     def id_desc(self) -> str:
