@@ -114,8 +114,10 @@ class Hand:
 
     def __repr__(self) -> str:
         # TODO: how to multiline f string plz
-        return f"cards: {str(self._cards)}; id: {self._id}; ii: " + \
-               f"{self._insertion_index}"
+        return (
+            f'<Hand {id(self)}; cards: {str(self._cards)}; id: {self._id};'
+            f' ii: {self._insertion_index}>'
+        )
 
     def __len__(self) -> int:
         return self._num_cards

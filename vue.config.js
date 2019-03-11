@@ -11,8 +11,8 @@ module.exports = {
 
   // document why I am doing everything below
   outputDir: process.env.NODE_ENV === 'production'
-    ? './src/back/'
-    : '.',  // don't understand why this makes it work; results in "don't set output directory to project root" error when just '.'
+    ? './src/back/app'
+    : './dev',  // don't understand why this makes it work; results in "don't set output directory to project root" error when just '.'
   assetsDir: process.env.NODE_ENV === 'production'
     ? 'static'
     : '.',

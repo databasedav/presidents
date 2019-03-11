@@ -1,13 +1,14 @@
 import random
-from eventlet import sleep, monkey_patch, greenthread
-monkey_patch()
+from eventlet import monkey_patch, greenthread
+# TODO: do I need this monkey patch?
+# monkey_patch()
 from itertools import cycle
 from typing import Any, Callable, Dict, List, Optional, Set, Union
 
 import numpy as np
 
-from .chamber import Chamber, CardNotInChamberError
-from .hand import Hand, DuplicateCardError, FullHandError
+from . import Chamber, CardNotInChamberError
+from . import Hand, DuplicateCardError, FullHandError
 from ..utils import rank_articler
 
 

@@ -18,6 +18,8 @@ sid_room_dict: Dict[str, str] = dict()
 
 sid_game_dict: Dict[str, EmittingGame] = dict()
 
+server = Server
+
 
 def room_list():
     return [{'room': room, 'num_players': game.num_players} for room, game in room_game_dict.items()]
