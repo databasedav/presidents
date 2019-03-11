@@ -1,9 +1,14 @@
 from ..game.components import EmittingGame
-from flask_socketio import join_room, leave_room, close_room
 
-class Room:
+from flask import request
+from flask_socketio import Namespace, join_room, leave_room, close_room
 
-    def __init__(self, game: EmittingGame):
-        self.rid: str = ...  # alphanumeric hash
+class Room(Namespace):
+
+    def __init__(self, namespace: str, game: EmittingGame) -> None:
+        super().__init__(namespace)
         self.game: EmittingGame = game
         
+    def on_card_click(self, payload):
+        self.game
+        ...

@@ -18,7 +18,7 @@ sid_room_dict: Dict[str, str] = dict()
 
 sid_game_dict: Dict[str, EmittingGame] = dict()
 
-server = Server
+# server = Server
 
 
 def room_list():

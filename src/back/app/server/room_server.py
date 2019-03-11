@@ -1,6 +1,6 @@
 from flask_socketio import Namespace, emit
 
-class RoomServer(NameSpace):
+class RoomServer:
 
     def __init__(self, socketio):
         
