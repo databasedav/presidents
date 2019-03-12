@@ -1,10 +1,10 @@
 from . import Room
-from .. import socketio
-from ..components import EmittingGame
+from ..game.components import EmittingGame
 
 from typing import Dict, List
-from xxhash import xxh32
+from uuid import uuid4
 
+from flask import request
 from flask_socketio import SocketIO, Namespace, emit
 
 # TODO: use axios for this; actually maybe just use sockets cuz y not
@@ -16,22 +16,21 @@ class RoomBrowser(Namespace):
 
     def __init__(self, socketio: SocketIO, namespace: str):
         super().__init__(namespace)
-        self.socketio = socketio
+        self._socketio = socketio
         # dict from rid (room namespace hash) to Room object
         self._room_dict: Dict[str, Room] = dict()
 
     def on_connect(self):
-        print(f'{request.sid} connected.')
+        print(f'{request.sid} connected')
 
     def _room_list(self) -> List:
-        return [{'room': room.name, 'num_players': room.game.num_players} for 
-                room in self._room_dict.values()]
+        return [{'room': room.name, 'num_players': room.game.num_players if room.game else 0} for room in self._room_dict.values()]
 
     def _add_room(self, name: str):
-        room_namespace: str = xxh32().hexdigest()
-        room: Room = Room(self.socketio, room_namespace, name)
-        self._room_dict[room_namespace] = room
-        self.socketio.on_namespace(room)
+        rid: str = uuid4().hex
+        room: Room = Room(self._socketio, rid, name)
+        self._room_dict[rid] = room
+        self._socketio.on_namespace(room)
 
     def on_add_room(self, payload):
         self._add_room(payload['name'])
@@ -40,7 +39,8 @@ class RoomBrowser(Namespace):
         assert rid in self._room_dict
         room: Room = self._room_dict[rid]
         if not room.game:  # room does not have a game
-            room.set_game(EmittingGame())  # new game
+            # set new game
+            room.set_game(EmittingGame(self._socketio, room._namespace))
             room.game.add_player(sid, name)
             self._refresh()
         elif room.is_full:
@@ -51,6 +51,9 @@ class RoomBrowser(Namespace):
 
     def on_join_room(self, payload):
         self._join_room(payload['rid'], payload['sid'], payload['name'])
+
+    def on_refresh(self) -> None:
+        self._refresh(request.sid)
 
     def _refresh(self, sid: str):
         self._socketio.emit('refresh', {'rooms': self._room_list()},

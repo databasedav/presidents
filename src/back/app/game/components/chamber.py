@@ -6,7 +6,7 @@ import numpy as np
 from llist import dllistnode
 
 from . import Hand, CardNotInHandError
-from ..utils import IterNodesDLList
+from ...utils import IterNodesDLList
 
 
 # TODO: use del for removing nodes?
