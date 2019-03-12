@@ -3,14 +3,11 @@ from typing import Callable, Dict, List, Optional, Set, Union
 from eventlet import Timeout, greenthread
 from bidict import bidict
 from flask import current_app, copy_current_request_context, request
-from flask_socketio import emit
+from flask_socketio import SocketIO, emit
 
-from .game import Game, base_hand, PresidentsError
-from .emitting_chamber import EmittingChamber
-from .chamber import CardNotInChamberError
-from .hand import Hand, DuplicateCardError, FullHandError
+from . import (Hand, DuplicateCardError, FullHandError, CardNotInChamberError,
+               EmittingChamber, Game, base_hand, PresidentsError)
 
-from .. import socketio
 
 
 # TODO: decide what to do for the removal of asking options
@@ -19,11 +16,13 @@ from .. import socketio
 
 class EmittingGame(Game):
 
-    def __init__(self):
+    def __init__(self, socketio: SocketIO, namespace: str):
 
         super().__init__(populate_chambers=False)
+        self._socketio: SocketIO = socketio
+        self._namespace: str = namespace
         self._chambers: List[Optional[EmittingChamber]] = [
-            EmittingChamber() for _ in range(4)
+            EmittingChamber(self._socketio, self._namespace) for _ in range(4)
         ]
         self._room: Optional[str] = None
         self._spot_sid_bidict: bidict = bidict()
@@ -297,7 +296,7 @@ class EmittingGame(Game):
     # emitters
 
     def _emit(self, event: str, payload: Dict[str, Union[int, str, List[int]]], sid: str, *, callback: Optional[Callable]=None) -> None:
-        socketio.emit(event, payload, room=sid, callback=callback)
+        self._socketio.emit(event, payload, namespace=self._namespace, room=sid, callback=callback)
 
     def _emit_to_all_players(self, event: str, payload: Dict[str, Union[int, str, List[int]]], *, skip_sid: Optional[str]=None):
         for sid in self._spot_sid_bidict.values():

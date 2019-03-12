@@ -5,7 +5,7 @@ from typing import List
 import numpy as np
 from llist import dllistnode
 
-from .hand import Hand, CardNotInHandError
+from . import Hand, CardNotInHandError
 from ..utils import IterNodesDLList
 
 

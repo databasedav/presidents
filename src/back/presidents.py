@@ -10,5 +10,5 @@ app = create_app(debug=True)
 
 
 @main
-def main():
+def dev():
     socketio.run(app)
