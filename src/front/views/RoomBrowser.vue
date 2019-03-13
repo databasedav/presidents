@@ -49,7 +49,7 @@
           <v-btn
             color="success"
             :disabled="props.item.num_players >= 4"
-            @click='join_room(props.item.room)'
+            @click='join_room(props.item.rid)'
           >
             join room
           </v-btn>
@@ -141,8 +141,8 @@ export default {
       this.socket.emit('add_room', {name: this.name})
     },
 
-    join_room (room) {
-      this.socket.emit('join_room', {room: room, name: this.nickname})
+    join_room (rid) {
+      this.socket.emit('join_room', {rid: rid, name: this.nickname})
     }
   }
 };

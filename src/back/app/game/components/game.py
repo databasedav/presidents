@@ -72,7 +72,7 @@ class Game:
 
     @property
     def is_full(self) -> bool:
-        return bool(self._open_spots)
+        return not bool(self._open_spots)
 
     @property
     def _num_unfinished_players(self) -> int:
