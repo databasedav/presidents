@@ -16,9 +16,8 @@
               <v-layout wrap>
                 <v-flex xs12 sm6 md4>
                   <v-text-field
-                    v-model="new_room"
-                    label="room"
-                    :rules="[this.rule]"
+                    v-model="name"
+                    label="name"
                   ></v-text-field>
                 </v-flex>
               </v-layout>
@@ -33,7 +32,6 @@
               flat
               @click="save"
               :loading='loading'
-              :disabled="!this.room_dne || loading"
             >create</v-btn>
           </v-card-actions>
         </v-card>
@@ -52,7 +50,9 @@
             color="success"
             :disabled="props.item.num_players >= 4"
             @click='join_room(props.item.room)'
-          >join room</v-btn>
+          >
+            join room
+          </v-btn>
         </td>
       </template>
       <template slot="no-data">
@@ -60,7 +60,9 @@
           :value="true"
           color="error"
           icon="warning"
-        >sorr no one playin rn create a new room :))</v-alert>
+        >
+          sorr no one playin rn create a new room :))
+        </v-alert>
       </template>
     </v-data-table>
   </div>
@@ -92,7 +94,7 @@ export default {
           sortable: false
         }
       ],
-      new_room: "",
+      name: "",
       loading: false
     };
   },
@@ -108,22 +110,11 @@ export default {
   },
 
   watch: {
-    new_room () {
-      if (!this.room_dne) {
-        this.$store.commit('set_room_dne', {room_dne: true})
-      }
-    },
 
     rooms () {
       // this will fire when the server force refreshes when a room is successfully added
       this.loading = false
       this.close()
-    },
-
-    room_dne (val) {
-      if (!val) {  // when room already exists
-        this.loading = false
-      }
     }
   },
 
@@ -132,12 +123,7 @@ export default {
       nickname: 'nickname',
       socket: 'socket',
       rooms: 'rooms',
-      room_dne: 'room_dne'
     }),
-
-    rule () {
-      return this.room_dne || "this room already exists"
-    }
   },
 
   methods: {
@@ -146,13 +132,13 @@ export default {
     },
 
     close () {
-      this.new_room = ''
+      this.name = ''
       this.dialog = false;
     },
 
     save () {
       this.loading = true
-      this.socket.emit('create_room', {room: this.new_room})
+      this.socket.emit('add_room', {name: this.name})
     },
 
     join_room (room) {
