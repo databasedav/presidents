@@ -19,7 +19,7 @@ export default {
 
   data () {
     return {
-      dialog: False
+      dialog: false
     }
   },
 

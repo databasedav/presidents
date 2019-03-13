@@ -8,8 +8,8 @@ function create_room_browser_socket_plugin (socket) {
       store.commit('refresh', payload)
     })
 
-    socket.on('set_socket', () => {
-      store.commit('set_socket', paylod)
+    socket.on('set_socket', payload => {
+      store.commit('set_socket', payload)
     })
 
     socket.on('join_room', () => {

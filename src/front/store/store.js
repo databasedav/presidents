@@ -31,7 +31,7 @@ export default new Vuex.Store({
 
     set_socket (state, payload) {
       state.socket = io(payload.namespace)
-    }
+    },
 
     refresh (state, payload) {
       state.rooms = payload.rooms

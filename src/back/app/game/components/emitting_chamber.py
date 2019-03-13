@@ -18,7 +18,7 @@ class EmittingChamber(Chamber):
     to be debugged without needing an active HTTP request.
     """
 
-    def __init__(self, namespace: str, socketio: SocketIO,
+    def __init__(self, socketio: SocketIO, namespace: str,
                  cards: np.ndarray=None) -> None:
         super().__init__(cards)
         self._namespace: str = namespace

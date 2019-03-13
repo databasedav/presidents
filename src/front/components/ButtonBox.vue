@@ -20,7 +20,7 @@
           color='error'
         >
           {{ lock_unlock_str }}
-          <v-icon v-if='!unlocked'right>fa-lock</v-icon>
+          <v-icon v-if='!unlocked' right>fa-lock</v-icon>
           <v-icon v-else right>fa-unlock</v-icon>
         </v-btn>
       </v-flex>
