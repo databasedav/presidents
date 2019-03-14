@@ -23,10 +23,14 @@ export default new Vuex.Store({
     },
 
     attach_socket (state) {
-      state.socket = io(`//${window.location.host}`, { forceNew: true })
+      state.socket = io('/', { forceNew: true })
       state.socket.once('connect', () => {
         state.namespace = state.socket.id
       })
+    },
+
+    set_socket (state, payload) {
+      state.socket = io(payload.namespace)
     },
 
     refresh (state, payload) {

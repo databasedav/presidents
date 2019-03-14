@@ -14,7 +14,7 @@ from __future__ import annotations
 import numpy as np
 import pickle
 
-from ..utils import hand_hash, card_names, id_desc_dict
+from ...utils import hand_hash, card_names, id_desc_dict
 from typing import List, Dict, Union, Optional
 from json import dumps, loads
 from mypy_extensions import NoReturn
@@ -22,7 +22,7 @@ from mypy_extensions import NoReturn
 
 # TODO create the .pkl if it doesn't exist
 # hash table for identifying hands
-with open('src/back/app/components/hand_table.pkl', 'rb') as file:
+with open('src/back/app/game/components/hand_table.pkl', 'rb') as file:
     hand_table = pickle.load(file)
 
 

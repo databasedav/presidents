@@ -8,16 +8,12 @@ function create_room_browser_socket_plugin (socket) {
       store.commit('refresh', payload)
     })
 
-    socket.on('set_room_dne', payload => {
-      store.commit('set_room_dne', payload)
+    socket.on('set_socket', payload => {
+      store.commit('set_socket', payload)
     })
 
     socket.on('join_room', () => {
       router.push({ path: '/presidents' })
-    })
-
-    socket.on('send_to_path', payload => {
-      router.push({ path: payload.path })
     })
   }
 }

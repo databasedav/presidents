@@ -39,19 +39,19 @@ export default {
     namespace: String
   },
   computed: {
-    spot() {
+    spot () {
       return this.$store.state[this.namespace].spot;
     },
 
-    left_spot() {
+    left_spot () {
       return (this.spot + 1) % 4
     },
 
-    center_spot() {
+    center_spot () {
       return (this.spot + 2) % 4
     },
 
-    right_spot() {
+    right_spot () {
       return (this.spot + 3) % 4
     }
   }

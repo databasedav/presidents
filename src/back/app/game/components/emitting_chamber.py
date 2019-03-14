@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from .hand import Hand
-from .chamber import Chamber, HandNode, HandPointerNode
+from . import Hand, Chamber, HandNode, HandPointerNode
 
-from .. import socketio
 
 from typing import Dict, List, Any, Optional
 import numpy as np
-from flask_socketio import emit
+from flask_socketio import SocketIO, emit
 
 
 # TODO: make repr's more meaningful
@@ -20,12 +18,16 @@ class EmittingChamber(Chamber):
     to be debugged without needing an active HTTP request.
     """
 
-    def __init__(self, cards: np.ndarray=None) -> None:
+    def __init__(self, socketio: SocketIO, namespace: str,
+                 cards: np.ndarray=None) -> None:
         super().__init__(cards)
+        self._namespace: str = namespace
+        self._socketio: SocketIO = socketio
         self._sid: str = None
 
     def _emit(self, event: str, payload: Dict[str, Any]):
-        socketio.emit(event, payload, room=self._sid)
+        self._socketio.emit(event, payload, namespace=self._namespace,
+                            room=self._sid)
 
     def reset(self) -> None:
         self._emit('clear_cards', {})
@@ -62,7 +64,8 @@ class EmittingChamber(Chamber):
             'cards': hand.to_list()
         })
         hand_pointer_nodes: List[HandPointerNode] = list()
-        hand_node: HandNode = EmittingHandNode(hand_pointer_nodes)
+        hand_node: HandNode = EmittingHandNode(hand_pointer_nodes,
+                                               self._namespace, self._socketio)
         for card in hand:
             hand_pointer_node: HandPointerNode = HandPointerNode(hand_node)
             hand_pointer_nodes.append(hand_pointer_node)
@@ -86,7 +89,10 @@ class EmittingChamber(Chamber):
 
 class EmittingHandNode(HandNode):
 
-    def __init__(self, hand_pointer_nodes: List[HandPointerNode]) -> None:
+    def __init__(self, hand_pointer_nodes: List[HandPointerNode],
+                 socketio: SocketIO, namespace: str) -> None:
+        self._socketio: SocketIO = socketio
+        self._namespace: str = namespace
         self._id = None  # TODO: random number or string (which one is better?)
         self._sid = None
 
@@ -94,7 +100,8 @@ class EmittingHandNode(HandNode):
         return 'EmittingHandNode'
 
     def _emit(self, event, paylaod) -> None:
-        socketio.emit(event, {'id': self._id}, room=self._sid)
+        self._socketio.emit(event, {'id': self._id}, namespace=self._namespace,
+                            room=self._sid)
 
     def set_sid(self, sid: str) -> None:
         self._sid = sid
@@ -108,4 +115,3 @@ class EmittingHandNode(HandNode):
         super().decrement_num_selected_cards()
         if self._num_cards_selected == 0:
             self._emit('deselect_hand')
-
