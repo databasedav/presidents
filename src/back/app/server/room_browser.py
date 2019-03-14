@@ -33,7 +33,7 @@ class RoomBrowser(Namespace):
         rid: str = str(uuid.uuid4())
         room: Room = Room(rid, name)
         self._room_dict[rid] = room
-        self.server.on_namespace(room)
+        self.socketio.on_namespace(room)
         try:
             self._refresh()
         except AttributeError:  # nobody has entered the room browser
@@ -76,5 +76,4 @@ class RoomBrowser(Namespace):
         self._refresh()
 
     def _refresh(self):
-        self._socketio.emit('refresh', {'rooms': self._room_list()},
-                            namespace=self.namespace)
+        self.emit('refresh', {'rooms': self._room_list()})

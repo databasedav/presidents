@@ -14,7 +14,7 @@ from __future__ import annotations
 import numpy as np
 import pickle
 
-from ...utils import hand_hash, card_names, id_desc_dict
+from ..utils import hand_hash, card_names, id_desc_dict
 from typing import List, Dict, Union, Optional
 from json import dumps, loads
 from mypy_extensions import NoReturn

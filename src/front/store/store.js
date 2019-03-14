@@ -10,7 +10,7 @@ export default new Vuex.Store({
     socket: io.Socket,
     namespace: String,  // sid
     rooms: [],
-    room_dne: true
+    sockets: []
   },
 
   mutations: {
@@ -29,8 +29,8 @@ export default new Vuex.Store({
       })
     },
 
-    set_socket (state, payload) {
-      state.socket = io(payload.namespace)
+    add_socket (state, payload) {
+      state.socket.push(io(payload.namespace))
     },
 
     refresh (state, payload) {

@@ -9,7 +9,7 @@ import numpy as np
 
 from . import (Hand, DuplicateCardError, FullHandError, Chamber,
                CardNotInChamberError)
-from ...utils import rank_articler
+from ..utils import rank_articler
 
 
 # TODO: nice way to remove asking options after takes are exhausted
