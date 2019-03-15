@@ -11,7 +11,7 @@
     <v-btn
       color='success'
       :disabled='!nickname'
-      to='/room_browser'
+      @click='send_to_room_browser'
     >
       browse rooms
     </v-btn>
@@ -19,10 +19,19 @@
 </template>
 
 <script>
+import router from '../router';
+
 export default {
   name: 'guest_login',
 
+  data () {
+    return {
+      server: 'US-West'
+    }
+  },
+
   computed: {
+
     nickname: {
       get () {
         return this.$store.state.nickname
@@ -31,6 +40,17 @@ export default {
       set (nickname) {
         this.$store.commit('set_nickname', {'nickname': nickname})
       }
+    }
+  },
+
+  methods: {
+    send_to_room_browser () {
+      router.push({
+        name: 'room browser',
+        params: {
+          rbnsp: `/room_browser-${this.server}`
+        }
+      })
     }
   }
 }

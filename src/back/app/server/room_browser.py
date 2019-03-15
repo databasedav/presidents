@@ -24,9 +24,7 @@ class RoomBrowser(Namespace):
         print(f'{request.sid} connected')
 
     def _room_list(self) -> List:
-        return [{'rid': rid, 'room': room.name, 
-                 'num_players': room.game.num_players if room.game else 0}
-                for rid, room in self._room_dict.items()]
+        return [{'rid': rid, 'room': room.name, 'num_players': room.game.num_players if room.game else 0} for rid, room in self._room_dict.items()]
 
     # allows multiple rooms with the same name
     def _add_room(self, name: str):
@@ -44,29 +42,7 @@ class RoomBrowser(Namespace):
 
     def _join_room(self, sid: str, rid: str, name: str):
         assert rid in self._room_dict
-        room: Room = self._room_dict[rid]
-        if not room.game:  # room does not have a game
-            # set new game
-            room.set_game(EmittingGame(self._socketio, room.namespace))
-            self.emit('send_to_room', {'rid': rid}, room=sid)
-            room.game.add_player(sid, name)
-            self._refresh()
-            if room.is_full:
-                room.game._start_round(testing=False)
-        elif room.is_full:
-            self._socketio.emit('room_full', namespace=self.namespace, room=sid)
-        else:
-            self._socketio.emit('join_room', namespace=self.namespace, room=sid)
-            self._socketio.emit('set_socket', {'namespace': room.namespace}, namespace=self.namespace, room=sid)
-            room.game.add_player(sid, name)
-            self._refresh()
-            if room.is_full:
-                room.game._start_round(testing=False)
-        
-        room: Room = self._room_dict[rid]
-        if not room.is_full:
-            self.emit('add_socket')
-        room.join(sid, name)
+        self._room_dict[rid].join(this.namespace, sid, name)
 
     def on_join_room(self, payload):
         self._join_room(request.sid, payload['rid'], payload['name'])

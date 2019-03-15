@@ -17,31 +17,21 @@ class Room(Namespace):
         self.game: Optional[EmittingGame] = game
 
     # must explicitly set new game if want
-    def _set_game(self, game: EmittingGame):
+    def _set_game(self, game: EmittingGame) -> None:
         self.game = game
 
-
-    def join(self, sid: str, name: str) -> None:
+    def join(self, rbnsp: str, sid: str, name: str) -> None:
         if not self.game:
-            self._set_game(EmittingGame(self.server, self.namespace))
-        else:
-            self.emit('join_room', room=sid)
-
-
-            
-    # TODO: joining room should just add you as a spectator
-    @property
-    def is_full(self) -> bool:
-        try:
-            return self.game.is_full
-        except AttributeError:  # no game has been added yet
-            return False
+            self._set_game(EmittingGame(self.socketio, self.namespace))
+        else self.game.is_full:
+            self.emit('room_full', namespace=rbnsp, room=sid)
+            return
+        self.emit('send_to_room', {'rnsp': self.namespace}, namespace=rbnsp, room=sid)
 
     def on_card_click(self, payload) -> None:
         self.game.add_or_remove_card(request.sid, payload['card'])
 
     def on_unlock(self) -> None:
-        print('wut')
         self.game.unlock_handler(request.sid)
 
     def on_lock(self) -> None:

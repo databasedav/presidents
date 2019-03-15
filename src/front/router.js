@@ -19,7 +19,8 @@ export default new Router({
     {
       path: '/room_browser',
       name: 'room browser',
-      component: RoomBrowser
+      component: RoomBrowser,
+      props: true
     },
     // {
     //   path: '/statistics',
@@ -29,7 +30,8 @@ export default new Router({
     {
       path:'/presidents',
       name: 'presidents',
-      component: Presidents
+      component: Presidents,
+      props: true
     },
     {
       path: '/tester',

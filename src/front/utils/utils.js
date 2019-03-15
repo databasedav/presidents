@@ -1,7 +1,7 @@
 import store from '../store/store'
-import state from '../store/player_store/state'
-import mutations from '../store/player_store/mutations'
-import getters from '../store/player_store/getters'
+import create_state from '../store/room_module/state'
+import mutations from '../store/room_module/mutations'
+import getters from '../store/room_module/getters'
 import router from '../router'
 
 // import { create_namespaced_player_socket_plugin } from "../store/plugins"
@@ -10,27 +10,22 @@ function namespaced_getter (namespace, getter) {
     return store.getters[`${namespace}/${getter}`]
 }
 
-function createSinglePlayerStore () {
+function create_room_module (socket) {
   return {
     strict: process.env.NODE_ENV !== 'production',
     namespaced: true,
-    state,
+    state: create_state(socket),
     getters,
     mutations,
-    // plugins: [create_namespaced_player_socket_plugin(socket, namespace)]
-  }
-}
-
-function create_room_module (socket) {
-
-  return {
-
   }
 }
 
 function create_room_browser_module (socket) {
   
   return {
+
+    strict: process.env.NODE_ENV !== 'production',
+
     namespaced: true,
     
     state: {
@@ -46,8 +41,13 @@ function create_room_browser_module (socket) {
     },
 
     actions: {
-      socket_sendToRoom (context, payload) {
-        create_room_module()
+      socket_sendToRoom (payload) {
+        router.push({
+          name: 'presidents',
+          params: {
+            rnsp: payload.rnsp
+          }
+        })
       }
     }
   }

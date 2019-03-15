@@ -119,8 +119,14 @@ export default {
     };
   },
 
+  props: {
+    rbnsp: String
+  },
+
   beforeCreate() {
-    this.$store.dispatch('plugin_room_browser')
+    this.$store.dispatch('plugin_room_browser', {
+      rbnsp: this.rbnsp
+    })
   },
 
   created() {
@@ -137,14 +143,6 @@ export default {
   },
 
   computed: {
-    ...mapState([
-      'server'
-    ]),
-
-    // room browser namespace
-    rbnsp () {
-      return 'room_browser-' + this.server
-    },
 
     socket () {
       return this.$store.state[this.rbnsp].socket
