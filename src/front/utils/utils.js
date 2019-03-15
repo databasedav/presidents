@@ -20,8 +20,29 @@ function createSinglePlayerStore () {
   }
 }
 
+function create_room_browser_module (socket) {
+  
+  return {
+    namespaced: true,
+    
+    state: {
+      socket: socket,
+      // TODO: change to map once reactive
+      rooms: []
+    },
+  
+    mutations: {
+      SOCKET_REFRESH (state, payload) {
+        state.rooms = payload.rooms
+      },
+    },
+  }
+}
+
 function register_namespaced_module (namespace, module) {
   store.registerModule(namespace, module)
 }
 
-export { namespaced_getter, createSinglePlayerStore, register_namespaced_module }
+
+
+export { create_room_browser_module, namespaced_getter, createSinglePlayerStore, register_namespaced_module }

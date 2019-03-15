@@ -1,15 +1,23 @@
 <template>
   <div>
     <v-toolbar flat>
-      <v-toolbar-title class="logo">presidents</v-toolbar-title>
+      <v-toolbar-title class="logo">
+        presidents
+      </v-toolbar-title>
       <v-divider class="mx-2" inset vertical></v-divider>
       <v-spacer></v-spacer>
-      <v-btn color="success" @click="this.refresh">refresh</v-btn>
+      <v-btn color="success" @click="this.refresh">
+        refresh
+      </v-btn>
       <v-dialog v-model="dialog" max-width="500px">
-        <v-btn slot="activator" color="primary" dark class="mb-2">create room</v-btn>
+        <v-btn slot="activator" color="primary" dark class="mb-2">
+          create room
+        </v-btn>
         <v-card>
           <v-card-title>
-            <span class="headline">new room</span>
+            <span class="headline">
+              new room
+            </span>
           </v-card-title>
           <v-card-text>
             <v-container grid-list-md>
@@ -26,13 +34,17 @@
 
           <v-card-actions>
             <v-spacer></v-spacer>
-            <v-btn color="blue darken-1" flat @click="close">cancel</v-btn>
+            <v-btn color="blue darken-1" flat @click="close">
+              cancel
+            </v-btn>
             <v-btn
               color="blue darken-1"
               flat
-              @click="save"
+              @click="add_room"
               :loading='loading'
-            >create</v-btn>
+            >
+              create
+            </v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>
@@ -43,8 +55,12 @@
       class="elevation-1"
     >
       <template slot="items" slot-scope="props">
-        <td>{{ props.item.room }}</td>
-        <td class="text-xs-center">{{ props.item.num_players }}</td>
+        <td>
+          {{ props.item.room }}
+        </td>
+        <td class="text-xs-center">
+          {{ props.item.num_players }}
+        </td>
         <td class="justify-center layout px-0">
           <v-btn
             color="success"
@@ -69,8 +85,12 @@
 </template>
 
 <script>
-import { mapState } from "vuex"
+import VueSocketio from 'vue-socket.io-extended'
+import io from 'socket.io-client'
+import { mapState } from 'vuex'
+import { room_browser_plugin } from '../store/plugins'
 import { create_room_browser_socket_plugin } from '../store/plugins'
+
 
 export default {
   data() {
@@ -100,12 +120,11 @@ export default {
   },
 
   beforeCreate() {
-    this.$store.commit('attach_socket')
+    const plugin = room_browser_plugin(this.$store.state.server)
+    plugin(this.$store)
   },
 
   created() {
-    const plugin = create_room_browser_socket_plugin(this.socket)
-    plugin(this.$store)
     this.refresh()
   },
 
@@ -119,14 +138,26 @@ export default {
   },
 
   computed: {
-    ...mapState({
-      nickname: 'nickname',
-      socket: 'socket',
-      rooms: 'rooms',
-    }),
+    ...mapState([
+      'server'
+    ]),
+
+    // room browser namespace
+    rbnsp () {
+      return 'room_browser-' + this.server
+    },
+
+    socket () {
+      return this.$store.state[this.rbnsp].socket
+    },
+
+    rooms () {
+      return this.$store.state[this.rbnsp].rooms
+    }
   },
 
   methods: {
+
     refresh () {
       this.socket.emit("refresh")
     },
@@ -136,7 +167,7 @@ export default {
       this.dialog = false;
     },
 
-    save () {
+    add_room () {
       this.loading = true
       this.socket.emit('add_room', {name: this.name})
     },

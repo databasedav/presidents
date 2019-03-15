@@ -2,15 +2,14 @@ import Vue from 'vue'
 import Vuex from 'vuex'
 import io from 'socket.io-client'
 
+import { room_browser_plugin } from '../utils/utils'
+
 Vue.use(Vuex)
 
 export default new Vuex.Store({
   state: {
     nickname: '',
-    socket: io.Socket,
-    namespace: String,  // sid
-    rooms: [],
-    sockets: []
+    server: 'US-West'
   },
 
   mutations: {
@@ -18,33 +17,8 @@ export default new Vuex.Store({
       state.nickname = payload.nickname
     },
 
-    set_namespace (state, payload) {
-      state.namespace = payload.namespace
-    },
-
-    attach_socket (state) {
-      state.socket = io('/', { forceNew: true })
-      state.socket.once('connect', () => {
-        state.namespace = state.socket.id
-      })
-    },
-
-    add_socket (state, payload) {
-      state.socket.push(io(payload.namespace))
-    },
-
-    refresh (state, payload) {
-      state.rooms = payload.rooms
-    },
-
-    set_room_dne (state, payload) {
-      state.room_dne = payload.room_dne
-    },
-
-    // join_room (state) {
-    //   router.push({ path: '/presidents' })
-    //   // console.log(state.namespace)
-    //   // this.registerModule(state.namespace, createSinglePlayerStore(state.socket, state.namespace))
-    // }
+    SOCKET_REFRESH () {
+      console.log('fuck')
+    }
   }
 })

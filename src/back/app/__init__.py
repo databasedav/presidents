@@ -2,7 +2,6 @@ from .server import RoomBrowser
 
 from flask import Flask, Blueprint
 from flask_socketio import SocketIO
-import random
 import uuid
 
 
@@ -11,7 +10,7 @@ socketio = SocketIO(logger=True)
 
 # uses global namespace (/) now but this could be customized if I want
 # to have multiple room browsers
-room_browser = RoomBrowser(str(uuid.uuid4()))
+room_browser = RoomBrowser('US-West')
 socketio.on_namespace(room_browser)
 
 for name in ['hello', 'world']:

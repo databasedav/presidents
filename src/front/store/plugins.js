@@ -1,4 +1,30 @@
 import router from '../router'
+import { create_room_browser_module } from '../utils/utils'
+import Vue from 'vue'
+import io from 'socket.io-client'
+import VueSocketio from 'vue-socket.io-extended'
+
+function createSinglePlayerStore () {
+  return {
+    strict: process.env.NODE_ENV !== 'production',
+    namespaced: true,
+    state,
+    getters,
+    mutations,
+    // plugins: [create_namespaced_player_socket_plugin(socket, namespace)]
+  }
+}
+
+function room_browser_plugin (namespace) {
+  // room browser store will get namespace from server during it's init
+  return store => {
+    const rbnsp = 'room_browser-' + namespace
+    const socket = io('/' + rbnsp)
+    store.registerModule(rbnsp, create_room_browser_module(socket))
+    Vue.use(VueSocketio, socket, { store })
+  }
+}
+
 
 function create_room_browser_socket_plugin (socket) {
 
@@ -143,4 +169,4 @@ function create_namespaced_player_socket_plugin (socket, namespace) {
   }
 }
 
-export { create_room_browser_socket_plugin, create_namespaced_player_socket_plugin }
+export { room_browser_plugin, create_room_browser_socket_plugin, create_namespaced_player_socket_plugin }
