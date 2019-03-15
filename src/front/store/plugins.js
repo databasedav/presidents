@@ -25,6 +25,10 @@ function room_browser_plugin (namespace) {
   }
 }
 
+function room_plugin (namespace) {
+  0
+}
+
 
 function create_room_browser_socket_plugin (socket) {
 

@@ -23,6 +23,10 @@ export default {
     }
   },
 
+  beforeCreate () {
+    room_plugin()
+  },
+
   created () {
     this.$store.registerModule(this.namespace, createSinglePlayerStore())
     const plugin = create_namespaced_player_socket_plugin(this.socket, this.namespace)

@@ -120,8 +120,7 @@ export default {
   },
 
   beforeCreate() {
-    const plugin = room_browser_plugin(this.$store.state.server)
-    plugin(this.$store)
+    this.$store.dispatch('plugin_room_browser')
   },
 
   created() {

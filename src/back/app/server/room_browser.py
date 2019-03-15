@@ -48,8 +48,7 @@ class RoomBrowser(Namespace):
         if not room.game:  # room does not have a game
             # set new game
             room.set_game(EmittingGame(self._socketio, room.namespace))
-            self._socketio.emit('join_room', namespace=self.namespace, room=sid)
-            self._socketio.emit('set_socket', {'namespace': room.namespace}, namespace=self.namespace, room=sid)
+            self.emit('send_to_room', {'rid': rid}, room=sid)
             room.game.add_player(sid, name)
             self._refresh()
             if room.is_full:
