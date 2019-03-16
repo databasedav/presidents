@@ -1,6 +1,5 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
-import io from 'socket.io-client'
 
 import { room_browser_plugin, room_plugin } from './plugins'
 
@@ -18,11 +17,11 @@ export default new Vuex.Store({
   },
 
   actions: {
-    plugin_room_browser (payload) {
+    plugin_room_browser (context, payload) {
       room_browser_plugin(payload.rbnsp)(this)
     },
 
-    plugin_room (payload) {
+    plugin_room (context, payload) {
       room_plugin(payload.rnsp)(this)
     }
   }

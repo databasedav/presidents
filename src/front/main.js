@@ -1,4 +1,5 @@
 import 'material-design-icons-iconfont/dist/material-design-icons.css'
+import '@fortawesome/fontawesome-free/css/all.css'
 import Vue from 'vue'
 import App from './App.vue'
 import store from './store/store'
@@ -10,9 +11,7 @@ import 'vuetify/dist/vuetify.min.css'
 
 Vue.config.productionTip = false
 
-Vue.use(Vuetify, {
-  iconfont: 'md'
-});
+Vue.use(Vuetify);
 Vue.component(VueCountdown.name, VueCountdown)
 
 new Vue({

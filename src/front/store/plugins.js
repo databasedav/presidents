@@ -1,4 +1,3 @@
-import router from '../router'
 import { create_room_browser_module, create_room_module } from '../utils/utils'
 import Vue from 'vue'
 import io from 'socket.io-client'
@@ -18,25 +17,6 @@ function room_plugin (rnsp) {
     const socket = io(rnsp)
     store.registerModule(rnsp, create_room_module(socket))
     Vue.use(VueSocketio, socket, { store })
-  }
-}
-
-
-function create_room_browser_socket_plugin (socket) {
-
-  return store => {
-
-    socket.on('refresh', payload => {
-      store.commit('refresh', payload)
-    })
-
-    socket.on('set_socket', payload => {
-      store.commit('set_socket', payload)
-    })
-
-    socket.on('join_room', () => {
-      router.push({ path: '/presidents' })
-    })
   }
 }
 

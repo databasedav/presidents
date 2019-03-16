@@ -1,7 +1,7 @@
 from ..game.components import EmittingGame
 
 from flask import request
-from flask_socketio import SocketIO, Namespace, join_room, leave_room, close_room
+from flask_socketio import Namespace
 from typing import Optional
 
 
@@ -16,17 +16,17 @@ class Room(Namespace):
         self.name: str = name
         self.game: Optional[EmittingGame] = game
 
-    # must explicitly set new game if want
     def _set_game(self, game: EmittingGame) -> None:
         self.game = game
 
     def join(self, rbnsp: str, sid: str, name: str) -> None:
         if not self.game:
             self._set_game(EmittingGame(self.socketio, self.namespace))
-        else self.game.is_full:
+        elif self.game.is_full:
             self.emit('room_full', namespace=rbnsp, room=sid)
             return
         self.emit('send_to_room', {'rnsp': self.namespace}, namespace=rbnsp, room=sid)
+        self.game.add_player(sid, name)
 
     def on_card_click(self, payload) -> None:
         self.game.add_or_remove_card(request.sid, payload['card'])

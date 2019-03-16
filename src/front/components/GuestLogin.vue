@@ -26,6 +26,7 @@ export default {
 
   data () {
     return {
+      // will be able to choose server eventually...
       server: 'US-West'
     }
   },

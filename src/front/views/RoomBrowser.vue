@@ -123,13 +123,13 @@ export default {
     rbnsp: String
   },
 
-  beforeCreate() {
+  created() {
     this.$store.dispatch('plugin_room_browser', {
       rbnsp: this.rbnsp
     })
   },
 
-  created() {
+  beforeMount () {
     this.refresh()
   },
 
@@ -144,6 +144,10 @@ export default {
 
   computed: {
 
+    ...mapState([
+      'nickname'
+    ]),
+
     socket () {
       return this.$store.state[this.rbnsp].socket
     },
@@ -156,7 +160,7 @@ export default {
   methods: {
 
     refresh () {
-      this.socket.emit("refresh")
+      this.socket.emit('refresh')
     },
 
     close () {
@@ -170,7 +174,10 @@ export default {
     },
 
     join_room (rid) {
-      this.socket.emit('join_room', {rid: rid, name: this.nickname})
+      this.socket.emit('join_room', {
+        rid: rid,
+        name: this.nickname
+      })
     }
   }
 };

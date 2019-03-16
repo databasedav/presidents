@@ -1,12 +1,10 @@
 from . import Room
-from ..game.components import EmittingGame
 
 from typing import Dict, List
 import uuid
 
 from flask import request
-from flask_socketio import SocketIO, Namespace, emit
-import random
+from flask_socketio import Namespace
 
 # TODO: add "copy room id" button so ppl can text their frens the rid
 # TODO: add space where you can enter a room id and join
@@ -18,7 +16,7 @@ class RoomBrowser(Namespace):
     def __init__(self, rbid: str):
         super().__init__(f'/room_browser-{rbid}')
         # dict from rid (room namespace uuid) to Room object
-        self._room_dict: Dict[int, Room] = dict()
+        self._room_dict: Dict[str, Room] = dict()
 
     def on_connect(self):
         print(f'{request.sid} connected')
@@ -42,7 +40,7 @@ class RoomBrowser(Namespace):
 
     def _join_room(self, sid: str, rid: str, name: str):
         assert rid in self._room_dict
-        self._room_dict[rid].join(this.namespace, sid, name)
+        self._room_dict[rid].join(self.namespace, sid, name)
 
     def on_join_room(self, payload):
         self._join_room(request.sid, payload['rid'], payload['name'])

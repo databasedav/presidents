@@ -4,28 +4,28 @@
     <v-layout column>
       <v-flex xs12>
         <OtherPlayerBox
-          :namespace='this.namespace'
+          :namespace='this.rnsp'
         >
         </OtherPlayerBox>
       </v-flex>
       
       <v-flex xs12>
         <AlertSnackbar
-          :namespace='this.namespace'
+          :namespace='this.rnsp'
         >
         </AlertSnackbar>
       </v-flex>
       
       <v-flex xs12>
         <InPlayBox
-          :namespace='this.namespace'
+          :namespace='this.rnsp'
         >
         </InPlayBox>
       </v-flex>
       
       <v-flex xs12>
         <MessageBox
-          :namespace='this.namespace'
+          :namespace='this.rnsp'
         >
         </MessageBox>
       </v-flex>
@@ -33,7 +33,7 @@
       <v-layout justify-center>
         <v-flex xs8>
           <PlayerStrip
-            :namespace='this.namespace'
+            :namespace='this.rnsp'
             :spot='this.spot'
           >
           </PlayerStrip>
@@ -41,14 +41,14 @@
       </v-layout>
 
       <CardBox
-        :namespace='this.namespace'
+        :namespace='this.rnsp'
         @card_click='this.card_click'
       >
       </CardBox>
 
       <v-flex xs12>
         <ButtonBox
-          :namespace='this.namespace'
+          :namespace='this.rnsp'
           @unlock='this.unlock'
           @lock='this.lock'
           @play='this.play'
@@ -74,6 +74,8 @@ import MessageBox from './MessageBox.vue'
 import PlayerStrip from './PlayerStrip.vue'
 import OtherPlayerBox from './OtherPlayerBox.vue'
 
+import io from 'socket.io-client'
+
 export default {
 
   name: 'Player',
@@ -86,6 +88,10 @@ export default {
     MessageBox,
     PlayerStrip,
     OtherPlayerBox
+  },
+
+  props: {
+    rnsp: String
   },
 
   methods: {
@@ -132,19 +138,15 @@ export default {
 
   computed: {
     socket () {
-      return this.$store.state.socket
-    },
-
-    namespace () {
-      return this.$store.state.namespace
+      return this.$store.state[this.rnsp].socket
     },
 
     on_turn () {
-      return this.$store.state[this.namespace].on_turn
+      return this.$store.state[this.rnsp].on_turn
     },
 
     spot () {
-      return this.$store.state[this.namespace].spot
+      return this.$store.state[this.rnsp].spot
     }
   },
 }

@@ -1,6 +1,7 @@
 export default {
   
-  alert (state, payload) {
+  SOCKET_ALERT (state, payload) {
+    console.log('fuck')
     state.alert = payload.alert
     state.snackbar = true
     setTimeout(() => state.snackbar = false, 1000)

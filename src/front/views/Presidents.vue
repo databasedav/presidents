@@ -1,5 +1,7 @@
 <template>
-  <Player/>
+  <Player
+    :rnsp='this.rnsp'
+  ></Player>
 </template>
 
 <script>
@@ -17,7 +19,7 @@ export default {
     rnsp: String
   },
 
-  beforeCreate () {
+  created () {
     this.$store.dispatch('plugin_room', {
       rnsp: this.rnsp
     })

@@ -16,7 +16,14 @@ function create_room_module (socket) {
     namespaced: true,
     state: create_state(socket),
     getters,
-    mutations,
+    mutations: {
+      fuck_CONNECT (state) {
+        console.log('connected')
+      },
+      fuck_ALERT (state, payload) {
+        console.log('alerted')
+      }
+    },
   }
 }
 
@@ -41,7 +48,7 @@ function create_room_browser_module (socket) {
     },
 
     actions: {
-      socket_sendToRoom (payload) {
+      socket_sendToRoom (context, payload) {
         router.push({
           name: 'presidents',
           params: {
@@ -61,4 +68,4 @@ function register_namespaced_module (namespace, module) {
 
 
 
-export { create_room_browser_module, namespaced_getter, createSinglePlayerStore, register_namespaced_module }
+export { create_room_module, create_room_browser_module, namespaced_getter, register_namespaced_module }
