@@ -8,6 +8,7 @@
 #       because I check for them beforehand, e.g. invalid hands cannot
 #       be compared
 # TODO: wrtie tests  # keeping this typo cuz I love irony
+# TODO: rename insertion index to head
 
 from __future__ import annotations
 
@@ -52,17 +53,17 @@ class Hand:
     def __init__(self,
                  cards: Optional[np.ndarray[np.uint8]]=None,
                  identity: Optional[int]=None,
-                 insertion_index: Optional[int]=None) -> None:
+                 head: Optional[int]=None) -> None:
         if cards is None:  # default constructor; empty hand
             self._cards: np.ndarray[np.uint8] = np.zeros(shape=5,
                                                          dtype=np.uint8)
             self._id: int = 0
-            self._insertion_index: int = 4
+            self._head: int = 4  # lowest empty index; -1 if full
         # .copy classmethod constructor; should not be used manually
-        elif insertion_index is not None:
+        elif head is not None:
             self._cards: np.ndarray[np.uint8] = cards.copy()
             self._id: int = identity
-            self._insertion_index: int = insertion_index
+            self._head: int = head
         # testing constructor (i.e. Hand([...])); auto identifies
         # list requirements: length <= 5, ints between 0 and 52
         #   inclusive, non-zero values must be unique
@@ -70,7 +71,7 @@ class Hand:
             assert len(cards) <= 5, 'hands can have up to 5 cards'
             filtered: List[int] = list(filter((0).__ne__, cards))
             len_filtered = len(filtered)
-            self._insertion_index = 4 - len_filtered
+            self._head: int = 4 - len_filtered
             assert all(map(lambda x: isinstance(x, int) and 1 <= x <= 52,
                            filtered)), ('cards must be ints between 0 and 52 i'
                                         'nclusive')
@@ -78,19 +79,19 @@ class Hand:
             # checks uniqueness of non-zero values
             assert len(filtered) == len(set(filtered)), 'cards must be unique'
             # pads cards to length 5
-            self._cards = np.pad(np.array(sorted(filtered), dtype=np.uint8),
-                                 (5 - len_filtered, 0), 'constant')
+            self._cards: np.ndarray[np.uint8] = np.pad(np.array(sorted(filtered), dtype=np.uint8),
+                 (5 - len_filtered, 0), 'constant')
             self._identify()
+
+    @classmethod
+    def copy(cls, hand: Hand) -> Hand:
+        return cls(hand._cards, hand._id, hand._head)
 
     @classmethod
     def from_json(cls, json_hand: str):
         # hd = hand dict
         hd: Dict[str, Union[np.ndarray, int]] = loads(json_hand)
-        return cls(hd['_cards'], hd['_id'], hd['_insertion_index'])
-
-    @classmethod
-    def copy(cls, hand: Hand) -> Hand:
-        return cls(hand._cards, hand._id, hand._insertion_index)
+        return cls(hd['_cards'], hd['_id'], hd['_head'])
 
     def __getitem__(self, key: Union[int, slice]) -> int:
         return self._cards[key]
@@ -106,36 +107,42 @@ class Hand:
         return card in self._cards  # TODO: should I slice before this?
 
     def __iter__(self):  # TODO: return type for this
-        return self[self._insertion_index + 1:].__iter__()
+        return self[self._head + 1:].__iter__()
 
     def __str__(self) -> str:
         to_join = [card_names[card] for card in self]
         return " ".join(to_join) + f": {self.id_desc}"
 
     def __repr__(self) -> str:
-        # TODO: how to multiline f string plz
         return (
             f'<Hand {id(self)}; cards: {str(self._cards)}; id: {self._id};'
-            f' ii: {self._insertion_index}>'
+            f' head: {self._head}>'
         )
 
     def __len__(self) -> int:
         return self._num_cards
 
     def __eq__(self, other: Hand) -> bool:
-        return (np.array_equal(self._cards, other._cards) and  # type: ignore
-                self._id == other._id and  # type: ignore
-                (self._insertion_index
-                    == other._insertion_index))  # type: ignore
+        return (np.array_equal(self._cards, other._cards) and
+                self._id == other._id and (self._head == other._head))
 
     def __ne__(self, other: Hand) -> bool:
         return not self == other
 
+    # one-directional
+    def _is_comparable(self, other: Hand) -> bool:
+        if not self.is_valid or not other.is_valid:
+            raise AssertionError('attempting to compare 1 or more invalid hand'
+                                 's.')
+        if self._id == other._id or self.is_bomb:
+            return True
+        else:
+            return False
+
     def __lt__(self, other: Hand) -> bool:
         if not self._is_comparable(other):
-            # TODO: should this be a runtime error?
-            raise RuntimeError(
-                f'a {self.id_desc} cannot be played on a {other.id_desc}')
+            raise NotPlayableOnError(f'a {self.id_desc} cannot be played on a '
+                                     f'{other.id_desc}')
         if self.is_bomb and other.is_bomb:
             return self[1] < other[1]  # second card is always part of the quad
         elif self.is_bomb:
@@ -147,7 +154,7 @@ class Hand:
         elif self.is_triple or self.is_fullhouse:
             return self[2] < other[2]
         else:
-            raise AssertionError("Bug: unidentified hand.")
+            raise AssertionError("unidentified hand.")
 
     def __gt__(self, other: Hand) -> bool:
         if not self._is_comparable(other):
@@ -164,13 +171,13 @@ class Hand:
         elif self.is_triple or self.is_fullhouse:
             return self[2] > other[2]
         else:
-            raise AssertionError("Bug: unidentified hand.")
+            raise AssertionError("unidentified hand.")
 
-    def __le__(self, other: Hand) -> NoReturn:
-        raise AssertionError('A <= call was made by a Hand.')
+    def __le__(self, other: Hand) -> bool:
+        return self < other or self == other
 
-    def __ge__(self, other: Hand) -> NoReturn:
-        raise AssertionError('A >= call was made by a Hand.')
+    def __ge__(self, other: Hand) -> bool:
+        return self > other or self == other
 
     @property
     def is_empty(self) -> bool:
@@ -178,7 +185,7 @@ class Hand:
 
     @property
     def is_full(self) -> bool:
-        return self._insertion_index == -1
+        return self._head == -1
 
     @property
     def is_single(self) -> bool:
@@ -210,7 +217,7 @@ class Hand:
 
     @property
     def _num_cards(self) -> int:
-        return 4 - self._insertion_index
+        return 4 - self._head
 
     @property
     def id_desc(self) -> str:
@@ -219,7 +226,7 @@ class Hand:
     def reset(self) -> None:
         self._cards = np.zeros(shape=5, dtype=np.uint8)
         self._id = 0
-        self._insertion_index = 4
+        self._head = 4
 
     # TODO: why do I need this?
     def intersects(self, other: Hand) -> bool:  # TODO: refine this
@@ -235,20 +242,7 @@ class Hand:
     def to_list(self) -> List:
         return list(map(int, self.__iter__()))
 
-    def _is_comparable(self, other: Hand) -> bool:
-        assert self.is_valid and other.is_valid, \
-            "Bug: attempting to compare 1 or more invalid hands."
-        # TODO: this case is specifically to show that one cannot
-        #       possibly play a non bomb on a bomb, but should it be
-        #       handled here? also this clearly is not symmetric so 
-        #       don't like it since if I wanted the server to verify it
-        #       as well, it would have to be the opposite
-        if other.is_bomb and not self.is_bomb:
-            return False
-        elif self.is_bomb or self._id == other._id:
-            return True
-        else:
-            return False
+    
 
     def _identify(self) -> None:
         try:
@@ -257,42 +251,45 @@ class Hand:
             self._id = self._num_cards * 10
 
     # TODO: is there any benefit to doing this recursively?
-    def _insert_pos(self, card: int, current_index: int) -> int:
+    def _insertion_index(self, card: int, current_index: int) -> int:
         if current_index == 5:
             return 4
         elif card > self[current_index]:
-            return self._insert_pos(card, current_index + 1)
+            return self._insertion_index(card, current_index + 1)
         else:
             return current_index - 1
 
     def add(self, card: int) -> None:
         # TODO: do I need these assertions?
-        assert 1 <= card <= 52, "Bug: attempting to add invalid card."
+        assert 1 <= card <= 52, "attempting to add invalid card."
         if self.is_full:  # TODO: should this be an error?
-            raise FullHandError("Cannot add any more cards to this hand.")
+            raise FullHandError("cannot add any more cards to this hand.")
         if card in self:
             raise DuplicateCardError(f'{card} already in hand.')
-        ii: int = self._insertion_index
-        ip: int = self._insert_pos(card, ii + 1)
-        self[ii: ip] = self[ii + 1: ip + 1]  # left shift lower cards
-        self[ip] = card
-        self._insertion_index -= 1
+        ii: int = self._insertion_index(card, self._head + 1)
+        # left shift lower cards if there's a card at the ii
+        if self[ii]:
+            self[self._head: ii] = self[self._head + 1: ii + 1]
+        self[ii] = card
+        self._head -= 1
         self._identify()
 
     def _card_index(self, card: int) -> int:
         try:
-            return np.where(self._cards == card)[0][0]  # TODO: justify in notebook
+            # TODO: is this the fastest way?
+            return np.where(self._cards == card)[0][0]
         except IndexError:
-            raise CardNotInHandError('Attempting to find index of card ({card}) which is not in hand.')
+            raise CardNotInHandError(f'attempting to find index of card '
+                                     f'({card}) which is not in hand.')
 
     def remove(self, card) -> None:
-        assert self._id != 0, "Bug: attempting to remove from an empty hand."
+        assert self._id != 0, "attempting to remove from an empty hand."
         ci: int = self._card_index(card)
         self[ci] = 0
-        self._insertion_index += 1
-        ii: int = self._insertion_index
-        self[ii + 1: ci + 1] = self[ii: ci]  # right shift lower cards
-        self[ii] = 0
+        self._head += 1
+        # right shift lower cards
+        self[self._head + 1: ci + 1] = self[self._head: ci]
+        self[self._head] = 0
         self._identify()
 
 
@@ -305,4 +302,8 @@ class FullHandError(RuntimeError):
 
 
 class CardNotInHandError(RuntimeError):
+    pass
+
+
+class NotPlayableOnError(RuntimeError):
     pass

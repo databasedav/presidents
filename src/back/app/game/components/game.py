@@ -8,7 +8,7 @@ from typing import Any, Callable, Dict, List, Optional, Set, Union
 import numpy as np
 
 from . import (Hand, DuplicateCardError, FullHandError, Chamber,
-               CardNotInChamberError)
+               CardNotInChamberError, NotPlayableOnError)
 from ..utils import rank_articler
 
 
@@ -260,7 +260,7 @@ class Game:
                     self._unlock(spot)
                 else:
                     raise PresidentsError('your current hand is weaker than the hand in play')
-            except RuntimeError as e:  # hands are not comparable
+            except NotPlayableOnError as e:
                 raise PresidentsError(str(e))
 
     def maybe_play_current_hand(self, spot: int) -> None:
