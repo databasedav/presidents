@@ -147,8 +147,6 @@ class Hand:
             return self[1] < other[1]  # second card is always part of the quad
         elif self.is_bomb:
             return False
-        elif other.is_bomb:
-            return True
         elif self.is_single or self.is_double or self.is_straight:
             return self[4] < other[4]
         elif self.is_triple or self.is_fullhouse:
@@ -158,14 +156,12 @@ class Hand:
 
     def __gt__(self, other: Hand) -> bool:
         if not self._is_comparable(other):
-            raise RuntimeError(
-                f'a {self.id_desc} cannot be played on a {other.id_desc}')
+            raise NotPlayableOnError(f'a {self.id_desc} cannot be played on a '
+                                     f'{other.id_desc}')
         if self.is_bomb and other.is_bomb:
             return self[1] > other[1]  # second card is always part of the quad
         elif self.is_bomb:
             return True
-        elif other.is_bomb:
-            return False
         elif self.is_single or self.is_double or self.is_straight:
             return self[4] > other[4]
         elif self.is_triple or self.is_fullhouse:
@@ -228,21 +224,12 @@ class Hand:
         self._id = 0
         self._head = 4
 
-    # TODO: why do I need this?
-    def intersects(self, other: Hand) -> bool:  # TODO: refine this
-        for card1 in self:
-            for card2 in other:
-                if card1 == card2:
-                    return True
-        return False
-
     def to_json(self) -> str:
         return dumps(self.__dict__, default=lambda x: x.tolist())
 
     def to_list(self) -> List:
+        # converts each card to int first for json serializability
         return list(map(int, self.__iter__()))
-
-    
 
     def _identify(self) -> None:
         try:
@@ -250,14 +237,14 @@ class Hand:
         except KeyError:
             self._id = self._num_cards * 10
 
-    # TODO: is there any benefit to doing this recursively?
-    def _insertion_index(self, card: int, current_index: int) -> int:
-        if current_index == 5:
+    # recursion o wow
+    def _insertion_index(self, card: int, curr_index: int) -> int:
+        if curr_index == 5:
             return 4
-        elif card > self[current_index]:
-            return self._insertion_index(card, current_index + 1)
+        elif card > self[curr_index]:
+            return self._insertion_index(card, curr_index + 1)
         else:
-            return current_index - 1
+            return curr_index - 1
 
     def add(self, card: int) -> None:
         # TODO: do I need these assertions?
@@ -269,7 +256,8 @@ class Hand:
         ii: int = self._insertion_index(card, self._head + 1)
         # left shift lower cards if there's a card at the ii
         if self[ii]:
-            self[self._head: ii] = self[self._head + 1: ii + 1]
+            head: int = self._head  # avoids multiple attribute accesses
+            self[head: ii] = self[head + 1: ii + 1]
         self[ii] = card
         self._head -= 1
         self._identify()
@@ -284,12 +272,13 @@ class Hand:
 
     def remove(self, card) -> None:
         assert self._id != 0, "attempting to remove from an empty hand."
+        self._head += 1
+        head: int = self._head  # avoids multiple attribute accesses
         ci: int = self._card_index(card)
         self[ci] = 0
-        self._head += 1
         # right shift lower cards
-        self[self._head + 1: ci + 1] = self[self._head: ci]
-        self[self._head] = 0
+        self[head + 1: ci + 1] = self[head: ci]
+        self[head] = 0
         self._identify()
 
 

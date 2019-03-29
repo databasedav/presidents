@@ -1,9 +1,10 @@
 import numpy as np
 import pickle
 
+
 from itertools import combinations as comb
 from typing import Dict
-from ....utils import hand_hash, cartesian_product_pp, main
+from ..utils import hand_hash, cartesian_product_pp, main
 
 
 cards = np.arange(1, 53, dtype=np.uint8)
