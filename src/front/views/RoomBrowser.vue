@@ -1,16 +1,35 @@
 <template>
   <div>
     <v-toolbar flat>
-      <v-toolbar-title class="logo">
+      <v-toolbar-title
+        class="logo"
+      >
         presidents
       </v-toolbar-title>
-      <v-divider class="mx-2" inset vertical></v-divider>
+      <v-divider
+        class="mx-2"
+        inset
+        vertical
+      ></v-divider>
+
       <v-spacer></v-spacer>
-      <v-btn color="success" @click="this.refresh">
+
+      <v-btn
+        color="success"
+        @click="this.refresh"
+      >
         refresh
       </v-btn>
-      <v-dialog v-model="dialog" max-width="500px">
-        <v-btn slot="activator" color="primary" dark class="mb-2">
+
+      <v-dialog
+        v-model="dialog"
+        max-width="500px"
+      >
+        <v-btn
+          slot="activator"
+          color="primary"
+          dark class="mb-2"
+        >
           create room
         </v-btn>
         <v-card>
@@ -34,7 +53,11 @@
 
           <v-card-actions>
             <v-spacer></v-spacer>
-            <v-btn color="blue darken-1" flat @click="close">
+            <v-btn
+              color="blue darken-1"
+              flat
+              @click="close"
+            >
               cancel
             </v-btn>
             <v-btn
@@ -137,8 +160,9 @@ export default {
 
     rooms () {
       // this will fire when the server force refreshes when a room is successfully added
-      this.loading = false
-      this.close()
+      if (this.loading) {
+        this.close()
+      }
     }
   },
 
@@ -153,7 +177,7 @@ export default {
     },
 
     rooms () {
-      return this.$store.state[this.rbnsp].rooms
+      return this.$store.state[this.rbnsp] ? this.$store.state[this.rbnsp].rooms : []
     }
   },
 
@@ -164,8 +188,9 @@ export default {
     },
 
     close () {
+      this.loading = false
       this.name = ''
-      this.dialog = false;
+      this.dialog = false
     },
 
     add_room () {
