@@ -17,10 +17,10 @@ function create_room_module (socket) {
     state: create_state(socket),
     getters,
     mutations: {
-      fuck_CONNECT (state) {
+      SOCKET_CONNECT (state) {
         console.log('connected')
       },
-      fuck_ALERT (state, payload) {
+      SOCKET_ALERT (state, payload) {
         console.log('alerted')
       }
     },
@@ -38,7 +38,7 @@ function create_room_browser_module (socket) {
     state: {
       socket: socket,
       // TODO: change to map once reactive
-      rooms: []
+      rooms: [],
     },
   
     mutations: {
