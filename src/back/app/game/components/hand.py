@@ -129,11 +129,12 @@ class Hand:
     def __ne__(self, other: Hand) -> bool:
         return not self == other
 
-    # one-directional
     def _is_comparable(self, other: Hand) -> bool:
         if not self.is_valid or not other.is_valid:
             raise AssertionError('attempting to compare 1 or more invalid hand'
                                  's.')
+        # one-directional because non-bombs cannot be compared with 
+        # bombs
         if self._id == other._id or self.is_bomb:
             return True
         else:
@@ -237,14 +238,14 @@ class Hand:
         except KeyError:
             self._id = self._num_cards * 10
 
-    # recursion o wow
-    def _insertion_index(self, card: int, curr_index: int) -> int:
-        if curr_index == 5:
-            return 4
-        elif card > self[curr_index]:
-            return self._insertion_index(card, curr_index + 1)
-        else:
-            return curr_index - 1
+    def _insertion_index(self, card: int) -> int:
+        curr_index: int = self._head + 1
+        while curr_index < 5:
+            if card > self[curr_index]:
+                curr_index += 1
+            else:
+                return curr_index - 1
+        return 4
 
     def add(self, card: int) -> None:
         # TODO: do I need these assertions?
@@ -253,7 +254,7 @@ class Hand:
             raise FullHandError("cannot add any more cards to this hand.")
         if card in self:
             raise DuplicateCardError(f'{card} already in hand.')
-        ii: int = self._insertion_index(card, self._head + 1)
+        ii: int = self._insertion_index(card)
         # left shift lower cards if there's a card at the ii
         if self[ii]:
             head: int = self._head  # avoids multiple attribute accesses

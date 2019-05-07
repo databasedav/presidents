@@ -1,4 +1,4 @@
-from ..app.components import Hand, NotPlayableOnError, hand_table
+from ..app.game.components import Hand, NotPlayableOnError, hand_table
 from typing import Optional
 import numpy as np
 import pytest
@@ -10,7 +10,7 @@ def test_default_constructor():
     hand: Hand = Hand()
     assert_array_equal(hand._cards, np.zeros(shape=5, dtype=np.uint8))
     assert hand._id == 0
-    assert hand._insertion_index == 4
+    assert hand._head == 4
 
 
 def test_testing_constructor():
@@ -20,71 +20,71 @@ def test_testing_constructor():
     hand = Hand([])
     assert_array_equal(hand._cards, np.zeros(shape=5, dtype=np.uint8))
     assert hand._id == 0
-    assert hand._insertion_index == 4
+    assert hand._head == 4
 
     # sorted, length < 5
     hand = Hand([1])
     assert_array_equal(hand._cards,
                        np.array([0, 0, 0, 0, 1], dtype=np.uint8))
     assert hand._id == 11
-    assert hand._insertion_index == 3
+    assert hand._head == 3
 
     hand = Hand([0, 0, 1])
     assert_array_equal(hand._cards,
                        np.array([0, 0, 0, 0, 1], dtype=np.uint8))
     assert hand._id == 11
-    assert hand._insertion_index == 3
+    assert hand._head == 3
 
     hand = Hand([1, 52])
     assert_array_equal(hand._cards,
                        np.array([0, 0, 0, 1, 52], dtype=np.uint8))
     assert hand._id == 20
-    assert hand._insertion_index == 2
+    assert hand._head == 2
 
     hand = Hand([1, 5, 9, 13])
     assert_array_equal(hand._cards,
                        np.array([0, 1, 5, 9, 13], dtype=np.uint8))
     assert hand._id == 40
-    assert hand._insertion_index == 0
+    assert hand._head == 0
 
     # unsorted, length < 5
     hand = Hand([1])
     assert_array_equal(hand._cards,
                        np.array([0, 0, 0, 0, 1], dtype=np.uint8))
     assert hand._id == 11
-    assert hand._insertion_index == 3
+    assert hand._head == 3
 
     hand = Hand([1, 0, 0])
     assert_array_equal(hand._cards,
                        np.array([0, 0, 0, 0, 1], dtype=np.uint8))
     assert hand._id == 11
-    assert hand._insertion_index == 3
+    assert hand._head == 3
 
     hand = Hand([52, 1])
     assert_array_equal(hand._cards,
                        np.array([0, 0, 0, 1, 52], dtype=np.uint8))
     assert hand._id == 20
-    assert hand._insertion_index == 2
+    assert hand._head == 2
 
     hand = Hand([13, 9, 5, 1])
     assert_array_equal(hand._cards,
                        np.array([0, 1, 5, 9, 13], dtype=np.uint8))
     assert hand._id == 40
-    assert hand._insertion_index == 0
+    assert hand._head == 0
 
     # sorted length 5
     hand = Hand([1, 2, 3, 4, 5])
     assert_array_equal(hand._cards,
                        np.array([1, 2, 3, 4, 5], dtype=np.uint8))
     assert hand._id == 53
-    assert hand._insertion_index == -1
+    assert hand._head == -1
 
     # unsorted length 5
     hand = Hand([5, 4, 3, 2, 1])
     assert_array_equal(hand._cards,
                        np.array([1, 2, 3, 4, 5], dtype=np.uint8))
     assert hand._id == 53
-    assert hand._insertion_index == -1
+    assert hand._head == -1
 
     # length assertion
     with pytest.raises(AssertionError, match=r'up to 5'):
@@ -124,7 +124,7 @@ def test__setitem__():
     assert hand[4] == 52
     # setting can add duplicate cards
     hand[2] = 5
-    asert hand[2] == 5
+    assert hand[2] == 5
 
 
 def test__hash__():
@@ -251,42 +251,42 @@ def test_is_empty():
 
 
 def test_is_full():
-    hand: Hand([1, 2, 3, 4, 5])
+    hand: Hand = Hand([1, 2, 3, 4, 5])
     assert hand.is_full
 
 
 def test_is_single():
-    hand: Hand([1])
+    hand: Hand = Hand([1])
     assert hand.is_single
 
 
 def test_is_double():
-    hand: Hand([1, 2])
+    hand: Hand = Hand([1, 2])
     assert hand.is_double
 
 
 def test_is_triple():
-    hand: Hand([1, 2, 3])
+    hand: Hand = Hand([1, 2, 3])
     assert hand.is_triple
 
 
 def test_is_fullhouse():
-    hand: Hand([1, 2, 3, 5, 6])
+    hand: Hand = Hand([1, 2, 3, 5, 6])
     assert hand.is_fullhouse
 
 
 def test_is_straight():
-    hand: Hand([1, 5, 9, 13, 17])
+    hand: Hand = Hand([1, 5, 9, 13, 17])
     assert hand.is_straight
 
 
 def test_is_bomb():
-    hand: Hand([1, 2, 3, 4, 52])
+    hand: Hand = Hand([1, 2, 3, 4, 52])
     assert hand.is_bomb
 
 
 def test_is_valid():
-    hand: Hand([1])
+    hand: Hand = Hand([1])
     assert hand.is_valid
 
     hand.add(52)
@@ -299,17 +299,17 @@ def test_id_desc():
 
 
 def test_reset():
-    hand: Hand([1, 2, 3, 4, 5])
+    hand: Hand = Hand([1, 2, 3, 4, 5])
     zeros_arr = np.zeros(shape=5, dtype=np.uint8)
     with pytest.raises(AssertionError, match=r'are not equal'):
         assert_array_equal(hand._cards, zeros_arr)
     assert hand._id != 0
-    assert hand_head != 4
+    assert hand._head != 4
 
     hand.reset()
     assert_array_equal(hand._cards, zeros_arr)
     assert hand._id == 0
-    assert hand_head == 4
+    assert hand._head == 4
 
 
 def test_to_json():
@@ -330,3 +330,5 @@ def test_identify():
 
 
 def test_insertion_index():
+    hand: Hand = Hand([1])
+    assert hand._insertion_index(2) == 4
