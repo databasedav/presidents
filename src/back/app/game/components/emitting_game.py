@@ -9,7 +9,6 @@ from . import (Hand, DuplicateCardError, FullHandError, CardNotInChamberError,
                EmittingChamber, Game, base_hand, PresidentsError)
 
 
-
 # TODO: decide what to do for the removal of asking options
 # TODO: add reserve time
 
@@ -76,10 +75,18 @@ class EmittingGame(Game):
 
         TODO: clean
         """
-        time: int = 30
+        time: int = 2
         self._set_dot_color(self._current_player, 'green')
-        self._emit('set_on_turn', {'on_turn': True, 'spot': self._current_player, 'time': time * 1000}, self._current_player_sid, callback=lambda: self._start_timer(self._current_player, time))
-        self._emit_to_all_players('set_time', {'spot': self._current_player, 'time': time * 1000}, skip_sid=self._current_player_sid)
+        self._emit('set_on_turn', {
+            'on_turn': True,
+            'spot': self._current_player,
+            'time': time * 1000
+        }, self._current_player_sid,
+        callback=lambda: self._start_timer(self._current_player, time))
+        self._emit_to_all_players('set_time', {
+            'spot': self._current_player,
+            'time': time * 1000
+        }, skip_sid=self._current_player_sid)
 
     def _player_finish(self, spot: int) -> None:
         self._set_dot_color(spot, 'purple')

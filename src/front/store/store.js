@@ -23,6 +23,6 @@ export default new Vuex.Store({
 
     plugin_room (context, payload) {
       room_plugin(payload.rnsp)(this)
-    }
+    },
   }
 })

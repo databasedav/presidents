@@ -184,7 +184,7 @@ export default {
   methods: {
 
     refresh () {
-      this.socket.emit('refresh')
+      this.$store.dispatch(`${this.rbnsp}/emit_refresh`)
     },
 
     close () {
@@ -195,11 +195,13 @@ export default {
 
     add_room () {
       this.loading = true
-      this.socket.emit('add_room', {name: this.name})
+      this.$store.dispatch(`${this.rbnsp}/emit_add_room`, {
+        name: this.name
+      })
     },
 
     join_room (rid) {
-      this.socket.emit('join_room', {
+      this.$store.dispatch(`${this.rbnsp}/emit_join_room`, {
         rid: rid,
         name: this.nickname
       })

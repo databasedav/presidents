@@ -49,7 +49,7 @@ export default {
       router.push({
         name: 'room browser',
         params: {
-          rbnsp: `/room_browser-${this.server}`
+          rbnsp: `/room_browser_${this.server}`
         }
       })
     }

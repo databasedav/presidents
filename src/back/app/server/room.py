@@ -12,7 +12,7 @@ class Room(Namespace):
 
     def __init__(self, rid: str, name: str,
                  game: Optional[EmittingGame]=None) -> None:
-        super().__init__(f'/room-{rid}')
+        super().__init__(f'/room_{rid}')
         self.name: str = name
         self.game: Optional[EmittingGame] = game
 
@@ -27,6 +27,8 @@ class Room(Namespace):
             return
         self.emit('send_to_room', {'rnsp': self.namespace}, namespace=rbnsp, room=sid)
         self.game.add_player(sid, name)
+        if self.game.num_players == 1:
+            self.game._start_round(testing=True)
 
     def on_card_click(self, payload) -> None:
         self.game.add_or_remove_card(request.sid, payload['card'])

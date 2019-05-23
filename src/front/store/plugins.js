@@ -1,22 +1,48 @@
 import { create_room_browser_module, create_room_module } from '../utils/utils'
 import Vue from 'vue'
 import io from 'socket.io-client'
-import VueSocketio from 'vue-socket.io-extended'
+// import VueSocketio from 'vue-socket.io-extended'
+import VueSocketIO from 'vue-socket.io'
+
 
 
 function room_browser_plugin (rbnsp) {
   return store => {
-    const socket = io(rbnsp)
-    store.registerModule(rbnsp, create_room_browser_module(socket))
-    Vue.use(VueSocketio, socket, { store })
+    store.registerModule(rbnsp, create_room_browser_module(rbnsp))
+    Vue.use(
+      new VueSocketIO({
+        connection: io(rbnsp),
+        options: {
+          useConnectionNamespace: true,
+          namespaceName: rbnsp
+        },
+        debug: false,
+        vuex: {
+          store,
+          mutationPrefix: 'SOCKET_',
+          actionPrefix: 'socket_'
+        }
+      })
+    )
   }
 }
 
 function room_plugin (rnsp) {
   return store => {
-    const socket = io(rnsp)
-    store.registerModule(rnsp, create_room_module(socket))
-    Vue.use(VueSocketio, socket, { store })
+    store.registerModule(rnsp, create_room_module(rnsp))
+    Vue.use(new VueSocketIO({
+      connection: io(rnsp),
+      options: {
+        useConnectionNamespace: true,
+        namespaceName: rnsp
+      },
+      debug: false,
+      vuex: {
+        store,
+        mutationPrefix: 'SOCKET_',
+        actionPrefix: 'socket_'
+      }
+    }))
   }
 }
 

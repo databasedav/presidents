@@ -74,10 +74,7 @@ import MessageBox from './MessageBox.vue'
 import PlayerStrip from './PlayerStrip.vue'
 import OtherPlayerBox from './OtherPlayerBox.vue'
 
-import io from 'socket.io-client'
-
 export default {
-
   name: 'Player',
   
   components: {
@@ -95,52 +92,48 @@ export default {
   },
 
   methods: {
-    restart () {
-      this.socket.emit('restart')
-    },
-
     card_click(card) {
-      this.socket.emit('card_click', {'card': card})
+      this.$store.dispatch(`${this.rnsp}/emit_card_click`, {
+        'card': card
+      })
     },
 
     unlock () {
-      this.socket.emit('unlock')
+      this.$store.dispatch(`${this.rnsp}/emit_unlock`)
     },
 
     lock () {
-      this.socket.emit('lock')
+      this.$store.dispatch(`${this.rnsp}/emit_lock`)
     },
 
     play () {
-      this.socket.emit('play')
+      this.$store.dispatch(`${this.rnsp}/emit_play`)
     },
 
     unlock_pass () {
-      this.socket.emit('unlock_pass')
+      this.$store.dispatch(`${this.rnsp}/emit_unlock_pass`)
     },
 
     pass () {
-      this.socket.emit('pass')
+      this.$store.dispatch(`${this.rnsp}/emit_pass`)
     },
 
     ask () {
-      this.socket.emit('ask')
+      this.$store.dispatch(`${this.rnsp}/emit_ask`)
     },
 
     give () {
-      this.socket.emit('give')
+      this.$store.dispatch(`${this.rnsp}/emit_give`)
     },
 
     asking_click (value) {
-      this.socket.emit('asking_click', {'value': value})
+      this.$store.dispatch(`${this.rnsp}/emit_asking_click`, {
+        'value': value
+      })
     }
   },
 
   computed: {
-    socket () {
-      return this.$store.state[this.rnsp].socket
-    },
-
     on_turn () {
       return this.$store.state[this.rnsp].on_turn
     },

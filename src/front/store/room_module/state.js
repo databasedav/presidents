@@ -1,8 +1,8 @@
 var SortedMap = require("collections/sorted-map")
 
-export default function create_state (socket) {
+export default function create_state (rnsp) {
   return {
-    socket: socket,
+    rnsp: rnsp,
     cards: new SortedMap(),
     // TODO: remove once Vue supports maps; change CardBox getters to cards map
     cards_arr: new Array(),

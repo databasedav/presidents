@@ -14,7 +14,7 @@ from flask_socketio import Namespace
 class RoomBrowser(Namespace):
 
     def __init__(self, rbid: str):
-        super().__init__(f'/room_browser-{rbid}')
+        super().__init__(f'/room_browser_{rbid}')
         # dict from rid (room namespace uuid) to Room object
         self._room_dict: Dict[str, Room] = dict()
 
