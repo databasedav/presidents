@@ -1,4 +1,4 @@
-import { create_room_browser_module, create_room_module } from '../utils/utils'
+import { create_server_browser_module, create_server_module } from '../utils/utils'
 import Vue from 'vue'
 import io from 'socket.io-client'
 // import VueSocketio from 'vue-socket.io-extended'
@@ -6,9 +6,9 @@ import VueSocketIO from 'vue-socket.io'
 
 
 
-function room_browser_plugin (rbnsp) {
+function server_browser_plugin (rbnsp) {
   return store => {
-    store.registerModule(rbnsp, create_room_browser_module(rbnsp))
+    store.registerModule(rbnsp, create_server_browser_module(rbnsp))
     Vue.use(
       new VueSocketIO({
         connection: io(rbnsp),
@@ -27,9 +27,9 @@ function room_browser_plugin (rbnsp) {
   }
 }
 
-function room_plugin (rnsp) {
+function server_plugin (rnsp) {
   return store => {
-    store.registerModule(rnsp, create_room_module(rnsp))
+    store.registerModule(rnsp, create_server_module(rnsp))
     Vue.use(new VueSocketIO({
       connection: io(rnsp),
       options: {
@@ -171,4 +171,4 @@ function create_namespaced_player_socket_plugin (socket, namespace) {
   }
 }
 
-export { room_plugin, room_browser_plugin, create_room_browser_socket_plugin, create_namespaced_player_socket_plugin }
+export { server_plugin, server_browser_plugin, create_server_browser_socket_plugin, create_namespaced_player_socket_plugin }

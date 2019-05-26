@@ -1,5 +1,5 @@
 from flask import render_template, jsonify
-from . import main, room_browser
+from . import main, server_browser
 
 @main.route('/', defaults={'path': ''})
 @main.route('/<path:path>')

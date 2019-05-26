@@ -11,9 +11,9 @@
     <v-btn
       color='success'
       :disabled='!nickname'
-      @click='send_to_room_browser'
+      @click='send_to_server_browser'
     >
-      browse rooms
+      browse servers
     </v-btn>
   </div>
 </template>
@@ -45,11 +45,11 @@ export default {
   },
 
   methods: {
-    send_to_room_browser () {
+    send_to_server_browser () {
       router.push({
-        name: 'room browser',
+        name: 'server browser',
         params: {
-          rbnsp: `/room_browser_${this.server}`
+          rbnsp: `/server_browser_${this.server}`
         }
       })
     }

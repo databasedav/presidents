@@ -23,7 +23,7 @@ class EmittingGame(Game):
         self._chambers: List[Optional[EmittingChamber]] = [
             EmittingChamber(self._socketio, self._namespace) for _ in range(4)
         ]
-        self._room: Optional[str] = None
+        self._server: Optional[str] = None
         self._spot_sid_bidict: bidict = bidict()
         self.num_spectators: int = 0  # TODO
 
@@ -35,8 +35,8 @@ class EmittingGame(Game):
 
     # setup related methods
 
-    def set_room(self, room: str) -> None:
-        self._room = room
+    def set_server(self, server: str) -> None:
+        self._server = server
 
     def add_player(self, sid: str, name: str) -> None:
         rand_open_spot: int = self._rand_open_spot()
@@ -247,7 +247,7 @@ class EmittingGame(Game):
 
     def _message(self, message: str) -> None:
         super()._message(message)
-        self._emit_to_room('message', {'message': message})
+        self._emit_to_server('message', {'message': message})
 
     # getters
 
@@ -276,7 +276,7 @@ class EmittingGame(Game):
 
     def _set_trading(self, trading: bool) -> None:
         super()._set_trading(trading)
-        self._emit_to_room('set_trading', {'trading': trading})
+        self._emit_to_server('set_trading', {'trading': trading})
 
     def _set_giver(self, spot: int, giver: bool) -> None:
         self._emit('set_giver', {'giver': giver}, self._get_sid(spot))
@@ -311,8 +311,8 @@ class EmittingGame(Game):
                 continue
             self._emit(event, payload, sid)
 
-    def _emit_to_room(self, event: str, payload: Dict[str, Union[int, str, List[int]]]):
-        self._emit(event, payload, self._room)
+    def _emit_to_server(self, event: str, payload: Dict[str, Union[int, str, List[int]]]):
+        self._emit(event, payload, self._server)
 
     # alerting related methods
 

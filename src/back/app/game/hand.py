@@ -8,14 +8,13 @@
 #       because I check for them beforehand, e.g. invalid hands cannot
 #       be compared
 # TODO: wrtie tests  # keeping this typo cuz I love irony
-# TODO: rename insertion index to head
 
 from __future__ import annotations
 
 import numpy as np
 import pickle
 
-from ..utils import hand_hash, card_names, id_desc_dict
+from .utils import hand_hash, card_names, id_desc_dict
 from typing import List, Dict, Union, Optional
 from json import dumps, loads
 from mypy_extensions import NoReturn
@@ -23,7 +22,7 @@ from mypy_extensions import NoReturn
 
 # TODO create the .pkl if it doesn't exist
 # hash table for identifying hands
-with open('src/back/app/game/components/hand_table.pkl', 'rb') as file:
+with open('src/back/app/game/hand_table.pkl', 'rb') as file:
     hand_table = pickle.load(file)
 
 
@@ -79,8 +78,10 @@ class Hand:
             # checks uniqueness of non-zero values
             assert len(filtered) == len(set(filtered)), 'cards must be unique'
             # pads cards to length 5
-            self._cards: np.ndarray[np.uint8] = np.pad(np.array(sorted(filtered), dtype=np.uint8),
-                 (5 - len_filtered, 0), 'constant')
+            self._cards: np.ndarray[np.uint8] = (
+                np.pad(np.array(sorted(filtered), dtype=np.uint8),
+                       (5 - len_filtered, 0), 'constant')
+            )
             self._identify()
 
     @classmethod
@@ -103,7 +104,7 @@ class Hand:
         return hand_hash(self._cards)
 
     def __contains__(self, card: int) -> object:
-        assert 1 <= card <= 52, "Bug: invalid card cannot be in hand."
+        assert 1 <= card <= 52, "invalid card cannot be in hand."
         return card in self._cards  # TODO: should I slice before this?
 
     def __iter__(self):  # TODO: return type for this
@@ -248,9 +249,8 @@ class Hand:
         return 4
 
     def add(self, card: int) -> None:
-        # TODO: do I need these assertions?
         assert 1 <= card <= 52, "attempting to add invalid card."
-        if self.is_full:  # TODO: should this be an error?
+        if self.is_full:
             raise FullHandError("cannot add any more cards to this hand.")
         if card in self:
             raise DuplicateCardError(f'{card} already in hand.')
@@ -283,15 +283,15 @@ class Hand:
         self._identify()
 
 
+class CardNotInHandError(RuntimeError):
+    pass
+
+
 class DuplicateCardError(RuntimeError):
     pass
 
 
 class FullHandError(RuntimeError):
-    pass
-
-
-class CardNotInHandError(RuntimeError):
     pass
 
 

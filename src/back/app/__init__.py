@@ -1,4 +1,4 @@
-from .server import RoomBrowser
+from .server import ServerBrowser
 
 from flask import Flask, Blueprint
 from flask_socketio import SocketIO
@@ -9,12 +9,12 @@ main = Blueprint('main', __name__)
 socketio = SocketIO(logger=True)
 
 # uses global namespace (/) now but this could be customized if I want
-# to have multiple room browsers
-room_browser = RoomBrowser('US-West')
-socketio.on_namespace(room_browser)
+# to have multiple server browsers
+server_browser = ServerBrowser('US-West')
+socketio.on_namespace(server_browser)
 
 for name in ['hello', 'world']:
-    room_browser._add_room(name)
+    server_browser._add_server(name)
 
 
 def create_app(*, debug=False):

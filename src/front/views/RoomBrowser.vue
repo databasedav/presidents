@@ -30,12 +30,12 @@
           color="primary"
           dark class="mb-2"
         >
-          create room
+          create server
         </v-btn>
         <v-card>
           <v-card-title>
             <span class="headline">
-              new room
+              new server
             </span>
           </v-card-title>
           <v-card-text>
@@ -63,7 +63,7 @@
             <v-btn
               color="blue darken-1"
               flat
-              @click="add_room"
+              @click="add_server"
               :loading='loading'
             >
               create
@@ -74,12 +74,12 @@
     </v-toolbar>
     <v-data-table
       :headers="headers"
-      :items="rooms"
+      :items="servers"
       class="elevation-1"
     >
       <template slot="items" slot-scope="props">
         <td>
-          {{ props.item.room }}
+          {{ props.item.server }}
         </td>
         <td class="text-xs-center">
           {{ props.item.num_players }}
@@ -88,9 +88,9 @@
           <v-btn
             color="success"
             :disabled="props.item.num_players >= 4"
-            @click='join_room(props.item.rid)'
+            @click='join_server(props.item.rid)'
           >
-            join room
+            join server
           </v-btn>
         </td>
       </template>
@@ -100,7 +100,7 @@
           color="error"
           icon="warning"
         >
-          sorr no one playin rn create a new room :))
+          sorr no one playin rn create a new server :))
         </v-alert>
       </template>
     </v-data-table>
@@ -111,8 +111,8 @@
 import VueSocketio from 'vue-socket.io-extended'
 import io from 'socket.io-client'
 import { mapState } from 'vuex'
-import { room_browser_plugin } from '../store/plugins'
-import { create_room_browser_socket_plugin } from '../store/plugins'
+import { server_browser_plugin } from '../store/plugins'
+import { create_server_browser_socket_plugin } from '../store/plugins'
 
 
 export default {
@@ -121,10 +121,10 @@ export default {
       dialog: false,
       headers: [
         {
-          text: "room",
+          text: "server",
           align: "center",
           sortable: false,
-          value: "room"
+          value: "server"
         },
         {
           text: "# players",
@@ -147,7 +147,7 @@ export default {
   },
 
   created() {
-    this.$store.dispatch('plugin_room_browser', {
+    this.$store.dispatch('plugin_server_browser', {
       rbnsp: this.rbnsp
     })
   },
@@ -158,8 +158,8 @@ export default {
 
   watch: {
 
-    rooms () {
-      // this will fire when the server force refreshes when a room is successfully added
+    servers () {
+      // this will fire when the server force refreshes when a server is successfully added
       if (this.loading) {
         this.close()
       }
@@ -176,8 +176,8 @@ export default {
       return this.$store.state[this.rbnsp].socket
     },
 
-    rooms () {
-      return this.$store.state[this.rbnsp] ? this.$store.state[this.rbnsp].rooms : []
+    servers () {
+      return this.$store.state[this.rbnsp] ? this.$store.state[this.rbnsp].servers : []
     }
   },
 
@@ -193,15 +193,15 @@ export default {
       this.dialog = false
     },
 
-    add_room () {
+    add_server () {
       this.loading = true
-      this.$store.dispatch(`${this.rbnsp}/emit_add_room`, {
+      this.$store.dispatch(`${this.rbnsp}/emit_add_server`, {
         name: this.name
       })
     },
 
-    join_room (rid) {
-      this.$store.dispatch(`${this.rbnsp}/emit_join_room`, {
+    join_server (rid) {
+      this.$store.dispatch(`${this.rbnsp}/emit_join_server`, {
         rid: rid,
         name: this.nickname
       })

@@ -27,7 +27,7 @@ class EmittingChamber(Chamber):
 
     def _emit(self, event: str, payload: Dict[str, Any]):
         self._socketio.emit(event, payload, namespace=self._namespace,
-                            room=self._sid)
+                            server=self._sid)
 
     def reset(self) -> None:
         self._emit('clear_cards', {})

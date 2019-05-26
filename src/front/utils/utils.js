@@ -1,8 +1,8 @@
 import store from '../store/store'
-import create_state from '../store/room_module/state'
-import mutations from '../store/room_module/mutations'
-import getters from '../store/room_module/getters'
-import actions from '../store/room_module/actions'
+import create_state from '../store/server_module/state'
+import mutations from '../store/server_module/mutations'
+import getters from '../store/server_module/getters'
+import actions from '../store/server_module/actions'
 import router from '../router'
 
 
@@ -12,7 +12,7 @@ function namespaced_getter (namespace, getter) {
     return store.getters[`${namespace}/${getter}`]
 }
 
-function create_room_module (rnsp) {
+function create_server_module (rnsp) {
   return {
     strict: process.env.NODE_ENV !== 'production',
     namespaced: true,
@@ -23,7 +23,7 @@ function create_room_module (rnsp) {
   }
 }
 
-function create_room_browser_module (rbnsp) {
+function create_server_browser_module (rbnsp) {
   return {
     strict: process.env.NODE_ENV !== 'production',
 
@@ -32,12 +32,12 @@ function create_room_browser_module (rbnsp) {
     state: {
       rbnsp: rbnsp,
       // TODO: change to map once reactive
-      rooms: [],
+      servers: [],
     },
   
     mutations: {
       SOCKET_refresh (state, payload) {
-        state.rooms = payload.rooms
+        state.servers = payload.servers
       },
     },
 
@@ -46,15 +46,15 @@ function create_room_browser_module (rbnsp) {
         this._vm.$socket[context.state.rbnsp].emit('refresh')
       },
 
-      emit_add_room (context, payload) {
-        this._vm.$socket[context.state.rbnsp].emit('add_room', payload)
+      emit_add_server (context, payload) {
+        this._vm.$socket[context.state.rbnsp].emit('add_server', payload)
       },
 
-      emit_join_room (context, payload) {
-        this._vm.$socket[context.state.rbnsp].emit('join_room', payload)
+      emit_join_server (context, payload) {
+        this._vm.$socket[context.state.rbnsp].emit('join_server', payload)
       },
 
-      socket_send_to_room (context, payload) {
+      socket_send_to_server (context, payload) {
         router.push({
           name: 'presidents',
           params: {
@@ -74,4 +74,4 @@ function register_namespaced_module (namespace, module) {
 
 
 
-export { create_room_module, create_room_browser_module, namespaced_getter, register_namespaced_module }
+export { create_server_module, create_server_browser_module, namespaced_getter, register_namespaced_module }

@@ -1,7 +1,7 @@
 import Vue from 'vue'
 import Router from 'vue-router'
 import Home from './views/Home.vue'
-import RoomBrowser from './views/RoomBrowser.vue'
+import serverBrowser from './views/serverBrowser.vue'
 import Presidents from './views/Presidents.vue'
 import Tester from './views/Tester.vue'
 
@@ -17,9 +17,9 @@ export default new Router({
       component: Home
     },
     {
-      path: '/room_browser',
-      name: 'room browser',
-      component: RoomBrowser,
+      path: '/server_browser',
+      name: 'server browser',
+      component: serverBrowser,
       props: true
     },
     // {

@@ -20,7 +20,7 @@ export default {
   },
 
   created () {
-    this.$store.dispatch('plugin_room', {
+    this.$store.dispatch('plugin_server', {
       rnsp: this.rnsp
     })
   },

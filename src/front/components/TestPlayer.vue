@@ -105,7 +105,7 @@ export default {
   created () {
     this.$store.registerModule(this.namespace, createSinglePlayerStore())
     this.socket = io(`//${window.location.host}`, { forceNew: true })
-    this.socket.emit('join_room', {room: 'world', name: this.namespace})
+    this.socket.emit('join_server', {server: 'world', name: this.namespace})
     const plugin = create_namespaced_player_socket_plugin(this.socket, this.namespace)
     plugin(this.$store)
   },

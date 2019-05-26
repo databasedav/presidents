@@ -1,2 +1,2 @@
-from .room import Room
-from .room_browser import RoomBrowser
+from .server import Server
+from .server_browser import ServerBrowser

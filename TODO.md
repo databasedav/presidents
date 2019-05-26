@@ -4,4 +4,6 @@
 * front end hand table
     * faster hand labeling
 
-* auto join on room creation
+* auto join on server creation
+
+* ~~rename room to server~~

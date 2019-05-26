@@ -1,34 +1,36 @@
-from ..game.components import EmittingGame
+from ..game import EmittingGame
 
 from flask import request
 from flask_socketio import Namespace
 from typing import Optional
 
 
-class Room(Namespace):
+class Server(Namespace):
     """
-    a Room is a server that listens to the people who are inside it
+    a Server is a server that listens to the people who are inside it
     """
 
-    def __init__(self, rid: str, name: str,
+    def __init__(self, server_id: str, name: str,
                  game: Optional[EmittingGame]=None) -> None:
-        super().__init__(f'/room_{rid}')
+        super().__init__(f'/server_{server_id}')
         self.name: str = name
         self.game: Optional[EmittingGame] = game
 
     def _set_game(self, game: EmittingGame) -> None:
         self.game = game
 
-    def join(self, rbnsp: str, sid: str, name: str) -> None:
+    def join(self, server_browser_namespace: str, sid: str, name: str) -> None:
         if not self.game:
             self._set_game(EmittingGame(self.socketio, self.namespace))
         elif self.game.is_full:
-            self.emit('room_full', namespace=rbnsp, room=sid)
+            self.emit('server_full', namespace=server_browser_namespace,
+                      room=sid)
             return
-        self.emit('send_to_room', {'rnsp': self.namespace}, namespace=rbnsp, room=sid)
+        self.emit('send_to_server', {'server_namespace': self.namespace},
+                  namespace=server_browser_namespace, room=sid)
         self.game.add_player(sid, name)
         if self.game.num_players == 1:
-            self.game._start_round(testing=True)
+            self.game._start_round(testing=True)  # TODO
 
     def on_card_click(self, payload) -> None:
         self.game.add_or_remove_card(request.sid, payload['card'])
