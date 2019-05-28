@@ -36,8 +36,9 @@ function create_server_browser_module (rbnsp) {
     },
   
     mutations: {
-      SOCKET_refresh (state, payload) {
+      SOCKET_refresh (state, payload, callback) {
         state.servers = payload.servers
+        callback()
       },
     },
 

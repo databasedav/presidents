@@ -1,7 +1,7 @@
 import Vue from 'vue'
 import Router from 'vue-router'
 import Home from './views/Home.vue'
-import serverBrowser from './views/serverBrowser.vue'
+import serverBrowser from './views/ServerBrowser.vue'
 import Presidents from './views/Presidents.vue'
 import Tester from './views/Tester.vue'
 

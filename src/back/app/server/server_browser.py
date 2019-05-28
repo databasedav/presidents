@@ -52,4 +52,4 @@ class ServerBrowser(Namespace):
         self._refresh()
 
     def _refresh(self):
-        self.emit('refresh', {'servers': self._server_list()})
+        self.emit('refresh', {'servers': self._server_list()}, callback=lambda: print('refreshed'))

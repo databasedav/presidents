@@ -1,5 +1,5 @@
 module.exports = {
-  devserver: {
+  devServer: {
     proxy: {
       '/socket.io': {
         target: 'http://localhost:5000',
