@@ -26,17 +26,5 @@ os.environ['CQLENG_ALLOW_SCHEMA_MANAGEMENT'] = '1'
 management.drop_keyspace(CASSANDRA_KEYSPACE)
 management.create_keyspace_simple(name=CASSANDRA_KEYSPACE, replication_factor=3)
 
-columns.DateTime.truncate_microseconds = False
-
-
-class GameClicks(models.Model):
-    __table_name__ = 'game_clicks'
-    __keyspace__ = CASSANDRA_KEYSPACE
-    game_id = columns.Text(primary_key=True, partition_key=True, required=True)
-    user_id = columns.Text(primary_key=True, partition_key=True, required=True)
-    action = columns.Text(primary_key=True, required=True, clustering_order='ASC')
-    timestamps = columns.List(value_type=columns.DateTime, required=True)
-
-
 # management.drop_table('game_clicks')
 management.sync_table(GameClicks)
