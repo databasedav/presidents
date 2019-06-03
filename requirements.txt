@@ -1,12 +1,17 @@
 ipython
 flask
 flask_socketio
+python_socketio
 numpy
 llist
 bidict
 gunicorn
 eventlet
 pytest
+faust[eventlet]
+asgiref
+cassandra_driver
+pandas
 
 # for linting
 pylint

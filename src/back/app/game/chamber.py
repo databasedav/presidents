@@ -20,17 +20,24 @@ class Chamber:
 
     Uses doubly linked list because node removal is constant time.
 
-    For operations that involve more than 1 card at a time, check that
-    all the cards are in the chamber before proceeding.
+    Runtime errors when attempting operation that involves a card that
+    is not in the chamber; is not an assertion because such an operation
+    could reasonably not be the result of a bug, e.g. not knowing
+    whether a card is in the chamber or a DOM modification.
+
+    For operations that involve more than one card at a time, checks
+    that all the cards are in the chamber before proceeding to avoid
+    having to undo link operations.
     """
     def __init__(self, cards: np.ndarray=None) -> None:
         self.current_hand: Hand = Hand()
         self.num_cards: int = 0
-        self._cards: np.ndarray = np.empty(shape=53, dtype=np.object)
+        self._cards: np.ndarray = np.full(shape=53, fill_value=None,
+                                          dtype=np.object)
         if cards:
             for card in cards:
                 self._cards[card] = HandPointerDLList()
-                self.num_cards += 1
+        self.num_cards = len(cards)
         self._hands: HandNodeDLList = HandNodeDLList()
 
     def __contains__(self, card) -> bool:
@@ -51,35 +58,34 @@ class Chamber:
     def reset(self) -> None:
         self.current_hand.reset()
         self.num_cards = 0
-        self._cards = np.empty(shape=53, dtype=np.object)
+        self._cards.fill(None)
         self._hands.clear()
 
-    def add_card(self, card: np.uint8) -> None:
-        assert card not in self, 'Bug: attempting to add dupe card to chamber.'
+    def add_card(self, card: int, check: bool=True) -> None:
+        if check:
+            self._check_card_not_in(card)
         self._cards[card] = HandPointerDLList()
         self.num_cards += 1
 
-    def add_cards(self, cards: np.ndarray) -> None:
+    def add_cards(self, cards) -> None:
+        self._check_cards_not_in(cards)
         for card in cards:
-            self.add_card(card)
+            self.add_card(card, check=False)  # already checked
 
-    def remove_card(self, card: np.uint8, check: bool=True) -> None:
+    def remove_card(self, card: int, check: bool=True) -> None:
         """
         Here it is important to note that we do not need to deselect the
         card before we remove it because all the hand nodes that contain
         the card will be removed.
-
-        Cards that are to be removed will not always be the in the
-        current hand, e.g. during trading I imagine many people will
-        just let the game default to giving the asking player the
-        lowest matching card.
 
         Using a try/except here because most of the time, the card will
         be in the hand but this should be empirically verified and the
         performance difference tested. TODO
         """
         if check:
-            self._check_card(card)
+            self._check_card_in(card)
+        # Cards that are to be removed will not always be in the current
+        # hand, i.e. during trading
         try:
             self.current_hand.remove(card)
         except CardNotInHandError:
@@ -96,7 +102,7 @@ class Chamber:
         self.num_cards -= 1
 
     def remove_cards(self, cards):
-        self._check_cards(cards)
+        self._check_cards_in(cards)
         for card in cards:
             self.remove_card(card, check=False)  # already checked
 
@@ -149,13 +155,21 @@ class Chamber:
             if maybe_dll is not None:
                 maybe_dll.clear()
 
-    def _check_card(self, card: int):
+    def _check_card_in(self, card: int):
         if card not in self:
             raise CardNotInChamberError(f'{card} not in chamber.')
 
-    def _check_cards(self, cards):
+    def _check_cards_in(self, cards: List[int]):
         for card in cards:
-            self._check_card(card)
+            self._check_card_in(card)
+
+    def _check_card_not_in(self, card: int):
+        if card in self:
+            raise CardAlreadyInChamberError(f'{card} already in chamber')
+
+    def _check_cards_not_in(self, cards: List[int]):
+        for card in cards:
+            self._check_cards_not_in(card)
 
     def deselect_selected(self) -> None:
         self.deselect_cards(self.current_hand)
@@ -208,6 +222,10 @@ class HandNode(dllistnode):
 
     def decrement_num_selected_cards(self) -> None:
         self._num_cards_selected -= 1
+
+
+class CardAlreadyInChamberError(RuntimeError):
+    pass
 
 
 class CardNotInChamberError(RuntimeError):
