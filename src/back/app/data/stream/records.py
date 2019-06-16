@@ -1,8 +1,8 @@
-from faust import Recod
+from faust import Record
 import datetime
 
 class GameClick(Record):
     game_id: str
     user_id: str
-    timestamp: datetime.datetime
+    timestamp: str
     action: str

@@ -171,4 +171,4 @@ function create_namespaced_player_socket_plugin (socket, namespace) {
   }
 }
 
-export { server_plugin, server_browser_plugin, create_server_browser_socket_plugin, create_namespaced_player_socket_plugin }
+export { server_plugin, server_browser_plugin }

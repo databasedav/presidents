@@ -1,6 +1,6 @@
 # from confluent_kafka import Producer
-from cassandra.cluster import Cluster
 from cassandra import query
+from cassandra.cluster import Cluster
 from cassandra.policies import DCAwareRoundRobinPolicy
 from cassandra.cqlengine import connection
 from cassandra.cqlengine import management

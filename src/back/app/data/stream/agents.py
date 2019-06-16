@@ -1,6 +1,5 @@
-from . import GameClick
+from .records import GameClick
 from faust import App
-
 
 app = App('game-click-app', broker='kafka://localhost:9092')
 topic = app.topic('game_click', value_type=GameClick)
@@ -16,3 +15,4 @@ async def game_click_agent(game_clicks):
             action: {game_click.action}
             '''
         )
+        await

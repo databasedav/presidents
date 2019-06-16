@@ -3,8 +3,6 @@ from cassandra.cqlengine import columns
 
 columns.DateTime.truncate_microseconds = False
 
-
-
 class GameClicks(Model):
     __table_name__ = 'game_clicks'
     __keyspace__ = 'presidents'

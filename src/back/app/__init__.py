@@ -11,7 +11,7 @@ socketio = SocketIO(logger=True)
 # uses global namespace (/) now but this could be customized if I want
 # to have multiple server browsers
 server_browser = ServerBrowser('US-West')
-socketio.server.register_namespace(server_browser)
+socketio.on_namespace(server_browser)
 
 for name in ['hello', 'world']:
     server_browser._add_server(name)
