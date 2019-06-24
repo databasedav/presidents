@@ -22,7 +22,7 @@ from mypy_extensions import NoReturn
 
 # TODO create the .pkl if it doesn't exist
 # hash table for identifying hands
-with open('src/back/app/game/hand_table.pkl', 'rb') as file:
+with open('app/game/hand_table.pkl', 'rb') as file:
     hand_table = pickle.load(file)
 
 

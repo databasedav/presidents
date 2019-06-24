@@ -10,6 +10,9 @@ import numpy as np
 from . import (Hand, DuplicateCardError, FullHandError, Chamber,
                CardNotInChamberError, NotPlayableOnError)
 from .utils import rank_articler
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # TODO: nice way to remove asking options after takes are exhausted
@@ -108,7 +111,9 @@ class Game:
         Returns random open spot. Should not happen when there are no
         open spots.
         """
+        logger.info(self._open_spots)
         assert self._open_spots
+
         spot = random.sample(self._open_spots, 1)[0]
         self._open_spots.remove(spot)
         return spot

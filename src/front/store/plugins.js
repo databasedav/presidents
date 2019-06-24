@@ -31,7 +31,7 @@ function server_plugin (rnsp) {
   return store => {
     store.registerModule(rnsp, create_server_module(rnsp))
     Vue.use(new VueSocketIO({
-      connection: io(rnsp),
+      connection: io(rnsp, { forceNew: true }),
       options: {
         useConnectionNamespace: true,
         namespaceName: rnsp

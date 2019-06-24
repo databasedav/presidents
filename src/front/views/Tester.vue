@@ -1,19 +1,35 @@
 <template>
-    <div>
-        <TestPlayer :namespace='"adsaijflasjdf"'></TestPlayer>
-        <TestPlayer :namespace='"bsadfasdfasdf"'></TestPlayer>
-        <TestPlayer :namespace='"cdfsasdfasdf"'></TestPlayer>
-        <TestPlayer :namespace='"ddgsadfhadfg"'></TestPlayer>
-    </div>
+  <v-layout row wrap>
+    <v-flex xs6>
+      <iframe>
+        <Player :rnsp='"/server_test"'></Player>
+      </iframe>
+    </v-flex>
+    <v-flex xs6>
+      <iframe>
+        <Player :rnsp='"/server_test"'></Player>
+      </iframe>
+    </v-flex>
+    <v-flex xs6>
+      <iframe>
+        <Player :rnsp='"/server_test"'></Player>
+      </iframe>
+    </v-flex>
+    <v-flex xs6>
+      <iframe>
+        <Player :rnsp='"/server_test"'></Player>
+      </iframe>
+    </v-flex>
+  </v-layout>
 </template>
 
 <script>
-import TestPlayer from '../components/TestPlayer.vue'
+import Player from '../components/Player.vue'
 
 export default {
     name: 'Tester',
     components: {
-        TestPlayer
+        Player
     }
 }
 </script>

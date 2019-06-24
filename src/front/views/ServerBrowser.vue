@@ -79,7 +79,7 @@
     >
       <template slot="items" slot-scope="props">
         <td>
-          {{ props.item.server }}
+          {{ props.item.name }}
         </td>
         <td class="text-xs-center">
           {{ props.item.num_players }}

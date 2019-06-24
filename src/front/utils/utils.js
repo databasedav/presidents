@@ -36,17 +36,15 @@ function create_server_browser_module (rbnsp) {
     },
   
     mutations: {
-      SOCKET_refresh (state, payload, callback) {
+      SOCKET_refresh (state, payload) {
         state.servers = payload.servers
-        console.log(callback)
-        // callback()
       },
     },
 
     actions: {
       emit_refresh (context, payload) {
         this._vm.$socket[context.state.rbnsp].emit('refresh')
-      },
+      },  
 
       emit_add_server (context, payload) {
         this._vm.$socket[context.state.rbnsp].emit('add_server', payload)

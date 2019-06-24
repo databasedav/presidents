@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from . import Hand, Chamber, HandNode, HandPointerNode
 
-
+from socketio import AsyncServer
 from typing import Dict, List, Any, Optional
 import numpy as np
-from flask_socketio import SocketIO, emit
 
 
 # TODO: make repr's more meaningful
@@ -18,15 +17,15 @@ class EmittingChamber(Chamber):
     to be debugged without needing an active HTTP request.
     """
 
-    def __init__(self, socketio: SocketIO, namespace: str,
+    def __init__(self, sio: AsyncServer, namespace: str,
                  cards: np.ndarray=None) -> None:
         super().__init__(cards)
         self._namespace: str = namespace
-        self._socketio: SocketIO = socketio
+        self._sio: AsyncServer = sio
         self._sid: str = None
 
     def _emit(self, event: str, payload: Dict[str, Any]):
-        self._socketio.emit(event, payload, namespace=self._namespace,
+        self._sio.emit(event, payload, namespace=self._namespace,
                             server=self._sid)
 
     def reset(self) -> None:

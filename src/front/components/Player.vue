@@ -91,6 +91,12 @@ export default {
     rnsp: String
   },
 
+  created () {
+    this.$store.dispatch('plugin_server', {
+      rnsp: this.rnsp
+    })
+  },
+
   methods: {
     card_click(card) {
       this.$store.dispatch(`${this.rnsp}/emit_card_click`, {

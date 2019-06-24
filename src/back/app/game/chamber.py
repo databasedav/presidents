@@ -37,7 +37,7 @@ class Chamber:
         if cards:
             for card in cards:
                 self._cards[card] = HandPointerDLList()
-        self.num_cards = len(cards)
+            self.num_cards = len(cards)
         self._hands: HandNodeDLList = HandNodeDLList()
 
     def __contains__(self, card) -> bool:

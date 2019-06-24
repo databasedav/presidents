@@ -1,23 +1,26 @@
 <template>
   <v-container fluid text-xs-center>
     <v-layout align-center justify-center column fill-height>
-      <v-flex class='logo' xs12>
+      <!-- <v-flex class='logo' xs12>
         presidents
       </v-flex>
       <v-flex xs4 text-xs-center>
         <GuestLogin/>
-      </v-flex>
+      </v-flex> -->
+      <Tester></Tester>
     </v-layout>
   </v-container>
 </template>
 
 <script>
 import GuestLogin from '../components/GuestLogin.vue'
+import Tester from './Tester.vue'
 
 export default {
-  name: 'home',
+  name: 'Home',
   components: {
-    GuestLogin
+    GuestLogin,
+    Tester
   }
 }
 </script>
