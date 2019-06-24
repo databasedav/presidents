@@ -7,3 +7,5 @@
 * auto join on server creation
 
 * ~~rename room to server~~
+
+* switch to FastAPI
