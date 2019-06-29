@@ -1,7 +1,4 @@
 import random
-from eventlet import monkey_patch, greenthread
-# TODO: do I need this monkey patch?
-# monkey_patch()
 from itertools import cycle
 from typing import Any, Callable, Dict, List, Optional, Set, Union
 

@@ -43,9 +43,10 @@ class Chamber:
     def __contains__(self, card) -> bool:
         return self._cards[card] is not None
 
-    # TODO: make this generator based
     def __iter__(self):
-        return [card for card in range(1, 53) if card in self].__iter__()
+        for card in range(1, 53):
+            if card in self:
+                yield card
 
     # TODO: should be simple but meaningful
     def __repr__(self) -> str:
@@ -120,7 +121,7 @@ class Chamber:
 
     def select_card(self, card: int, check: bool=True) -> None:
         if check:
-            self._check_card(card)
+            self._check_card_in(card)
         self.current_hand.add(card)
         # self._cards[card] is a HandPointerDLList; iterating through
         # it, via the class' own __iter__ (which iterates through the
@@ -130,19 +131,19 @@ class Chamber:
             hand_node.increment_num_selected_cards()
 
     def select_cards(self, cards) -> None:
-        self._check_cards(cards)
+        self._check_cards_in(cards)
         for card in cards:
             self.select_card(card, check=False)  # already checked
 
     def deselect_card(self, card: int, check: bool=True) -> None:
         if check:
-            self._check_card(card)
+            self._check_card_in(card)
         self.current_hand.remove(card)
         for hand_node in self._cards[card]:
             hand_node.decrement_num_selected_cards()
 
     def deselect_cards(self, cards) -> None:
-        self._check_cards(cards)
+        self._check_cards_in(cards)
         for card in cards:
             self.deselect_card(card, check=False)  # already checked
 
