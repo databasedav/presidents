@@ -16,15 +16,12 @@ hand_table: Dict[int, int] = {}
 
 
 def _save_hand_table() -> None:
-    with open('hand_table.pkl', 'wb') as file:
+    with open("hand_table.pkl", "wb") as file:
         pickle.dump(hand_table, file, pickle.HIGHEST_PROTOCOL)
 
 
 def _add_to_hand_table(hand, id: int) -> None:
-    hh = hand_hash(hand)
-    if hh in hand_table:
-        print('nope')
-    hand_table[hh] = id
+    hand_table[hand_hash(hand)] = id
 
 
 def _add_to_hand_table_iter(hands, id: int) -> None:
@@ -98,7 +95,7 @@ def _add_straights() -> None:
     adds all straights to the hand hash table
     """
     for i in range(9):
-        group_of_5_suits = suits[i: i + 5]
+        group_of_5_suits = suits[i : i + 5]
         straights = cartesian_product_pp(group_of_5_suits)
         _add_to_hand_table_iter(straights, 52)
 

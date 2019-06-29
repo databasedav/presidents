@@ -15,19 +15,16 @@ import numpy as np
 import pickle
 
 from .utils import hand_hash, card_names, id_desc_dict
-from typing import List, Dict, Union, Optional
+from typing import List, Dict, Union, Optional, Iterator
 from json import dumps, loads
 
 
 # TODO create the .pkl if it doesn't exist
 # hash table for identifying hands
-<<<<<<< HEAD:src/back/app/game/hand.py
-with open('src/back/app/game/hand_table.pkl', 'rb') as file:
+with open(
+    "/home/avi/presidents/src/back/game/utils/hand_table.pkl", "rb"
+) as file:
     hand_table = pickle.load(file)
-=======
-# with open('./game/hand_table.pkl', 'rb') as file:
-#     hand_table = pickle.load(file)
->>>>>>> dbf3b2164dc6d628cfd5890cff37cd7f5a23eb56:src/back/game/hand.py
 
 
 class Hand:
@@ -53,46 +50,51 @@ class Hand:
     No support for hands with more than 5 cards.
     """
 
-    def __init__(self,
-                 cards: Optional[np.ndarray[np.uint8]]=None,
-                 identity: Optional[int]=None,
-                 head: Optional[int]=None) -> None:
+    def __init__(
+        self,
+        cards: Optional[np.ndarray[np.uint8]] = None,
+        identity: Optional[int] = None,
+        head: Optional[int] = None,
+    ) -> None:
         if cards is None:  # default constructor; empty hand
-            self._cards: np.ndarray[np.uint8] = np.zeros(shape=5,
-                                                         dtype=np.uint8)
+            self._cards: np.ndarray[np.uint8] = np.zeros(
+                shape=5, dtype=np.uint8
+            )
             self._id: int = 0
             self._head: int = 4  # lowest empty index; -1 if full
         # .copy classmethod constructor; should not be used manually
         elif head is not None:
-            self._cards: np.ndarray[np.uint8] = cards.copy()
-            self._id: int = identity
-            self._head: int = head
+            self._cards = cards.copy()
+            self._id = identity  # type: ignore
+            self._head = head
         # testing constructor (i.e. Hand([...])); auto identifies
         # list requirements: length <= 5, ints between 0 and 52
         #   inclusive, non-zero values must be unique
         else:
-            assert len(cards) <= 5, 'hands can have up to 5 cards'
+            assert len(cards) <= 5, "hands can have up to 5 cards"
             filtered: List[int] = list(filter((0).__ne__, cards))
             len_filtered = len(filtered)
-            self._head: int = 4 - len_filtered
-            assert all(map(lambda x: isinstance(x, int) and 1 <= x <= 52,
-                           filtered)), ('cards must be ints between 0 and 52 i'
-                                        'nclusive')
+            self._head = 4 - len_filtered
+            assert all(
+                map(lambda x: isinstance(x, int) and 1 <= x <= 52, filtered)
+            ), "cards must be ints between 0 and 52 inclusive"
             # cards with the zeroes removed
             # checks uniqueness of non-zero values
-            assert len(filtered) == len(set(filtered)), 'cards must be unique'
+            assert len(filtered) == len(set(filtered)), "cards must be unique"
             # pads cards to length 5
-            self._cards: np.ndarray[np.uint8] = (
-                np.pad(np.array(sorted(filtered), dtype=np.uint8),
-                       (5 - len_filtered, 0), 'constant')
+            self._cards: np.ndarray[np.uint8] = np.pad(  # type: ignore
+                np.array(sorted(filtered), dtype=np.uint8),
+                (5 - len_filtered, 0),
+                "constant",
             )
+
             self._identify()
 
     @classmethod
     def copy(cls, hand: Hand) -> Hand:
         return cls(hand._cards, hand._id, hand._head)
 
-    def __getitem__(self, key: Union[int, slice]) -> int:
+    def __getitem__(self, key: Union[int, slice]) -> np.uint8:
         return self._cards[key]
 
     def __setitem__(self, key: Union[int, slice], card: int) -> None:
@@ -101,12 +103,13 @@ class Hand:
     def __hash__(self) -> int:
         return hand_hash(self._cards)
 
-    def __contains__(self, card: int) -> object:
+    def __contains__(self, card: int) -> bool:
         assert 1 <= card <= 52, "invalid card cannot be in hand."
         return card in self._cards  # TODO: should I slice before this?
 
-    def __iter__(self):  # TODO: return type for this
-        return self[self._head + 1:].__iter__()
+    def __iter__(self) -> Iterator[np.uint8]:  # TODO: return type for this
+        for i in range(self._head + 1, 5):
+            yield self[i]
 
     def __str__(self) -> str:
         to_join = [card_names[card] for card in self]
@@ -114,25 +117,33 @@ class Hand:
 
     def __repr__(self) -> str:
         return (
-            f'<Hand {id(self)}; cards: {str(self._cards)}; id: {self._id};'
-            f' head: {self._head}>'
+            f"<Hand {id(self)}; cards: {str(self._cards)}; id: {self._id};"
+            f" head: {self._head}>"
         )
 
     def __len__(self) -> int:
         return self._num_cards
 
-    def __eq__(self, other: Hand) -> bool:
-        return (np.array_equal(self._cards, other._cards) and
-                self._id == other._id and (self._head == other._head))
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Hand):
+            return NotImplemented
+        return (
+            np.array_equal(self._cards, other._cards)
+            and self._id == other._id
+            and self._head == other._head
+        )
 
-    def __ne__(self, other: Hand) -> bool:
+    def __ne__(self, other: object) -> bool:
+        if not isinstance(other, Hand):
+            return NotImplemented
         return not self == other
 
     def _is_comparable(self, other: Hand) -> bool:
         if not self.is_valid or not other.is_valid:
-            raise AssertionError('attempting to compare 1 or more invalid hand'
-                                 's.')
-        # one-directional because non-bombs cannot be compared with 
+            raise AssertionError(
+                "attempting to compare 1 or more invalid hands."
+            )
+        # one-directional because non-bombs cannot be compared with
         # bombs
         if self._id == other._id or self.is_bomb:
             return True
@@ -141,8 +152,9 @@ class Hand:
 
     def __lt__(self, other: Hand) -> bool:
         if not self._is_comparable(other):
-            raise NotPlayableOnError(f'a {self.id_desc} cannot be played on a '
-                                     f'{other.id_desc}')
+            raise NotPlayableOnError(
+                f"a {self.id_desc} cannot be played on a {other.id_desc}"
+            )
         if self.is_bomb and other.is_bomb:
             return self[1] < other[1]  # second card is always part of the quad
         elif self.is_bomb:
@@ -156,8 +168,9 @@ class Hand:
 
     def __gt__(self, other: Hand) -> bool:
         if not self._is_comparable(other):
-            raise NotPlayableOnError(f'a {self.id_desc} cannot be played on a '
-                                     f'{other.id_desc}')
+            raise NotPlayableOnError(
+                f"a {self.id_desc} cannot be played on a {other.id_desc}"
+            )
         if self.is_bomb and other.is_bomb:
             return self[1] > other[1]  # second card is always part of the quad
         elif self.is_bomb:
@@ -224,7 +237,7 @@ class Hand:
         self._id = 0
         self._head = 4
 
-    def to_list(self) -> List:
+    def to_list(self) -> List[int]:
         # converts each card to int first for json serializability
         return list(map(int, self.__iter__()))
 
@@ -248,12 +261,12 @@ class Hand:
         if self.is_full:
             raise FullHandError("cannot add any more cards to this hand.")
         if card in self:
-            raise DuplicateCardError(f'{card} already in hand.')
+            raise DuplicateCardError(f"{card} already in hand.")
         ii: int = self._insertion_index(card)
         # left shift lower cards if there's a card at the ii
         if self[ii]:
             head: int = self._head  # avoids multiple attribute accesses
-            self[head: ii] = self[head + 1: ii + 1]
+            self[head:ii] = self[head + 1 : ii + 1]
         self[ii] = card
         self._head -= 1
         self._identify()
@@ -263,8 +276,10 @@ class Hand:
             # TODO: is this the fastest way?
             return np.where(self._cards == card)[0][0]
         except IndexError:
-            raise CardNotInHandError(f'attempting to find index of card '
-                                     f'({card}) which is not in hand.')
+            raise CardNotInHandError(
+                f"attempting to find index of card ({card}) which is not in"
+                "hand."
+            )
 
     def remove(self, card) -> None:
         assert self._id != 0, "attempting to remove from an empty hand."
@@ -273,7 +288,7 @@ class Hand:
         ci: int = self._card_index(card)
         self[ci] = 0
         # right shift lower cards
-        self[head + 1: ci + 1] = self[head: ci]
+        self[head + 1 : ci + 1] = self[head:ci]
         self[head] = 0
         self._identify()
 

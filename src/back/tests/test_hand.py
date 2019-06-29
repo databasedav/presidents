@@ -1,5 +1,10 @@
-from ..app.game import (Hand, CardNotInHandError, DuplicateCardError,
-                        FullHandError, NotPlayableOnError, hand_table)
+from ..game import (
+    Hand,
+    CardNotInHandError,
+    DuplicateCardError,
+    FullHandError,
+    NotPlayableOnError
+)
 from typing import Optional
 import numpy as np
 import pytest
@@ -24,81 +29,71 @@ def test_testing_constructor():
 
     # sorted, length < 5
     hand = Hand([1])
-    assert_array_equal(hand._cards,
-                       np.array([0, 0, 0, 0, 1], dtype=np.uint8))
+    assert_array_equal(hand._cards, np.array([0, 0, 0, 0, 1], dtype=np.uint8))
     assert hand._id == 11
     assert hand._head == 3
 
     hand = Hand([0, 0, 1])
-    assert_array_equal(hand._cards,
-                       np.array([0, 0, 0, 0, 1], dtype=np.uint8))
+    assert_array_equal(hand._cards, np.array([0, 0, 0, 0, 1], dtype=np.uint8))
     assert hand._id == 11
     assert hand._head == 3
 
     hand = Hand([1, 52])
-    assert_array_equal(hand._cards,
-                       np.array([0, 0, 0, 1, 52], dtype=np.uint8))
+    assert_array_equal(hand._cards, np.array([0, 0, 0, 1, 52], dtype=np.uint8))
     assert hand._id == 20
     assert hand._head == 2
 
     hand = Hand([1, 5, 9, 13])
-    assert_array_equal(hand._cards,
-                       np.array([0, 1, 5, 9, 13], dtype=np.uint8))
+    assert_array_equal(hand._cards, np.array([0, 1, 5, 9, 13], dtype=np.uint8))
     assert hand._id == 40
     assert hand._head == 0
 
     # unsorted, length < 5
     hand = Hand([1])
-    assert_array_equal(hand._cards,
-                       np.array([0, 0, 0, 0, 1], dtype=np.uint8))
+    assert_array_equal(hand._cards, np.array([0, 0, 0, 0, 1], dtype=np.uint8))
     assert hand._id == 11
     assert hand._head == 3
 
     hand = Hand([1, 0, 0])
-    assert_array_equal(hand._cards,
-                       np.array([0, 0, 0, 0, 1], dtype=np.uint8))
+    assert_array_equal(hand._cards, np.array([0, 0, 0, 0, 1], dtype=np.uint8))
     assert hand._id == 11
     assert hand._head == 3
 
     hand = Hand([52, 1])
-    assert_array_equal(hand._cards,
-                       np.array([0, 0, 0, 1, 52], dtype=np.uint8))
+    assert_array_equal(hand._cards, np.array([0, 0, 0, 1, 52], dtype=np.uint8))
     assert hand._id == 20
     assert hand._head == 2
 
     hand = Hand([13, 9, 5, 1])
-    assert_array_equal(hand._cards,
-                       np.array([0, 1, 5, 9, 13], dtype=np.uint8))
+    assert_array_equal(hand._cards, np.array([0, 1, 5, 9, 13], dtype=np.uint8))
     assert hand._id == 40
     assert hand._head == 0
 
     # sorted length 5
     hand = Hand([1, 2, 3, 4, 5])
-    assert_array_equal(hand._cards,
-                       np.array([1, 2, 3, 4, 5], dtype=np.uint8))
+    assert_array_equal(hand._cards, np.array([1, 2, 3, 4, 5], dtype=np.uint8))
     assert hand._id == 53
     assert hand._head == -1
 
     # unsorted length 5
     hand = Hand([5, 4, 3, 2, 1])
-    assert_array_equal(hand._cards,
-                       np.array([1, 2, 3, 4, 5], dtype=np.uint8))
+    assert_array_equal(hand._cards, np.array([1, 2, 3, 4, 5], dtype=np.uint8))
     assert hand._id == 53
     assert hand._head == -1
 
     # length assertion
-    with pytest.raises(AssertionError, match=r'up to 5'):
+    with pytest.raises(AssertionError, match=r"up to 5"):
         hand = Hand([1, 2, 3, 4, 5, 6])
 
     # int assertion
-    with pytest.raises(AssertionError, match=r'must be ints'):
-        hand = Hand([1, 'hello', 3, 'world', 5])
+    with pytest.raises(AssertionError, match=r"must be ints"):
+        hand = Hand([1, "hello", 3, "world", 5])
 
     # dupe assertion
-    with pytest.raises(AssertionError, match=r'unique'):
+    with pytest.raises(AssertionError, match=r"unique"):
         hand = Hand([1, 1])
 
-    with pytest.raises(AssertionError, match=r'unique'):
+    with pytest.raises(AssertionError, match=r"unique"):
         hand = Hand([0, 1, 0, 1, 0])
 
 
@@ -117,14 +112,14 @@ def test__setitem__():
     hand: Hand = Hand([1, 2, 3, 4, 5])
     hand[4] = 52
     assert hand[4] == 52
-    
+
     # setting can add duplicate cards
     hand[3] = 5
     assert hand[3] == 5
 
     # setting does not check for valid card
     hand[4] = 53
-    assert hand[4]  == 53
+    assert hand[4] == 53
 
 
 def test__hash__():
@@ -145,7 +140,7 @@ def test__iter__():
         assert card1 == card2
 
 
-def test__str___():
+def test__str__():
     # TODO
     ...
 
@@ -179,10 +174,10 @@ def test_is_comparable():
     hand1: Hand = Hand([1, 2])
     hand2: Hand = Hand([1, 52])
 
-    with pytest.raises(AssertionError, match=r'invalid hand'):
+    with pytest.raises(AssertionError, match=r"invalid hand"):
         hand1._is_comparable(hand2)
 
-    with pytest.raises(AssertionError, match=r'invalid hand'):
+    with pytest.raises(AssertionError, match=r"invalid hand"):
         hand2._is_comparable(hand1)
 
     hand2 = Hand([5, 6])
@@ -302,7 +297,7 @@ def test_reset():
     hand: Hand = Hand([1, 2, 3, 4, 5])
     zeroes_arr = np.array([0, 0, 0, 0, 0], dtype=np.uint8)
 
-    with pytest.raises(AssertionError, match=r'are not equal'):
+    with pytest.raises(AssertionError, match=r"are not equal"):
         assert_array_equal(hand._cards, zeroes_arr)
     assert hand._id != 0
     assert hand._head != 4
@@ -368,12 +363,12 @@ def test_add():
     assert hand._id == 30
     assert hand._head == 1
 
-    with pytest.raises(AssertionError, match=r'invalid card'):
+    with pytest.raises(AssertionError, match=r"invalid card"):
         hand.add(53)
 
     with pytest.raises(DuplicateCardError):
         hand.add(1)
-    
+
     hand = Hand([1, 2, 3, 4, 5])
     with pytest.raises(FullHandError):
         hand.add(6)
@@ -393,14 +388,14 @@ def test_remove():
     assert_array_equal(hand._cards, np.array([0, 0, 0, 0, 0], dtype=np.uint8))
     assert hand._id == 0
     assert hand._head == 4
-    with pytest.raises(AssertionError, match=r'empty hand'):
+    with pytest.raises(AssertionError, match=r"empty hand"):
         hand.remove(1)
 
     hand = Hand([1, 2, 3, 4, 5])
     assert_array_equal(hand._cards, np.array([1, 2, 3, 4, 5], dtype=np.uint8))
     assert hand._id == 53
     assert hand._head == -1
-    
+
     hand.remove(1)
     assert_array_equal(hand._cards, np.array([0, 2, 3, 4, 5], dtype=np.uint8))
     assert hand._id == 40

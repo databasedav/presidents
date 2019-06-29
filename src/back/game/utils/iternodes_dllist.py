@@ -1,11 +1,13 @@
 from llist import dllist
 
+
 class IterNodesDLList(dllist):
     """
     Wrapper for dllist with iter_nodes method.
     """
+
     def __repr__(self) -> str:
-        return 'IterNodesDLList'
+        return "IterNodesDLList"
 
     def iter_nodes(self):
         curr_node = self.first

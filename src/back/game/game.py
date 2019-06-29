@@ -4,8 +4,14 @@ from typing import Any, Callable, Dict, List, Optional, Set, Union
 
 import numpy as np
 
-from . import (Hand, DuplicateCardError, FullHandError, Chamber,
-               CardNotInChamberError, NotPlayableOnError)
+from . import (
+    Hand,
+    DuplicateCardError,
+    FullHandError,
+    Chamber,
+    CardNotInChamberError,
+    NotPlayableOnError,
+)
 from .utils import rank_articler
 import logging
 
@@ -23,8 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 class Game:
-
-    def __init__(self, populate_chambers: bool=True) -> None:
+    def __init__(self, populate_chambers: bool = True) -> None:
         """
         Represents a 'game' of presidents. Operates on 'spots'
         attempting confirmation/allowal of certain moves (e.g. unlocking
@@ -57,7 +62,9 @@ class Game:
 
         # trading related attributes
         self.trading: bool = False
-        self._selected_asking_option: List[Optional[int]] = [None for _ in range(4)]
+        self._selected_asking_option: List[Optional[int]] = [
+            None for _ in range(4)
+        ]
         self._already_asked: List[Set[int]] = [set() for _ in range(4)]
         self._waiting: List[bool] = [False for _ in range(4)]
         self._giving_options: List[Optional[Set[int]]] = [
@@ -80,7 +87,9 @@ class Game:
 
     @property
     def _no_takes_or_gives_remaining(self) -> bool:
-        return not any(self._takes_remaining) and not any(self._gives_remaining)
+        return not any(self._takes_remaining) and not any(
+            self._gives_remaining
+        )
 
     # testing related methods TODO: make a separate class for these
 
@@ -93,7 +102,7 @@ class Game:
             spot: int = self._current_player
             chamber = self._chambers[spot]
             for card in chamber:
-                if card not in chamber.current_hand:
+                if card not in chamber.hand:
                     self.add_or_remove_card(spot, card)
                 self.maybe_unlock_play(spot)
                 if self._unlocked[spot]:
@@ -124,10 +133,14 @@ class Game:
         self._open_spots.add(spot)
         self.num_players -= 1
 
-    def _make_shuffled_decks(self, testing: bool=False):
-        deck = np.arange(1, 53 if not testing else 5, dtype=np.int32)  # deck of cards 1-52
+    def _make_shuffled_decks(self, testing: bool = False):
+        deck = np.arange(
+            1, 53 if not testing else 5, dtype=np.int32
+        )  # deck of cards 1-52
         np.random.shuffle(deck)  # shuffles deck inplace
-        decks = deck.reshape(4, 13 if not testing else 1)  # splits deck into 4 decks of 13
+        decks = deck.reshape(
+            4, 13 if not testing else 1
+        )  # splits deck into 4 decks of 13
         decks.sort(axis=1)  # sorts individual decks
         return decks
 
@@ -137,7 +150,7 @@ class Game:
             chamber = self._chambers[spot]
             chamber.reset()
             chamber.add_cards(decks)
-    
+
     def _make_and_set_turn_manager(self) -> None:
         decks = self._get_decks_from_chambers()
         # get which deck has the 3 of clubs
@@ -146,25 +159,27 @@ class Game:
 
     # game flow related methods
 
-    def _start_round(self, testing: bool=False) -> None:
+    def _start_round(self, testing: bool = False) -> None:
         self._deal_cards(testing)
         self._make_and_set_turn_manager()
         self._num_consecutive_rounds += 1
-        self._message(f'🏁 round {self._num_consecutive_rounds} has begun')
+        self._message(f"🏁 round {self._num_consecutive_rounds} has begun")
         self._next_player()
 
-    def _next_player(self, timer: bool=True):
+    def _next_player(self, timer: bool = True):
         self._current_player = next(self._turn_manager)
         self._message(f"🎲 it's {self._names[self._current_player]}'s turn")
         if timer:
-            self._start_timer(self._current_player, .5)
+            self._start_timer(self._current_player, 0.5)
 
     def _start_timer(self, spot: int, seconds: int) -> None:
-        self._timers[spot] = greenthread.spawn_after(seconds, self._auto_play_or_pass, spot)
+        self._timers[spot] = greenthread.spawn_after(
+            seconds, self._auto_play_or_pass, spot
+        )
 
     def _auto_play_or_pass(self, spot: int) -> None:
         chamber: Chamber = self._chambers[spot]
-        currently_selected_cards: List[int] = chamber.current_hand.to_list()
+        currently_selected_cards: List[int] = chamber.hand.to_list()
         chamber.deselect_selected()
         if self._hand_in_play is base_hand:
             chamber.select_card(1)
@@ -192,18 +207,20 @@ class Game:
         num_unfinished_players = self._num_unfinished_players
         if num_unfinished_players == 3:
             self._set_president(spot)
-            self._message(f'🏆 {self._names[spot]} is president 🥇')
+            self._message(f"🏆 {self._names[spot]} is president 🥇")
             self._next_player()
         elif num_unfinished_players == 2:
             self._set_vice_president(spot)
-            self._message(f'🏆 {self._names[spot]} is vice president 🥈')
+            self._message(f"🏆 {self._names[spot]} is vice president 🥈")
             self._next_player()
         else:
             self._set_vice_asshole(spot)
             self._current_player = next(self._turn_manager)
             self._positions.append(self._current_player)
             self._set_asshole(self._current_player)
-            self._message(f'🏆 {self._names[spot]} is vice asshole 🥉 and {self._names[self._current_player]} is asshole 💩')
+            self._message(
+                f"🏆 {self._names[spot]} is vice asshole 🥉 and {self._names[self._current_player]} is asshole 💩"
+            )
             self._initiate_trading()
 
     # card control related methods
@@ -216,7 +233,9 @@ class Game:
         try:
             chamber.select_card(card)
             if self._is_asking(spot):
-                self._deselect_asking_option(spot, self._selected_asking_option[spot])
+                self._deselect_asking_option(
+                    spot, self._selected_asking_option[spot]
+                )
             self._lock_if_unlocked(spot)
         except CardNotInChamberError:
             # TODO: console use or dom modification
@@ -227,7 +246,7 @@ class Game:
             chamber.deselect_card(card, check=False)
             self._lock_if_unlocked(spot)
         except FullHandError:
-            raise PresidentsError('your current hand is full')
+            raise PresidentsError("your current hand is full")
 
     # TODO
     def store_hand(self, spot: int) -> None:
@@ -239,14 +258,18 @@ class Game:
         self._lock_if_pass_unlocked(spot)
         hand = self._get_current_hand(spot)
         if hand.is_empty:
-            raise PresidentsError('you must add cards before attempting to unlock')
+            raise PresidentsError(
+                "you must add cards before attempting to unlock"
+            )
         if not hand.is_valid:
             raise PresidentsError("you can't play invalid hands")
         hip = self._hand_in_play
         if hip is base_hand:  # start of the game
             if self._is_current_player(spot):  # player with 3 of clubs
                 if 1 not in hand:  # card 1 is the 3 of clubs
-                    raise PresidentsError('the first hand must contain the 3 of clubs')
+                    raise PresidentsError(
+                        "the first hand must contain the 3 of clubs"
+                    )
                 else:
                     # any hand with the 3 of clubs is ok
                     self._unlock(spot)
@@ -261,32 +284,36 @@ class Game:
                 if hand > hip:
                     self._unlock(spot)
                 else:
-                    raise PresidentsError('your current hand is weaker than the hand in play')
+                    raise PresidentsError(
+                        "your current hand is weaker than the hand in play"
+                    )
             except NotPlayableOnError as e:
                 raise PresidentsError(str(e))
 
     def maybe_play_current_hand(self, spot: int) -> None:
         # TODO: maybe switch order of first 2 cases (throughout)
         if not self._is_current_player(spot):
-            raise PresidentsError('you can only play a hand on your turn')
+            raise PresidentsError("you can only play a hand on your turn")
         elif not self._unlocked[spot]:
             # TODO: console use or dom modification
             self.lock(spot)
-            raise PresidentsError('you must unlock before playing')
+            raise PresidentsError("you must unlock before playing")
         else:
             self._play_current_hand(spot)
 
-    def _play_current_hand(self, spot: int, handle_post: bool=True) -> None:
+    def _play_current_hand(self, spot: int, handle_post: bool = True) -> None:
         self._stop_timer(spot)
         chamber = self._chambers[spot]
-        hand = Hand.copy(chamber.current_hand)
+        hand = Hand.copy(chamber.hand)
         chamber.remove_cards(hand)
         self._num_consecutive_passes = 0
         self._set_hand_in_play(hand)
-        self._message(f'▶️ {self._names[spot]} played a {hand.id_desc}')
+        self._message(f"▶️ {self._names[spot]} played a {hand.id_desc}")
         self.lock(spot)
         # lock others if their currently unlocked hand should no longer be unlocked
-        other_spots = [other_spot for other_spot in range(4) if other_spot != spot]
+        other_spots = [
+            other_spot for other_spot in range(4) if other_spot != spot
+        ]
         for other_spot in other_spots:
             if self._unlocked[other_spot]:
                 try:
@@ -308,9 +335,11 @@ class Game:
     def maybe_unlock_pass_turn(self, spot: int) -> None:
         if self._is_current_player(spot):
             if self._hand_in_play is base_hand:
-                raise PresidentsError('you cannot pass when you have the 3 of clubs')
+                raise PresidentsError(
+                    "you cannot pass when you have the 3 of clubs"
+                )
             if self._hand_in_play is None:
-                raise PresidentsError('you can play any hand')
+                raise PresidentsError("you can play any hand")
         self._unlock_pass(spot)
 
     def _unlock_pass(self, spot: int) -> None:
@@ -322,19 +351,19 @@ class Game:
 
     def maybe_pass_turn(self, spot: int) -> None:
         if not self._is_current_player(spot):
-            raise PresidentsError('you can only pass on your turn')
+            raise PresidentsError("you can only pass on your turn")
         elif not self._pass_unlocked[spot]:
             # TODO: console use or dom modification
             self._lock_pass(spot)
-            raise PresidentsError('you must unlock pass before passing')
-        else: 
+            raise PresidentsError("you must unlock pass before passing")
+        else:
             self._pass_turn(spot)
 
-    def _pass_turn(self, spot: int, handle_post: bool=True) -> None:
+    def _pass_turn(self, spot: int, handle_post: bool = True) -> None:
         self._stop_timer(spot)
         self._lock_pass(spot)
         self._num_consecutive_passes += 1
-        self._message(f'⏭️ {self._names[spot]} passed')
+        self._message(f"⏭️ {self._names[spot]} passed")
         if handle_post:
             self._post_pass_handler()
 
@@ -362,7 +391,9 @@ class Game:
         self._num_consecutive_passes: int = 0
         self._winning_last_played: bool = False
         self._timers: List[Optional[Timeout]] = [None for _ in range(4)]
-        self._selected_asking_option: List[Optional[int]] = [None for _ in range(4)]
+        self._selected_asking_option: List[Optional[int]] = [
+            None for _ in range(4)
+        ]
         self._already_asked: List[Set[int]] = [set() for _ in range(4)]
         self._giving_options: List[Optional[Set[int]]] = [
             set() for _ in range(4)
@@ -373,19 +404,21 @@ class Game:
         self._clear_hand_in_play()
         self._deal_cards()
         self._set_trading(True)
-        self._message('💱 trading has begun')
+        self._message("💱 trading has begun")
 
     def set_selected_asking_option(self, spot: int, value: int) -> None:
         if not self._is_asker(spot):
             # TODO: console use or dom modification
-            raise PresidentsError('you are not an asker')
+            raise PresidentsError("you are not an asker")
         if not 0 <= value <= 13:
             # TODO: console use or dom modification
-            raise PresidentsError('you cannot ask for this value')
+            raise PresidentsError("you cannot ask for this value")
         if self._is_already_asked(spot, value):
             # TODO: console use or dom modification
             # raise PresidentsError('you already asked for this value')
-            raise PresidentsError(f"{self._names[self._get_opposing_position_spot(spot)]} doesn't have any cards of this rank")
+            raise PresidentsError(
+                f"{self._names[self._get_opposing_position_spot(spot)]} doesn't have any cards of this rank"
+            )
         selected_asking_option: int = self._selected_asking_option[spot]
         if selected_asking_option is None:
             self._select_asking_option(spot, value)
@@ -398,44 +431,52 @@ class Game:
     def maybe_unlock_ask(self, spot: int) -> None:
         if not self.trading:
             # TODO: console use or dom modification
-            raise PresidentsError('trading is not ongoing')
+            raise PresidentsError("trading is not ongoing")
         if not self._is_asker(spot):
             # TODO: console use or dom modification
-            raise PresidentsError('you are not an asker')
+            raise PresidentsError("you are not an asker")
         if self._is_waiting(spot):
-            raise PresidentsError('you cannot ask while waiting for a response')
+            raise PresidentsError(
+                "you cannot ask while waiting for a response"
+            )
         if not self._has_takes_remaining(spot):
-            raise PresidentsError('you have no takes remaining')
+            raise PresidentsError("you have no takes remaining")
         # selected_asking_option is None if no trading option is selected
         if not self._selected_asking_option[spot]:
             # TODO: console use or dom modification
-            raise PresidentsError('you have not selected an asking option')
+            raise PresidentsError("you have not selected an asking option")
         else:
             self._unlock(spot)
 
     def ask_for_card(self, spot: int) -> None:
         if not self.trading:
             # TODO: console use or dom modification
-            raise PresidentsError('trading is not ongoing')
+            raise PresidentsError("trading is not ongoing")
         if not self._is_asker(spot):
             # TODO: console use or dom modification
-            raise PresidentsError('you are not an asker')
+            raise PresidentsError("you are not an asker")
         if not self._unlocked[spot]:
             # TODO: console use or dom modification
             self.lock(spot)
-            raise PresidentsError('you must unlock before asking')
+            raise PresidentsError("you must unlock before asking")
         # TODO: remove trading options when takes run out
         value = self._selected_asking_option[spot]
         articled_rank = rank_articler(value)
         asked_spot = self._get_opposing_position_spot(spot)
-        self._message(f'❓ {self._names[spot]} asks {self._names[asked_spot]} for {articled_rank}')
+        self._message(
+            f"❓ {self._names[spot]} asks {self._names[asked_spot]} for {articled_rank}"
+        )
         # chamber for asked
         chamber = self._chambers[asked_spot]
         giving_options = {
-            card for card in range((value - 1) * 4 + 1, value * 4 + 1) if card in chamber and card not in self._given[spot]
+            card
+            for card in range((value - 1) * 4 + 1, value * 4 + 1)
+            if card in chamber and card not in self._given[spot]
         }
         if not giving_options:
-            self._message(f'❎ {self._names[asked_spot]} does not have such a card')
+            self._message(
+                f"❎ {self._names[asked_spot]} does not have such a card"
+            )
             self.lock(spot)
             self._add_to_already_asked(spot, value)
         else:
@@ -461,24 +502,26 @@ class Game:
     def maybe_unlock_give(self, spot: int) -> None:
         if not self.trading:
             # TODO: console use or dom modification
-            raise PresidentsError('trading is not ongoing')
+            raise PresidentsError("trading is not ongoing")
         if self._is_asker(spot) and not self._has_gives_remaining(spot):
-            raise PresidentsError('you have no gives remaining')
+            raise PresidentsError("you have no gives remaining")
         hand: Hand = self._get_current_hand(spot)
         if hand.is_empty:
-            raise PresidentsError('you must add cards before attempting to unlock')
+            raise PresidentsError(
+                "you must add cards before attempting to unlock"
+            )
         # TODO: add ability to give valid/invalid 2 card hand
         if not hand.is_single:
-            raise PresidentsError('you can only give singles')
+            raise PresidentsError("you can only give singles")
         card: int = hand[4]
         if self._is_giver(spot):
             if card in self._giving_options[spot]:
                 self._unlock(spot)
             else:
-                raise PresidentsError('you can only give a highlighted option')
+                raise PresidentsError("you can only give a highlighted option")
         elif self._is_asker(spot):
             if card in self._taken[spot]:
-                raise PresidentsError('you cannot give a card you took')
+                raise PresidentsError("you cannot give a card you took")
             else:
                 self._unlock(spot)
 
@@ -486,14 +529,16 @@ class Game:
         if not self._unlocked[spot]:
             # TODO: console use or dom modification
             self.lock(spot)
-            raise PresidentsError('you must unlock before giving')
+            raise PresidentsError("you must unlock before giving")
         card = self._get_current_hand(spot)[4]
         giver_chamber: Chamber = self._chambers[spot]
         receiver_spot: int = self._get_opposing_position_spot(spot)
         receiver_chamber: Chamber = self._chambers[receiver_spot]
         giver_chamber.remove_card(card)
         receiver_chamber.add_card(card)
-        self._message(f'🎁 {self._names[spot]} gives {self._names[receiver_spot]} a card')
+        self._message(
+            f"🎁 {self._names[spot]} gives {self._names[receiver_spot]} a card"
+        )
         if self._is_asker(spot):
             self._add_to_given(spot, card)
             self._decrement_gives_remaining(spot)
@@ -526,7 +571,7 @@ class Game:
         self._positions.clear()
         self._hand_in_play = base_hand
         self._num_consecutive_rounds += 1
-        self._message(f'🏁 round {self._num_consecutive_rounds} has begun')
+        self._message(f"🏁 round {self._num_consecutive_rounds} has begun")
         self._make_and_set_turn_manager()
         self._next_player()
 
@@ -541,7 +586,7 @@ class Game:
 
     def _lock_if_unlocked(self, spot: int) -> None:
         if self._unlocked[spot]:
-            self.lock(spot) 
+            self.lock(spot)
 
     def _lock_if_pass_unlocked(self, spot: int) -> None:
         if self._pass_unlocked[spot]:
@@ -578,7 +623,7 @@ class Game:
         return self._positions[2:4]
 
     def _get_current_hand(self, spot: int) -> Hand:
-        return self._chambers[spot].current_hand
+        return self._chambers[spot].hand
 
     def _get_current_player_name(self) -> str:
         return self._names[self._current_player]
@@ -623,7 +668,9 @@ class Game:
         self._given[spot].add(card)
 
     def _add_to_already_asked(self, spot: int, value: int) -> None:
-        self._deselect_asking_option(spot, value)  # TODO: this results in an extra emit
+        self._deselect_asking_option(
+            spot, value
+        )  # TODO: this results in an extra emit
         self._already_asked[spot].add(value)
 
     def _add_to_taken(self, spot: int, card: int) -> None:
@@ -661,12 +708,14 @@ class Game:
 
 class BaseHand:
     """hand at begininning of game; 3 of clubs must be played on it"""
+
     pass
+
+
 base_hand = BaseHand()
 
 
 class TurnManager:
-
     def __init__(self, first) -> None:
         self._cycling_list = cycle([i for i in range(4)])
         for _ in range(first):

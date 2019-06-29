@@ -14,8 +14,11 @@
 
 * testing view with iframes
 
-* switch to async for base game timeout
+* ~~switch to async for base game timeout~~
+    * not doing
 
 * easiest to calculate hash
+
+* add support for deciding certain behavior like whether add cards to a hand deselects those cards or not, etc.
 
 
