@@ -7,26 +7,19 @@ verify_ssl = true
 
 [packages]
 ipython = "*"
+fastapi = "*"
 python-socketio = "*"
 numpy = "*"
 llist = "*"
 bidict = "*"
-gunicorn = "*"
-eventlet = "*"
-pytest = "*"
-faust = {extras = ["eventlet"],version = "*"}
-asgiref = "*"
+faust = "*"
 cassandra-driver = "*"
-pandas = "*"
+pytest = "*"
 pylint = "*"
 bandit = "*"
 mypy = "*"
 flake8 = "*"
-Flask = "*"
-Flask-SocketIO = "*"
-mypy_extensions = "*"
-confluent-kafka = "*"
-aiocassandra = {editable = true,git = "https://github.com/CharAct3/aiocassandra",ref = "add_cqlengine"}
+black = "*"
 
 [requires]
 python_version = "3.7"

@@ -37,8 +37,8 @@ def rank_articler(value: int) -> str:
 
 # TODO: 53 might not be necessary to guarantee unique hashes;
 #       empirically minimize
-def hand_hash(hand: np.ndarray) -> int:
-    return int(sum([hand[i] * (53 ** (5 - i))  # type: ignore
+def hand_hash(hand: np.ndarray, n) -> int:
+    return int(sum([hand[i] * ( ** (5 - i))  # type: ignore
                 for i in range(5)]))
 
 

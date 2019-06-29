@@ -21,7 +21,10 @@ def _save_hand_table() -> None:
 
 
 def _add_to_hand_table(hand, id: int) -> None:
-    hand_table[hand_hash(hand)] = id
+    hh = hand_hash(hand)
+    if hh in hand_table:
+        print('nope')
+    hand_table[hh] = id
 
 
 def _add_to_hand_table_iter(hands, id: int) -> None:

@@ -108,11 +108,6 @@ def test_copy_constructor():
     assert hand == hand_copy
 
 
-def test_from_json():
-    # TODO
-    ...
-
-
 def test__getitem__():
     hand: Hand = Hand([1, 2, 3, 4, 5])
     assert hand[2] == 3

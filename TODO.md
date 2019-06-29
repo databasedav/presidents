@@ -9,3 +9,13 @@
 * ~~rename room to server~~
 
 * switch to FastAPI
+
+* local tests on all base classes and emitting counterparts
+
+* testing view with iframes
+
+* switch to async for base game timeout
+
+* easiest to calculate hash
+
+

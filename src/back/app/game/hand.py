@@ -17,12 +17,11 @@ import pickle
 from .utils import hand_hash, card_names, id_desc_dict
 from typing import List, Dict, Union, Optional
 from json import dumps, loads
-from mypy_extensions import NoReturn
 
 
 # TODO create the .pkl if it doesn't exist
 # hash table for identifying hands
-with open('app/game/hand_table.pkl', 'rb') as file:
+with open('src/back/app/game/hand_table.pkl', 'rb') as file:
     hand_table = pickle.load(file)
 
 
@@ -87,12 +86,6 @@ class Hand:
     @classmethod
     def copy(cls, hand: Hand) -> Hand:
         return cls(hand._cards, hand._id, hand._head)
-
-    @classmethod
-    def from_json(cls, json_hand: str):
-        # hd = hand dict
-        hd: Dict[str, Union[np.ndarray, int]] = loads(json_hand)
-        return cls(hd['_cards'], hd['_id'], hd['_head'])
 
     def __getitem__(self, key: Union[int, slice]) -> int:
         return self._cards[key]
@@ -225,9 +218,6 @@ class Hand:
         self._cards = np.zeros(shape=5, dtype=np.uint8)
         self._id = 0
         self._head = 4
-
-    def to_json(self) -> str:
-        return dumps(self.__dict__, default=lambda x: x.tolist())
 
     def to_list(self) -> List:
         # converts each card to int first for json serializability
