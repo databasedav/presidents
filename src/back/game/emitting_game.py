@@ -1,6 +1,5 @@
 from typing import Callable, Dict, List, Optional, Set, Union
 
-from eventlet import Timeout, greenthread
 from bidict import bidict
 from socketio import AsyncServer
 

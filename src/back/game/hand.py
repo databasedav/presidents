@@ -21,8 +21,13 @@ from json import dumps, loads
 
 # TODO create the .pkl if it doesn't exist
 # hash table for identifying hands
+<<<<<<< HEAD:src/back/app/game/hand.py
 with open('src/back/app/game/hand_table.pkl', 'rb') as file:
     hand_table = pickle.load(file)
+=======
+# with open('./game/hand_table.pkl', 'rb') as file:
+#     hand_table = pickle.load(file)
+>>>>>>> dbf3b2164dc6d628cfd5890cff37cd7f5a23eb56:src/back/game/hand.py
 
 
 class Hand:

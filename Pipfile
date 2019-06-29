@@ -16,10 +16,10 @@ faust = "*"
 cassandra-driver = "*"
 pytest = "*"
 pylint = "*"
-bandit = "*"
 mypy = "*"
 flake8 = "*"
 black = "*"
+aiojobs = "*"
 
 [requires]
 python_version = "3.7"
