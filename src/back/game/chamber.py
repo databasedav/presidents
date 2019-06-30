@@ -44,13 +44,10 @@ class Chamber:
 
     def __contains__(self, card_or_hand: Union[int, Collection[int]]) -> bool:
         # contains card
-        try:
-            raise Exception()
+        if not isinstance(card_or_hand, Collection):
             return self._cards[card_or_hand] is not None
         # contains hand
-        except:
-            # checking if iterable and sized
-            assert isinstance(card_or_hand, Collection), 'bad hand type'
+        else:
             # no hands or not all cards in hand in chamber
             if self._hands.size == 0 or not all(
                 card in self for card in card_or_hand
@@ -209,9 +206,8 @@ class Chamber:
         self._hands.clear()
 
     def _reset_card_dllists(self) -> None:
-        for maybe_dll in self._cards:
-            if maybe_dll is not None:
-                maybe_dll.clear()
+        for card in self:
+            self._cards[card].clear()
 
     def _check_card_in(self, card: int):
         if card not in self:

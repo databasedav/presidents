@@ -231,18 +231,27 @@ def test_add_hand():
     assert chamber._cards[2].nodeat(0) is chamber._cards[2].nodeat(1).prev
     assert chamber._cards[2].nodeat(0).next is chamber._cards[2].nodeat(1)
 
-    # adding goofy hands bug
+    # card check
+    with pytest.raises(CardNotInChamberError):
+        chamber.add_hand([13, 14])
+
+    # order assertion
+    with pytest.raises(AssertionError, match=r'be ordered'):
+        chamber.add_hand([2, 1])
+    
+    # length assertion
     with pytest.raises(AssertionError, match=r'can only add'):
         chamber.add_hand([1])
 
     with pytest.raises(AssertionError, match=r'can only add'):
         chamber.add_hand([1, 2, 3, 4, 5, 6])
 
-    # card check
-    with pytest.raises(CardNotInChamberError):
-        chamber.add_hand([13, 14])
+    # dupe hand assertion
+    with pytest.raises(AssertionError, match=r'hand is'):
+        chamber.add_hand([1, 2])
 
-    chamber.add_hand([1, 2])
-
-
-
+    # deselecting cards in hand
+    chamber.select_cards([3, 4])
+    assert chamber.hand == Hand([3, 4])
+    chamber.add_hand(chamber.hand)
+    assert chamber.hand.is_empty
