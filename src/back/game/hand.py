@@ -76,7 +76,11 @@ class Hand:
             len_filtered = len(filtered)
             self._head = 4 - len_filtered
             assert all(
-                map(lambda x: isinstance(x, int) and 1 <= x <= 52, filtered)
+                map(
+                    lambda x: isinstance(x, (int, np.integer))
+                    and 1 <= x <= 52,
+                    filtered,
+                )
             ), "cards must be ints between 0 and 52 inclusive"
             # cards with the zeroes removed
             # checks uniqueness of non-zero values

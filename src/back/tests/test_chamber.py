@@ -2,7 +2,7 @@ from ..game.chamber import (
     Chamber,
     CardAlreadyInChamberError,
     CardNotInChamberError,
-    Hand
+    Hand,
 )
 import numpy as np
 from numpy.testing import assert_array_equal
@@ -236,18 +236,22 @@ def test_add_hand():
         chamber.add_hand([13, 14])
 
     # order assertion
-    with pytest.raises(AssertionError, match=r'be ordered'):
+    with pytest.raises(AssertionError, match=r"be ordered"):
         chamber.add_hand([2, 1])
-    
+
     # length assertion
-    with pytest.raises(AssertionError, match=r'can only add'):
+    with pytest.raises(AssertionError, match=r"2-5 cards"):
         chamber.add_hand([1])
 
-    with pytest.raises(AssertionError, match=r'can only add'):
+    with pytest.raises(AssertionError, match=r"2-5 cards"):
         chamber.add_hand([1, 2, 3, 4, 5, 6])
 
+    # validity assertion
+    with pytest.raises(AssertionError, match=r"valid hands"):
+        chamber.add_hand([1, 5])
+
     # dupe hand assertion
-    with pytest.raises(AssertionError, match=r'hand is'):
+    with pytest.raises(AssertionError, match=r"hand is"):
         chamber.add_hand([1, 2])
 
     # deselecting cards in hand
@@ -255,3 +259,7 @@ def test_add_hand():
     assert chamber.hand == Hand([3, 4])
     chamber.add_hand(chamber.hand)
     assert chamber.hand.is_empty
+
+
+def test_select_card():
+    ...

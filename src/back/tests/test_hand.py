@@ -379,7 +379,7 @@ def test_card_index():
     for card, index in zip(hand, range(5)):
         assert hand._card_index(card) == index
 
-    with pytest.raises(CardNotInHandError, match=r'find index'):
+    with pytest.raises(CardNotInHandError, match=r"find index"):
         hand._card_index(6)
 
 

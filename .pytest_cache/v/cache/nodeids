@@ -11,6 +11,7 @@
   "src/back/tests/test_chamber.py::test_remove_card",
   "src/back/tests/test_chamber.py::test_remove_cards",
   "src/back/tests/test_chamber.py::test_add_hand",
+  "src/back/tests/test_chamber.py::test_select_card",
   "src/back/tests/test_hand.py::test_default_constructor",
   "src/back/tests/test_hand.py::test_testing_constructor",
   "src/back/tests/test_hand.py::test_copy_constructor",

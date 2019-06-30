@@ -43,10 +43,10 @@ class Chamber:
         self._hands: HandNodeDLList = HandNodeDLList()
 
     def __contains__(self, card_or_hand: Union[int, Collection[int]]) -> bool:
-        # contains card
+        # card
         if not isinstance(card_or_hand, Collection):
             return self._cards[card_or_hand] is not None
-        # contains hand
+        # hand
         else:
             # no hands or not all cards in hand in chamber
             if self._hands.size == 0 or not all(
@@ -55,8 +55,7 @@ class Chamber:
                 return False
 
             card_w_least_hands = min(
-                list(card_or_hand),
-                key=lambda card: self._cards[card].size
+                list(card_or_hand), key=lambda card: self._cards[card].size
             )
             for hand_node in self._cards[card_w_least_hands]:
                 hand_pointer_nodes = hand_node.value
@@ -67,12 +66,12 @@ class Chamber:
                 # else move onto the next HandNode
                 elif all(
                     card == hand_pointer_node.owner().card
-                    for card, hand_pointer_node
-                    in zip(card_or_hand, hand_pointer_nodes)
+                    for card, hand_pointer_node in zip(
+                        card_or_hand, hand_pointer_nodes
+                    )
                 ):
                     return True
             return False
-
 
     def __iter__(self) -> Iterator[int]:
         for card in range(1, 53):
@@ -153,10 +152,12 @@ class Chamber:
     def add_hand(self, hand: Collection[int]) -> None:
         if hand is not self.hand:
             assert all(
-                hand[i] < hand[i+1] for i in range(len(hand)-1)  # type:ignore
-            ), 'hand must be ordered'
-        assert 1 < len(hand) <= 5, 'can only add hands with 2-5 cards'
-        assert hand not in self, 'hand is already in chamber'
+                hand[i] < hand[i + 1]
+                for i in range(len(hand) - 1)  # type:ignore
+            ), "hand must be ordered"
+        assert 1 < len(hand) <= 5, "can only add hands with 2-5 cards"
+        assert Hand(hand).is_valid, "can only add valid hands"
+        assert hand not in self, "hand is already in chamber"
         self._check_cards_in(hand)
         for card in hand:
             if card in self.hand:
@@ -233,6 +234,7 @@ class HandPointerDLList(IterNodesDLList):
     """
     Stores card for dupe checking.
     """
+
     def __init__(self, card: int) -> None:
         self.card: int = card
 
