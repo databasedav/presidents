@@ -282,7 +282,10 @@ class Hand:
             )
 
     def remove(self, card) -> None:
-        assert self._id != 0, "attempting to remove from an empty hand."
+        if self._id == 0:
+            raise CardNotInHandError(
+                "attempting to remove from an empty hand."
+            )
         self._head += 1
         head: int = self._head  # avoids multiple attribute accesses
         ci: int = self._card_index(card)

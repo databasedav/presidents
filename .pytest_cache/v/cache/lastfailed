@@ -1,0 +1,6 @@
+{
+  "src/back/tests/test_chamber.py::test__contains__": true,
+  "src/back/tests/test_chamber.py::test_add_hand": true,
+  "src/back/tests/test_chamber.py::test_remove_card": true,
+  "src/back/tests/test_chamber.py::test_reset": true
+}

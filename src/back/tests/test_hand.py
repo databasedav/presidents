@@ -3,7 +3,7 @@ from ..game import (
     CardNotInHandError,
     DuplicateCardError,
     FullHandError,
-    NotPlayableOnError
+    NotPlayableOnError,
 )
 from typing import Optional
 import numpy as np
@@ -379,7 +379,7 @@ def test_card_index():
     for card, index in zip(hand, range(5)):
         assert hand._card_index(card) == index
 
-    with pytest.raises(CardNotInHandError):
+    with pytest.raises(CardNotInHandError, match=r'find index'):
         hand._card_index(6)
 
 
@@ -388,7 +388,7 @@ def test_remove():
     assert_array_equal(hand._cards, np.array([0, 0, 0, 0, 0], dtype=np.uint8))
     assert hand._id == 0
     assert hand._head == 4
-    with pytest.raises(AssertionError, match=r"empty hand"):
+    with pytest.raises(CardNotInHandError, match=r"empty hand"):
         hand.remove(1)
 
     hand = Hand([1, 2, 3, 4, 5])

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Collection, Optional, Iterator, Iterable
+from typing import List, Collection, Optional, Iterator, Iterable, Union
 
 import numpy as np
 from llist import dllistnode
@@ -38,12 +38,44 @@ class Chamber:
         self.num_cards: int = 0
         if cards:
             for card in cards:
-                self._cards[card] = HandPointerDLList()
+                self._cards[card] = HandPointerDLList(card)
             self.num_cards = len(cards)
         self._hands: HandNodeDLList = HandNodeDLList()
 
-    def __contains__(self, card) -> bool:
-        return self._cards[card] is not None
+    def __contains__(self, card_or_hand: Union[int, Collection[int]]) -> bool:
+        # contains card
+        try:
+            raise Exception()
+            return self._cards[card_or_hand] is not None
+        # contains hand
+        except:
+            # checking if iterable and sized
+            assert isinstance(card_or_hand, Collection), 'bad hand type'
+            # no hands or not all cards in hand in chamber
+            if self._hands.size == 0 or not all(
+                card in self for card in card_or_hand
+            ):
+                return False
+
+            card_w_least_hands = min(
+                list(card_or_hand),
+                key=lambda card: self._cards[card].size
+            )
+            for hand_node in self._cards[card_w_least_hands]:
+                hand_pointer_nodes = hand_node.value
+                # don't need to check HandNodes storing off-length hands
+                if len(card_or_hand) != len(hand_pointer_nodes):
+                    continue
+                # if cards in HandNode match hand, then hand is in chamber;
+                # else move onto the next HandNode
+                elif all(
+                    card == hand_pointer_node.owner().card
+                    for card, hand_pointer_node
+                    in zip(card_or_hand, hand_pointer_nodes)
+                ):
+                    return True
+            return False
+
 
     def __iter__(self) -> Iterator[int]:
         for card in range(1, 53):
@@ -69,7 +101,7 @@ class Chamber:
     def add_card(self, card: int, *, check: bool = True) -> None:
         if check:
             self._check_card_not_in(card)
-        self._cards[card] = HandPointerDLList()
+        self._cards[card] = HandPointerDLList(card)
         self.num_cards += 1
 
     def add_cards(self, cards) -> None:
@@ -89,40 +121,58 @@ class Chamber:
         """
         if check:
             self._check_card_in(card)
+
         # Cards that are to be removed will not always be in the current
         # hand, i.e. during trading
         try:
             self.hand.remove(card)
         except CardNotInHandError:
             pass
+
+        # iterate through hand_pointer_nodes
         for base_hand_pointer_node in self._cards[card].iter_nodes():
             hand_node = base_hand_pointer_node.value
+            # .value is a list of HandPointerNodes
             for hand_pointer_node in hand_node.value:
-                if hand_pointer_node is base_hand_pointer_node:
-                    continue
-                else:
+                # base_hand_pointer_nodes are removed when deleting card
+                # because they must first be used to the HandNode they
+                # point to after the other HandPointerNodes stored by
+                # the HandNode are removed
+                if hand_pointer_node is not base_hand_pointer_node:
+                    # .owner() returns a weakref to the
+                    # hand_pointer_node's corresponding
+                    # HandPointerDLList
                     hand_pointer_node.owner().remove(hand_pointer_node)
             hand_node.owner().remove(hand_node)
+        # remove only reference to HandPointerDLList
         self._cards[card] = None
         self.num_cards -= 1
 
-    def remove_cards(self, cards: List[int]):
+    def remove_cards(self, cards: Iterable[int]):
         self._check_cards_in(cards)
         for card in cards:
             self.remove_card(card, check=False)  # already checked
 
-    def add_hand(self, hand: Hand) -> None:
+    def add_hand(self, hand: Collection[int]) -> None:
+        if hand is not self.hand:
+            assert all(
+                hand[i] < hand[i+1] for i in range(len(hand)-1)  # type:ignore
+            ), 'hand must be ordered'
+        assert 1 < len(hand) <= 5, 'can only add hands with 2-5 cards'
+        assert hand not in self, 'hand is already in chamber'
         self._check_cards_in(hand)
         for card in hand:
             if card in self.hand:
+                # TODO allow users to control this behavior
                 self.deselect_card(card)
         hand_pointer_nodes: List[HandPointerNode] = list()
-        cards: List[int] = list()
         hand_node: HandNode = HandNode(hand_pointer_nodes)
         for card in hand:
             hand_pointer_node: HandPointerNode = HandPointerNode(hand_node)
+            # appending pointer to list of HandPointerNodes living on
+            # HandNode
             hand_pointer_nodes.append(hand_pointer_node)
-            cards.append(card)
+            # appending node to HandPointerDLList
             self._cards[card].appendnode(hand_pointer_node)
         self._hands.appendnode(hand_node)
 
@@ -133,11 +183,11 @@ class Chamber:
         # self._cards[card] is a HandPointerDLList; iterating through
         # it, via the class' own __iter__ (which iterates through the
         # values, not the nodes) gives us each HandNode which contains
-        # card passed to the function
+        # the card passed to the function
         for hand_node in self._cards[card]:
             hand_node.increment_num_selected_cards()
 
-    def select_cards(self, cards: List[int]) -> None:
+    def select_cards(self, cards: Iterable[int]) -> None:
         self._check_cards_in(cards)
         for card in cards:
             self.select_card(card, check=False)  # already checked
@@ -185,8 +235,10 @@ class Chamber:
 
 class HandPointerDLList(IterNodesDLList):
     """
-    Labelled wrapper for IterNodesDLList for readability.
+    Stores card for dupe checking.
     """
+    def __init__(self, card: int) -> None:
+        self.card: int = card
 
     def __repr__(self) -> str:
         return "HandPointerDLList"
