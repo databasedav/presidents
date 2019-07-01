@@ -5,11 +5,10 @@ from typing import List, Collection, Optional, Iterator, Iterable, Union
 import numpy as np
 from llist import dllistnode
 
-from . import Hand, CardNotInHandError
+from . import Hand, CardNotInHandError, DuplicateCardError, FullHandError
 from .utils import IterNodesDLList
 
 
-# TODO: use del for removing nodes?
 # TODO: make high quality representation of what is going on
 
 
@@ -152,8 +151,8 @@ class Chamber:
     def add_hand(self, hand: Collection[int]) -> None:
         if hand is not self.hand:
             assert all(
-                hand[i] < hand[i + 1]
-                for i in range(len(hand) - 1)  # type:ignore
+                hand[i] < hand[i + 1]  # type:ignore
+                for i in range(len(hand) - 1)
             ), "hand must be ordered"
         assert 1 < len(hand) <= 5, "can only add hands with 2-5 cards"
         assert Hand(hand).is_valid, "can only add valid hands"
@@ -188,7 +187,12 @@ class Chamber:
     def select_cards(self, cards: Iterable[int]) -> None:
         self._check_cards_in(cards)
         for card in cards:
-            self.select_card(card, check=False)  # already checked
+            try:
+                self.select_card(card, check=False)  # already checked
+            # this is an assertion because multiple card selections
+            # should be checked beforehand; same for deselection below
+            except (DuplicateCardError, FullHandError):
+                raise AssertionError('bad select cards call')
 
     def deselect_card(self, card: int, check: bool = True) -> None:
         if check:
@@ -197,10 +201,16 @@ class Chamber:
         for hand_node in self._cards[card]:
             hand_node.decrement_num_selected_cards()
 
-    def deselect_cards(self, cards) -> None:
+    def deselect_cards(self, cards: Iterable[int]) -> None:
         self._check_cards_in(cards)
         for card in cards:
-            self.deselect_card(card, check=False)  # already checked
+            try:
+                self.deselect_card(card, check=False)  # already checked
+            except CardNotInHandError:
+                raise AssertionError('bad deselect cards call')
+
+    def deselect_selected(self) -> None:
+        self.deselect_cards(self.hand)
 
     def clear_hands(self) -> None:
         self._reset_card_dllists()
@@ -225,9 +235,6 @@ class Chamber:
     def _check_cards_not_in(self, cards: Iterable[int]):
         for card in cards:
             self._check_card_not_in(card)
-
-    def deselect_selected(self) -> None:
-        self.deselect_cards(self.hand)
 
 
 class HandPointerDLList(IterNodesDLList):

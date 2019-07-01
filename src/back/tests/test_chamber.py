@@ -3,17 +3,20 @@ from ..game.chamber import (
     CardAlreadyInChamberError,
     CardNotInChamberError,
     Hand,
+    HandPointerDLList,
+    HandPointerNode,
+    HandNodeDLList,
+    HandNode
 )
-import numpy as np
-from numpy.testing import assert_array_equal
-from ..game.chamber import HandNodeDLList
+from ..game.hand import CardNotInHandError, DuplicateCardError, FullHandError
+from ..game.utils import IterNodesDLList
 import pytest
 
 
 def test_cardless_constructor():
     chamber: Chamber = Chamber()
     assert chamber.hand.is_empty
-    assert chamber.num_cards == 0
+    assert chamber.is_empty
     assert all(card not in chamber for card in range(1, 53))
     assert chamber._hands.size == 0
 
@@ -75,7 +78,7 @@ def test_reset():
     chamber.reset()
     assert chamber.hand.is_empty
     assert all(card not in chamber for card in range(1, 53))
-    assert chamber.num_cards == 0
+    assert chamber.is_empty
     assert chamber._hands.size == 0
 
 
@@ -262,4 +265,301 @@ def test_add_hand():
 
 
 def test_select_card():
-    ...
+    # without hands
+    chamber: Chamber = Chamber(range(1, 14))
+    assert chamber.hand.is_empty
+    chamber.select_card(1)
+    assert chamber.hand == Hand([1])
+
+    # one hand
+    chamber = Chamber(range(1, 14))
+    assert chamber.hand.is_empty
+    chamber.add_hand([1, 2])
+    chamber.select_card(1)
+    assert chamber.hand == Hand([1])
+    assert chamber._hands.nodeat(0)._num_cards_selected == 1
+    chamber.select_card(2)
+    assert chamber.hand == Hand([1, 2])
+    assert chamber._hands.nodeat(0)._num_cards_selected == 2
+
+    # two hands
+    chamber = Chamber(range(1, 14))
+    assert chamber.hand.is_empty
+    chamber.add_hand([1, 2])
+    chamber.add_hand([2, 3])
+    chamber.select_card(1)
+    assert chamber.hand == Hand([1])
+    assert chamber._hands.nodeat(0)._num_cards_selected == 1
+    chamber.select_card(2)
+    assert chamber.hand == Hand([1, 2])
+    assert chamber._hands.nodeat(0)._num_cards_selected == 2
+    assert chamber._hands.nodeat(1)._num_cards_selected == 1
+    chamber.select_card(3)
+    assert chamber.hand == Hand([1, 2, 3])
+    assert chamber._hands.nodeat(1)._num_cards_selected == 2
+
+    # card check
+    with pytest.raises(CardNotInChamberError):
+        chamber.select_card(14)
+
+    # dupe card error
+    with pytest.raises(DuplicateCardError):
+        chamber.select_card(1)
+
+    # full hand error
+    with pytest.raises(FullHandError):
+        chamber.select_card(4)
+        chamber.select_card(5)
+        chamber.select_card(6)
+
+
+def test_select_cards():
+    # without hands
+    chamber: Chamber = Chamber(range(1, 14))
+    assert chamber.hand.is_empty
+    chamber.select_cards([1, 2])
+    assert chamber.hand == Hand([1, 2])
+
+    # one hand
+    chamber = Chamber(range(1, 14))
+    assert chamber.hand.is_empty
+    chamber.add_hand([1, 2])
+    chamber.select_cards([1, 2])
+    assert chamber.hand == Hand([1, 2])
+    assert chamber._hands.nodeat(0)._num_cards_selected == 2
+
+    # two hands
+    chamber = Chamber(range(1, 14))
+    assert chamber.hand.is_empty
+    chamber.add_hand([1, 2])
+    chamber.add_hand([2, 3])
+    chamber.select_cards([1, 2, 3])
+    assert chamber.hand == Hand([1, 2, 3])
+    assert chamber._hands.nodeat(0)._num_cards_selected == 2
+    assert chamber._hands.nodeat(1)._num_cards_selected == 2
+
+    # card check
+    with pytest.raises(CardNotInChamberError):
+        chamber.select_cards([14, 15])
+
+    # does not select any card unless all cards are in chamber
+    with pytest.raises(CardNotInChamberError):
+        chamber.select_cards([4, 14])
+    assert 4 not in chamber.hand
+
+    # dupe card assertion
+    with pytest.raises(AssertionError, match=r'bad select'):
+        chamber.select_cards([1, 2])
+    
+    # still selects individual cards if they are good
+    with pytest.raises(AssertionError, match=r'bad select'):
+        chamber.select_cards([4, 1])
+    assert chamber.hand == Hand([1, 2, 3, 4])
+    
+    # full hand assertion; still selects individual cards if they are
+    # good
+    with pytest.raises(AssertionError, match=r'bad select'):
+        chamber.select_cards([5, 6])
+    assert chamber.hand == Hand([1, 2, 3, 4, 5])
+    
+
+def test_deselect_card():
+    # without hands
+    chamber: Chamber = Chamber(range(1, 14))
+    assert chamber.hand.is_empty
+    chamber.select_card(1)
+    assert chamber.hand == Hand([1])
+    chamber.deselect_card(1)
+    assert chamber.hand.is_empty
+
+    # one hand
+    chamber: Chamber = Chamber(range(1, 14))
+    assert chamber.hand.is_empty
+    chamber.add_hand([1, 2])
+    chamber.select_card(1)
+    assert chamber.hand == Hand([1])
+    assert chamber._hands.nodeat(0)._num_cards_selected == 1
+    chamber.deselect_card(1)
+    assert chamber.hand.is_empty
+    assert chamber._hands.nodeat(0)._num_cards_selected == 0
+    chamber.select_card(1)
+    chamber.select_card(2)
+    assert chamber.hand == Hand([1, 2])
+    assert chamber._hands.nodeat(0)._num_cards_selected == 2
+    chamber.deselect_card(1)
+    assert chamber._hands.nodeat(0)._num_cards_selected == 1
+    chamber.deselect_card(2)
+    assert chamber._hands.nodeat(0)._num_cards_selected == 0
+
+    # two hands
+    chamber: Chamber = Chamber(range(1, 14))
+    assert chamber.hand.is_empty
+    chamber.add_hand([1, 2])
+    chamber.add_hand([2, 3])
+    chamber.select_card(1)
+    assert chamber.hand == Hand([1])
+    assert chamber._hands.nodeat(0)._num_cards_selected == 1
+    chamber.select_card(2)
+    assert chamber.hand == Hand([1, 2])
+    assert chamber._hands.nodeat(0)._num_cards_selected == 2
+    assert chamber._hands.nodeat(1)._num_cards_selected == 1
+    chamber.deselect_card(2)
+    assert chamber.hand == Hand([1])
+    assert chamber._hands.nodeat(0)._num_cards_selected == 1
+    assert chamber._hands.nodeat(1)._num_cards_selected == 0
+    chamber.select_card(2)
+    chamber.select_card(3)
+    assert chamber.hand == Hand([1, 2, 3])
+    assert chamber._hands.nodeat(0)._num_cards_selected == 2
+    assert chamber._hands.nodeat(0)._num_cards_selected == 2
+    chamber.deselect_card(2)
+    assert chamber._hands.nodeat(0)._num_cards_selected == 1
+    assert chamber._hands.nodeat(0)._num_cards_selected == 1
+
+    # card check
+    with pytest.raises(CardNotInChamberError):
+        chamber.deselect_card(14)
+
+    # not in hand error
+    with pytest.raises(CardNotInHandError):
+        chamber.deselect_card(4)
+
+
+def test_deselect_cards():
+    # without hands
+    chamber: Chamber = Chamber(range(1, 14))
+    assert chamber.hand.is_empty
+    chamber.select_cards([1, 2])
+    assert chamber.hand == Hand([1, 2])
+    chamber.deselect_cards([1, 2])
+    assert chamber.hand.is_empty
+
+    # one hand
+    chamber: Chamber = Chamber(range(1, 14))
+    assert chamber.hand.is_empty
+    chamber.add_hand([1, 2])
+    chamber.select_cards([1, 2])
+    assert chamber.hand == Hand([1, 2])
+    assert chamber._hands.nodeat(0)._num_cards_selected == 2
+    chamber.deselect_cards([1, 2])
+    assert chamber.hand.is_empty
+    assert chamber._hands.nodeat(0)._num_cards_selected == 0
+
+    # two hands
+    chamber: Chamber = Chamber(range(1, 14))
+    assert chamber.hand.is_empty
+    chamber.add_hand([1, 2])
+    chamber.add_hand([2, 3])
+    chamber.select_cards([1, 2, 3])
+    assert chamber.hand == Hand([1, 2, 3])
+    assert chamber._hands.nodeat(0)._num_cards_selected == 2
+    assert chamber._hands.nodeat(1)._num_cards_selected == 2
+    chamber.deselect_cards([1, 3])
+    assert chamber.hand == Hand([2])
+    assert chamber._hands.nodeat(0)._num_cards_selected == 1
+    assert chamber._hands.nodeat(1)._num_cards_selected == 1
+    
+    # card check
+    with pytest.raises(CardNotInChamberError):
+        chamber.deselect_card(14)
+
+    # not in hand assertion
+    with pytest.raises(AssertionError, match=r'bad deselect'):
+        chamber.deselect_cards([1, 3])
+    
+    # still deselects individual cards if they are good
+    assert chamber.hand == Hand([2])
+    chamber.select_cards([1, 3])
+    assert chamber.hand == Hand([1, 2, 3])
+    with pytest.raises(AssertionError, match=r'bad deselect'):
+        chamber.deselect_cards([2, 3, 4])
+    assert chamber.hand == Hand([1])
+
+
+def test_deselect_selected():
+    chamber: Chamber = Chamber(range(1, 14))
+    assert chamber.hand.is_empty
+    chamber.select_cards([1, 2])
+    assert chamber.hand == Hand([1, 2])
+    chamber.deselect_selected()
+    assert chamber.hand.is_empty
+    chamber.select_cards([1, 2, 3, 4, 5])
+    assert chamber.hand == Hand([1, 2, 3, 4, 5])
+    chamber.deselect_selected()
+    assert chamber.hand.is_empty
+
+
+def test_clear_hands():
+    chamber: Chamber = Chamber(range(1, 14))
+    chamber.add_hand([1, 2])
+    chamber.add_hand([1, 3])
+    assert chamber._cards[1].size == 2
+    assert chamber._cards[2].size == 1
+    assert chamber._cards[3].size == 1
+    assert chamber._hands.size == 2
+    chamber.clear_hands()
+    assert chamber._cards[1].size == 0
+    assert chamber._cards[2].size == 0
+    assert chamber._cards[3].size == 0
+    assert chamber._hands.size == 0
+
+
+def test_check_card_in():
+    chamber: Chamber = Chamber(range(1, 14))
+    assert chamber._check_card_in(1) is None
+    with pytest.raises(CardNotInChamberError):
+        chamber._check_card_in(14)
+
+
+def test_check_cards_in():
+    chamber: Chamber = Chamber(range(1, 14))
+    assert chamber._check_cards_in([1, 2]) is None
+    with pytest.raises(CardNotInChamberError):
+        chamber._check_cards_in([1, 14])
+
+
+def test_check_card_not_in():
+    chamber: Chamber = Chamber(range(1, 14))
+    assert chamber._check_card_not_in(14) is None
+    with pytest.raises(CardAlreadyInChamberError):
+        chamber._check_card_not_in(1)
+
+
+def test_check_cards_not_in():
+    chamber: Chamber = Chamber(range(1, 14))
+    assert chamber._check_cards_not_in([14, 15]) is None
+    with pytest.raises(CardAlreadyInChamberError):
+        chamber._check_cards_not_in([14, 1])
+
+
+def test_IterNodesDLList_iter_nodes():
+    iter_nodes_dllist: IterNodesDLList = IterNodesDLList([1, 2, 3])
+    assert all(i+1 == node.value for i, node in enumerate(iter_nodes_dllist.iter_nodes()))
+
+def test_HandPointerDLList_constructor():
+    hand_pointer_dllist: HandPointerDLList = HandPointerDLList(1)
+    assert hand_pointer_dllist.size == 0
+    assert hand_pointer_dllist.card == 1
+
+
+def test_HandPointerNode_constructor():
+    hand_pointer_nodes = list()
+    hand_node: HandNode = HandNode(hand_pointer_nodes)
+    hand_pointer_node: HandPointerNode = HandPointerNode(hand_node)
+    assert isinstance(hand_pointer_node.value, HandNode)
+
+
+def test_HandNode():
+    hand_pointer_nodes = list()
+    hand_node: HandNode = HandNode(hand_pointer_nodes)
+    hand_pointer_nodes.extend([
+        HandPointerNode(HandNode),
+        HandPointerNode(HandNode)
+    ])
+    assert hand_node.value is hand_pointer_nodes
+    assert hand_node._num_cards_selected == 0
+
+    hand_node.increment_num_selected_cards()
+    assert hand_node._num_cards_selected == 1
+    hand_node.decrement_num_selected_cards()
+    assert hand_node._num_cards_selected == 0

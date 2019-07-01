@@ -234,7 +234,8 @@ class Game:
             chamber.select_card(card)
             if self._is_asking(spot):
                 self._deselect_asking_option(
-                    spot, self._selected_asking_option[spot]
+                    spot,
+                    self._selected_asking_option[spot]
                 )
             self._lock_if_unlocked(spot)
         except CardNotInChamberError:

@@ -14,4 +14,3 @@ class IterNodesDLList(dllist):
         while curr_node is not None:
             yield curr_node
             curr_node = curr_node.next
-        return StopIteration

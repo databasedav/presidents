@@ -290,9 +290,9 @@ class Hand:
             raise CardNotInHandError(
                 "attempting to remove from an empty hand."
             )
+        ci: int = self._card_index(card)
         self._head += 1
         head: int = self._head  # avoids multiple attribute accesses
-        ci: int = self._card_index(card)
         self[ci] = 0
         # right shift lower cards
         self[head + 1 : ci + 1] = self[head:ci]

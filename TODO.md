@@ -21,4 +21,4 @@
 
 * add support for deciding certain behavior like whether add cards to a hand deselects those cards or not, etc.
 
-
+* add state check fired by faust worker
