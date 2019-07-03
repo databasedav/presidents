@@ -70,9 +70,10 @@ class Server(AsyncNamespace):
             self.game._start_round(testing=True)  # TODO
 
     async def on_card_click(self, sid, payload) -> None:
-        # await agent.send(...)
+        # timestamp = ...
         assert self.game is not None
         self.game.add_or_remove_card(sid, payload["card"])
+        # await agent.send(timestamp...)
 
     def on_unlock(self, sid) -> None:
         assert self.game is not None
