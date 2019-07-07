@@ -51,10 +51,13 @@ class Game:
         # game related attributes
         self._turn_manager: Optional[TurnManager] = None
         self._current_player: Optional[int] = None
+        self._chambers: List[Optional[Chamber]] = [None for _ in range(4)]
+        # TODO: I don't like this
         if populate_chambers:
-            self._chambers: List[Optional[Chamber]] = [
-                Chamber() for _ in range(4)
-            ]
+            for i in range(4):
+                self._chambers[i] = Chamber()
+        # when hand in play is base_hand, only the 3 of clubs can be
+        # played on it; when it is None, anyhand can be played on it
         self._hand_in_play: Optional[Union[BaseHand, Hand]] = base_hand
         self._num_consecutive_passes: int = 0
         self._winning_last_played: bool = False
@@ -70,11 +73,11 @@ class Game:
         ]
         self._already_asked: List[Set[int]] = [set() for _ in range(4)]
         self._waiting: List[bool] = [False for _ in range(4)]
-        self._giving_options: List[Optional[Set[int]]] = [
+        self._giving_options: List[Set[int]] = [
             set() for _ in range(4)
         ]
-        self._takes_remaining: List[int] = [0 for _ in range(4)]
         self._gives_remaining: List[int] = [0 for _ in range(4)]
+        self._takes_remaining: List[int] = [0 for _ in range(4)]
         self._given: List[Set[int]] = [set() for _ in range(4)]
         self._taken: List[Set[int]] = [set() for _ in range(4)]
 

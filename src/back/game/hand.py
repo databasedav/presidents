@@ -17,12 +17,13 @@ import pickle
 from .utils import hand_hash, card_names, id_desc_dict
 from typing import List, Dict, Union, Optional, Iterator
 from json import dumps, loads
+import os
 
 
 # TODO create the .pkl if it doesn't exist
 # hash table for identifying hands
 with open(
-    "/home/avi/presidents/src/back/game/utils/hand_table.pkl", "rb"
+    f"{os.path.expanduser('~')}/presidents/src/back/game/utils/hand_table.pkl", "rb"
 ) as file:
     hand_table = pickle.load(file)
 
