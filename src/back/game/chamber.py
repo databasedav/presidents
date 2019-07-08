@@ -236,6 +236,15 @@ class Chamber:
         for card in cards:
             self._check_card_not_in(card)
 
+    def _get_min_card(self) -> int:
+        for card in self:
+            return card
+
+    def _get_max_card(self) -> int:
+        for card in range(52, 1, -1):
+            if self._cards[card]:
+                return card
+
 
 class HandPointerDLList(IterNodesDLList):
     """

@@ -1,5 +1,13 @@
 from cassandra.cqlengine.models import Model
-from cassandra.cqlengine.columns import DateTime, List, Map, Text, TinyInt, UUID
+from cassandra.cqlengine.columns import (
+    Boolean,
+    DateTime,
+    List,
+    Map,
+    Text,
+    TinyInt,
+    UUID
+)
 
 DateTime.truncate_microseconds = False
 
@@ -19,6 +27,26 @@ class UserGames(Model):
     game_ids = List(value_type=UUID, required=False)
 
 
+class UserRoundtimeSpots(Model):
+    __table_name__ = 'user_jointime_spots'
+    __keyspace__ = 'presidents'
+    user_id = UUID(primary_key=True, partition_key=True, required=True)
+    round_id = UUID(primary_key=True, partition_key=True, required=True)
+    # round time is either simply start of round if player did not join
+    # mid round, or the time the round is joined; it is like this
+    # because a player can join and leave the same round multiple times
+    roundtime_to_spot = Map(key_type=DateTime, value_type=TinyInt, required=True)
+    spot = TinyInt(required=True)
+
+
+class UserLeavetimes(Model):
+    __table_name__ = 'user_leave_timestamps'
+    __keyspace__ = 'presidents'
+    user_id = UUID(primary_key=True, partition_key=True, required=True)
+    game_id = UUID(primary_key=True, partition_key=True, required=True)
+    leave_timestamps = List(value_type=DateTime, required=False)
+
+
 class Game(Model):
     __table_name__ = 'game'
     __keyspace__ = 'presidents'
@@ -26,9 +54,7 @@ class Game(Model):
     user_ids = List(value_type=UUID, required=False)
     creation_timestamp = DateTime(required=True)
     destruction_timestamp = DateTime(required=False)
-    user_to_entrance_timestamp = Map(key_type=UUID, value_type=DateTime, required=False)
-    user_to_exit_timestamp = Map(key_type=UUID, value_type=DateTime, required=False)
-    rounds = List(value_type=UUID, required=False)
+    round_ids = List(value_type=UUID, required=False)
     pause_start_timestamps = List(value_type=DateTime, required=False)
     pause_end_timestamps = List(value_type=DateTime, required=False)
 
@@ -40,6 +66,7 @@ class Round(Model):
     game_id = UUID(required=True)
     start_timestamp = DateTime(required=True)
     end_timestamp = DateTime(required=False)
+    game_first = Boolean(required=True)
 
 
 class RoundCards(Model):
@@ -48,5 +75,3 @@ class RoundCards(Model):
     round_id = UUID(primary_key=True, partition_key=True, required=True)
     spot = TinyInt(primary_key=True, required=True, clustering_order='ASC')
     cards = List(value_type=TinyInt, required=True)
-
-# TODO: logic for leaving a game and rejoining later

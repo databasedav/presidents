@@ -32,7 +32,8 @@ logger = logging.getLogger(__name__)
 
 
 class Game:
-    def __init__(self, populate_chambers: bool = True) -> None:
+    # def __init__(self, populate_chambers: bool = True) -> None:
+    def __init__(self, timer=None) -> None:
         """
         Represents a 'game' of presidents. Operates on 'spots'
         attempting confirmation/allowal of certain moves (e.g. unlocking
@@ -44,22 +45,25 @@ class Game:
         self.num_players: int = 0
         self._num_consecutive_rounds: int = 0
 
+        # TODO: allow addition of players
+        # addition of rounds
+        # 
+
         # setup and ID related attributes
         self._open_spots = {i for i in range(4)}
+
         self._names: List[Optional[str]] = [None for _ in range(4)]
 
         # game related attributes
         self._turn_manager: Optional[TurnManager] = None
         self._current_player: Optional[int] = None
-        self._chambers: List[Optional[Chamber]] = [None for _ in range(4)]
-        # TODO: I don't like this
-        if populate_chambers:
-            for i in range(4):
-                self._chambers[i] = Chamber()
+        self._chambers: List[Optional[Chamber]] = list()
+        
+        self._chambers: List[Optional[Chamber]] = [Chamber() for _ in range(4)]
         # when hand in play is base_hand, only the 3 of clubs can be
         # played on it; when it is None, anyhand can be played on it
         self._hand_in_play: Optional[Union[BaseHand, Hand]] = base_hand
-        self._num_consecutive_passes: int = 0
+        self. _num_consecutive_passes: int = 0
         self._winning_last_played: bool = False
         self._positions: List[int] = list()
         self._unlocked: List[bool] = [False for _ in range(4)]
@@ -80,8 +84,13 @@ class Game:
         self._takes_remaining: List[int] = [0 for _ in range(4)]
         self._given: List[Set[int]] = [set() for _ in range(4)]
         self._taken: List[Set[int]] = [set() for _ in range(4)]
+        self._timer = timer
 
     # properties
+
+    @property
+    def is_empty(self) -> bool:
+        return len(self._open_spots) == 4
 
     @property
     def is_full(self) -> bool:
@@ -97,9 +106,16 @@ class Game:
             self._gives_remaining
         )
 
-    # testing related methods TODO: make a separate class for these
+    def _set_up_testing_base(self) -> None:
+        '''
+        Adds players and starts the round.
+        '''
+        assert self.is_empty, 'game must be empty to set up testing base'
+        for i in range(4):
+            self.add_player(f'player{i}')
+        self._start_round()
 
-    def get_game_to_trading(self) -> None:
+    def _get_game_to_trading(self) -> None:
         """
         For use when testing to quickly get to trading state from 4 card
         state, i.e. each player has one of the 3's.
@@ -107,31 +123,43 @@ class Game:
         while not self.trading:
             spot: int = self._current_player
             chamber = self._chambers[spot]
-            for card in chamber:
-                if card not in chamber.hand:
-                    self.add_or_remove_card(spot, card)
+            card: int = chamber._get_min_card()
+            if card not in chamber.hand:
+                self.add_or_remove_card(spot, card)
+            try:
                 self.maybe_unlock_play(spot)
-                if self._unlocked[spot]:
+            except PresidentsError:
+                pass
+            if self._unlocked[spot]:
+                try:
                     self.maybe_play_current_hand(spot)
-                else:
-                    self._pass_turn(spot)
+                except PresidentsError:
+                    pass
+            else:
+                self._pass_turn(spot)
+
 
     # setup related methods
 
-    def _rand_open_spot(self):
+    def _rand_open_spot(self, no_remove: bool = False) -> int:
         """
         Returns random open spot. Should not happen when there are no
         open spots.
         """
-        logger.info(self._open_spots)
         assert self._open_spots
 
         spot = random.sample(self._open_spots, 1)[0]
-        self._open_spots.remove(spot)
+        if not no_remove:
+            self._open_spots.remove(spot)
         return spot
 
     def add_player(self, name: str) -> None:
         self._names[self._rand_open_spot()] = name
+        self.num_players += 1
+
+    def add_player_to_spot(self, name: str, spot: int) -> None:
+        assert self._names[spot] is None, f'player already in spot {spot}'
+        self._names[spot] = name
         self.num_players += 1
 
     def remove_player(self, spot: int) -> None:
@@ -139,23 +167,14 @@ class Game:
         self._open_spots.add(spot)
         self.num_players -= 1
 
-    def _make_shuffled_decks(self, testing: bool = False):
-        deck = np.arange(
-            1, 53 if not testing else 5, dtype=np.int32
-        )  # deck of cards 1-52
-        np.random.shuffle(deck)  # shuffles deck inplace
-        decks = deck.reshape(
-            4, 13 if not testing else 1
-        )  # splits deck into 4 decks of 13
-        decks.sort(axis=1)  # sorts individual decks
-        return decks
+    def _make_shuffled_deck(self) -> np.ndarray[int]:
+        return np.sort(np.random.permutation(range(1, 53)).reshape(4, 13))
 
     def _deal_cards(self) -> None:
-        decks = self._make_shuffled_decks()
-        for spot in zip(range(4), decks):
-            chamber = self._chambers[spot]
+        for spot, cards in enumerate(self._make_shuffled_deck()):
+            chamber: Chamber = self._chambers[spot]
             chamber.reset()
-            chamber.add_cards(decks)
+            chamber.add_cards(cards)
 
     def _make_and_set_turn_manager(self) -> None:
         decks = self._get_decks_from_chambers()
@@ -165,17 +184,18 @@ class Game:
 
     # game flow related methods
 
-    def _start_round(self, testing: bool = False) -> None:
-        self._deal_cards(testing)
+    def _start_round(self) -> None:
+        assert self.num_players == 4, 'four players required to start round'
+        self._deal_cards()
         self._make_and_set_turn_manager()
         self._num_consecutive_rounds += 1
         self._message(f"🏁 round {self._num_consecutive_rounds} has begun")
         self._next_player()
 
-    def _next_player(self, timer: bool = True):
+    def _next_player(self) -> None:
         self._current_player = next(self._turn_manager)
         self._message(f"🎲 it's {self._names[self._current_player]}'s turn")
-        if timer:
+        if self._timer:
             self._start_timer(self._current_player, 0.5)
 
     def _start_timer(self, spot: int, seconds: int) -> None:
@@ -204,7 +224,8 @@ class Game:
                 chamber.select_card(card)
 
     def _stop_timer(self, spot: int) -> None:
-        self._timers[spot].cancel()
+        if self._timer:
+            self._timers[spot].cancel()
 
     def _player_finish(self, spot: int) -> None:
         self._positions.append(self._current_player)
@@ -262,6 +283,11 @@ class Game:
     # playing and passing related methods
 
     def maybe_unlock_play(self, spot: int):
+        '''
+        Unlocking is allowed as long as one's current hand can be played
+        on the current hand in play. Locking updates automatically as
+        the hand in play changes.
+        '''
         self._lock_if_pass_unlocked(spot)
         hand = self._get_current_hand(spot)
         if hand.is_empty:
@@ -711,6 +737,9 @@ class Game:
 
     def _is_waiting(self, spot: int) -> bool:
         return self._waiting[spot]
+    
+    def _is_finished(self, spot: int) -> bool:
+        return self._chambers[spot].is_empty
 
 
 class BaseHand:
