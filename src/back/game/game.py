@@ -18,6 +18,8 @@ import logging
 from eventlet import Timeout
 from eventlet.greenthread import spawn_after
 
+import uuid
+
 logger = logging.getLogger(__name__)
 
 
@@ -42,6 +44,7 @@ class Game:
         """
 
         # instance related attributes
+        self.id: str = str(uuid.uuid4())
         self.num_players: int = 0
         self._num_consecutive_rounds: int = 0
 
@@ -344,15 +347,14 @@ class Game:
         self._message(f"▶️ {self._names[spot]} played a {hand.id_desc}")
         self.lock(spot)
         # lock others if their currently unlocked hand should no longer be unlocked
-        other_spots = [
-            other_spot for other_spot in range(4) if other_spot != spot
-        ]
-        for other_spot in other_spots:
+        for other_spot in range(4):
+            if other_spot == spot:
+                continue
             if self._unlocked[other_spot]:
                 try:
                     if self._get_current_hand(other_spot) < self._hand_in_play:
                         self.lock(other_spot)
-                except RuntimeError:  # can occur when a bomb is played on a non bomb
+                except RuntimeError:  # can occur when a bomb is played on a non bomb TODO clarify this case
                     self.lock(other_spot)
         if handle_post:
             self._post_play_handler(spot)

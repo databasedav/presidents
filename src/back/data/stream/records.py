@@ -7,3 +7,7 @@ class GameClick(Record):
     user_id: str
     timestamp: str
     action: str
+
+
+class PlayedHand(Record):
+    hash: int

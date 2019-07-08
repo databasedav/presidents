@@ -1,9 +1,11 @@
 from ..game import EmittingGame
+from ..data import game_click_agent, GameClick
 
 from socketio import AsyncNamespace
 
 from typing import Optional
 from itertools import cycle
+from datetime import datetime
 
 names = cycle(["aa", "bb", "cc", "dd"])
 
@@ -18,7 +20,10 @@ class Server(AsyncNamespace):
     """
 
     def __init__(
-        self, server_id: str, name: str, game: Optional[EmittingGame] = None
+        self,
+        server_id: str,
+        name: str,
+        game: Optional[EmittingGame] = None
     ) -> None:
         super().__init__(namespace=f"/server_{server_id}")
         self.name: str = name
@@ -70,10 +75,17 @@ class Server(AsyncNamespace):
             self.game._start_round(testing=True)  # TODO
 
     async def on_card_click(self, sid, payload) -> None:
-        # timestamp = ...
+        timestamp: datetime.datetime = datetime.utcnow()
         assert self.game is not None
         self.game.add_or_remove_card(sid, payload["card"])
-        # await agent.send(timestamp...)
+        await game_click_agent.send(
+            GameClick(
+                game_id=self.game.id,
+                user_id=self.game.get_user_id(sid),
+                timestamp=timestamp,
+                action=payload['card']
+            )
+        )
 
     def on_unlock(self, sid) -> None:
         assert self.game is not None

@@ -30,6 +30,7 @@ class EmittingGame(Game):
         ]
         self._server: Optional[str] = None
         self._spot_sid_bidict: bidict = bidict()
+        self.sid_user_id_dict: Dict[str, str] = dict()
         self.num_spectators: int = 0  # TODO
 
     # properties
@@ -147,6 +148,7 @@ class EmittingGame(Game):
             {"spot": spot, "cards_remaining": self._chambers[spot].num_cards},
         )
         self._post_play_handler(spot)
+        
 
     async def maybe_unlock_pass_turn(self, sid: str) -> None:
         spot: int = self._get_spot(sid)
@@ -297,6 +299,8 @@ class EmittingGame(Game):
 
     def _get_spot(self, sid: str) -> int:
         return self._spot_sid_bidict.inv[sid]
+
+    def get_user_id(self, sid: str) ->
 
     # setters
 
