@@ -3,7 +3,7 @@ from faust import App
 from ..db import GameClicks
 from datetime import timedelta
 
-app = App("game-click-app", broker="kafka://localhost:9092")
+app = App("presidents-app", broker="kafka://localhost:9092")
 
 game_click_topic = app.topic("game_click", value_type=GameClick)
 

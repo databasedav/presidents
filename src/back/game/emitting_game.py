@@ -300,7 +300,8 @@ class EmittingGame(Game):
     def _get_spot(self, sid: str) -> int:
         return self._spot_sid_bidict.inv[sid]
 
-    def get_user_id(self, sid: str) ->
+    def get_user_id(self, sid: str) -> str:
+        return self.sid_user_id_dict[sid]
 
     # setters
 

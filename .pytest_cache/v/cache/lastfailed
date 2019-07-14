@@ -1,5 +1,3 @@
 {
-  "src/back/tests/test_chamber.py": true,
-  "src/back/tests/test_game.py": true,
-  "src/back/tests/test_hand.py": true
+  "src/back/tests/test_game.py::test_start_timer": true
 }

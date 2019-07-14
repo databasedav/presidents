@@ -1,6 +1,11 @@
-from ..game.game import Game, PresidentsError, base_hand
+from ..game.game import Game, PresidentsError, base_hand, NoopTimer
 import numpy as np
 import pytest
+from eventlet import greenthread
+from eventlet.greenthread import GreenThread
+import time
+from ..game.hand import Hand
+
 
 def test_constructor():
     game: Game = Game()
@@ -190,7 +195,7 @@ def test_start_round():
     game._start_round()
     assert all(chamber.num_cards == 13 for chamber in game._chambers)
     assert game._turn_manager is not None
-    assert game._num_consecutive_round == 1
+    assert game._num_consecutive_rounds == 1
     assert 1 in game._chambers[game._current_player]
     
     with pytest.raises(AssertionError, match=r'four players'):
@@ -200,3 +205,45 @@ def test_start_round():
 
 def test_next_player():
     game: Game = Game()
+    game._set_up_testing_base()
+    game._start_round()
+    assert 1 in game._chambers[game._current_player]
+    game._next_player()
+    assert 1 not in game._chambers[game._current_player]
+
+
+def test_start_timer():
+    # NoopTimer doesn't do anything
+    game: Game = Game(turn_time=0.5)
+    game._set_up_testing_base()
+    game._start_round()
+    assert isinstance(game._timers[game._current_player], NoopTimer)
+    assert game._hand_in_play is base_hand
+    time.sleep(0.25)
+    assert isinstance(game._timers[game._current_player], NoopTimer)
+    assert game._hand_in_play is base_hand
+    time.sleep(0.25)
+    # doesn't become None at the end of the timer either
+    assert isinstance(game._timers[game._current_player], NoopTimer)
+    assert game._hand_in_play is base_hand
+
+    # eventlet.greenthread.spawn_after is completely functional
+    game = Game(timer=greenthread.spawn_after, turn_time=0.5)
+    game._set_up_testing_base()
+    game._start_round()
+    player_w_3_of_clubs = game._current_player
+    assert isinstance(game._timers[player_w_3_of_clubs], GreenThread)
+    assert game._hand_in_play is base_hand
+    time.sleep(0.25)
+    assert isinstance(game._timers[player_w_3_of_clubs], GreenThread)
+    assert game._hand_in_play is base_hand
+    time.sleep(0.26)
+    assert game._timers[player_w_3_of_clubs] is None
+    assert isinstance(game._timers[game._current_player], GreenThread)
+    assert game._hand_in_play == Hand([1])
+
+
+def test_handle_timeout():
+    # TODO
+    ...
+
