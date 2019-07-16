@@ -23,7 +23,8 @@ import os
 # TODO create the .pkl if it doesn't exist
 # hash table for identifying hands
 with open(
-    f"{os.path.expanduser('~')}/presidents/src/back/game/utils/hand_table.pkl", "rb"
+    f"{os.path.expanduser('~')}/presidents/src/back/game/utils/hand_table.pkl",
+    "rb",
 ) as file:
     hand_table = pickle.load(file)
 
@@ -99,11 +100,11 @@ class Hand:
     def copy(cls, hand: Hand) -> Hand:
         return cls(hand._cards, hand._id, hand._head)
 
-    def __getitem__(self, key: Union[int, slice]) -> np.uint8:
-        return self._cards[key]
+    def __getitem__(self, index: Union[int, slice]) -> np.uint8:
+        return self._cards[index]
 
-    def __setitem__(self, key: Union[int, slice], card: int) -> None:
-        self._cards[key] = card
+    def __setitem__(self, index: Union[int, slice], card: int) -> None:
+        self._cards[index] = card
 
     def __hash__(self) -> int:
         return hand_hash(self._cards)

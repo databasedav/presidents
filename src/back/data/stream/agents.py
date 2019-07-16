@@ -7,11 +7,10 @@ app = App("presidents-app", broker="kafka://localhost:9092")
 
 game_click_topic = app.topic("game_click", value_type=GameClick)
 
-played_hand_topic = app.topic('played_hand', value_type=PlayedHand)
-played_hand_table = app.Table(
-    'played_hands',
-    default=int
-).hopping(size=2, step=1, expires=timedelta(minutes=15))
+played_hand_topic = app.topic("played_hand", value_type=PlayedHand)
+played_hand_table = app.Table("played_hands", default=int).hopping(
+    size=2, step=1, expires=timedelta(minutes=15)
+)
 
 
 @app.agent(game_click_topic)
@@ -20,7 +19,7 @@ async def game_click_agent(game_clicks) -> None:
         await GameClicks.objects(
             game_id=game_click.game_id,
             user_id=game_click.user_id,
-            action=game_click.action
+            action=game_click.action,
         ).async_update(timestamps__append=[game_click.timestamp])
 
 

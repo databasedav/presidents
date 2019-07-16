@@ -148,7 +148,6 @@ class EmittingGame(Game):
             {"spot": spot, "cards_remaining": self._chambers[spot].num_cards},
         )
         self._post_play_handler(spot)
-        
 
     async def maybe_unlock_pass_turn(self, sid: str) -> None:
         spot: int = self._get_spot(sid)

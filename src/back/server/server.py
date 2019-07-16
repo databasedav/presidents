@@ -20,10 +20,7 @@ class Server(AsyncNamespace):
     """
 
     def __init__(
-        self,
-        server_id: str,
-        name: str,
-        game: Optional[EmittingGame] = None
+        self, server_id: str, name: str, game: Optional[EmittingGame] = None
     ) -> None:
         super().__init__(namespace=f"/server_{server_id}")
         self.name: str = name
@@ -83,7 +80,7 @@ class Server(AsyncNamespace):
                 game_id=self.game.id,
                 user_id=self.game.get_user_id(sid),
                 timestamp=timestamp,
-                action=payload['card']
+                action=payload["card"],
             )
         )
 

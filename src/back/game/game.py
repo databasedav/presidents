@@ -15,7 +15,7 @@ from . import (
 )
 from .utils import rank_articler
 import logging
-
+from eventlet.greenthread import GreenThread
 
 
 import uuid
@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 # TODO: can unlock if the unlocked action can potentially be taken (i.e.
 #       when it is their turn); else, cannot unlock
 # TODO: shuffle player spots after every round
+# uncommented asserts are for mypy
 
 
 class Game:
@@ -55,6 +56,7 @@ class Game:
         self.id: str = str(uuid.uuid4())
         self.num_players: int = 0
         self._num_consecutive_rounds: int = 0
+        self._times_reset: int = 0
 
         # timer related attributes
         # timer should be function that returns a non-blocking timer
@@ -63,9 +65,12 @@ class Game:
         # must also have a cancel method which suspends the timer; see
         # eventlet.greenthread.spawn_after for an example of this
         self._timer: Optional[Callable] = timer or NoopTimer.timer
-        self._timers: List[Optional[Timeout]] = [None for _ in range_4]
+        self._timers: List[Optional[Union[NoopTimer, GreenThread]]] = [
+            None for _ in range_4
+        ]
         self._turn_time: Optional[Union[int, float]] = turn_time
-        self._reserve_times: List[Union[int, float]] = [
+        self._reserve_time: Optional[Union[int, float]] = reserve_time
+        self._reserve_times: List[Optional[Union[int, float]]] = [
             reserve_time for _ in range_4
         ]
         self._reserve_time_use_starts: List[Optional[datetime]] = [
@@ -73,7 +78,7 @@ class Game:
         ]
 
         # setup and ID related attributes
-        self._open_spots = {i for i in range_4}
+        self._open_spots: Set[int] = {i for i in range_4}
         self._names: List[Optional[str]] = [None for _ in range_4]
 
         # game related attributes
@@ -83,7 +88,7 @@ class Game:
         # when hand in play is base_hand, only the 3 of clubs can be
         # played on it; when it is None, anyhand can be played on it
         self._hand_in_play: Optional[Union[BaseHand, Hand]] = base_hand
-        self. _num_consecutive_passes: int = 0
+        self._num_consecutive_passes: int = 0
         self._winning_last_played: bool = False
         self._positions: List[int] = list()
         self._unlocked: List[bool] = [False for _ in range_4]
@@ -101,7 +106,54 @@ class Game:
         self._takes_remaining: List[int] = [0 for _ in range_4]
         self._given: List[Set[int]] = [set() for _ in range_4]
         self._taken: List[Set[int]] = [set() for _ in range_4]
-        
+
+    def reset(
+        self,
+        *,
+        timer: Optional[Callable] = None,
+        turn_time: Optional[Union[int, float]] = None,
+        reserve_time: Union[int, float] = 0,
+    ):
+        """
+        Resetting maintains timer and reserve time settings unless
+        provided new ones.
+        """
+        range_4 = range(4)
+        # instance related attributes
+        self.num_players = 0
+        self._num_consecutive_rounds = 0
+        # timer related attributes
+        self._timer = timer or self._timer
+        self._timers = [None for _ in range_4]
+        self._turn_time = turn_time or self._turn_time
+        self._reserve_time = reserve_time or self._reserve_time
+        self._reserve_times = [self._reserve_time for _ in range_4]
+        self._reserve_time_use_starts = [None for _ in range_4]
+        # setup and ID related attributes
+        self._open_spots = {i for i in range_4}
+        self._names = [None for _ in range_4]
+        # game related attributes
+        self._turn_manager = None
+        self._current_player = None
+        self._chambers = [Chamber() for _ in range_4]
+        self._hand_in_play = base_hand
+        self._num_consecutive_passes = 0
+        self._winning_last_played = False
+        self._positions = list()
+        self._unlocked = [False for _ in range_4]
+        self._pass_unlocked = [False for _ in range_4]
+        # trading related attributes
+        self.trading = False
+        self._selected_asking_option = [None for _ in range_4]
+        self._already_asked = [set() for _ in range_4]
+        self._waiting = [False for _ in range_4]
+        self._giving_options = [set() for _ in range_4]
+        self._gives_remaining = [0 for _ in range_4]
+        self._takes_remaining = [0 for _ in range_4]
+        self._given = [set() for _ in range_4]
+        self._taken = [set() for _ in range_4]
+
+        self._times_reset += 1
 
     # properties
 
@@ -125,12 +177,12 @@ class Game:
         )
 
     def _set_up_testing_base(self) -> None:
-        '''
+        """
         Adds players and starts the round.
-        '''
-        assert self.is_empty, 'game must be empty to set up testing base'
+        """
+        assert self.is_empty, "game must be empty to set up testing base"
         for i in range(4):
-            self.add_player(f'player{i}')
+            self.add_player(f"player{i}")
         self._start_round()
 
     def _get_game_to_trading(self) -> None:
@@ -156,8 +208,8 @@ class Game:
                 except PresidentsError:
                     pass
             else:
+                self._unlock_pass(spot)
                 self._pass_turn(spot)
-
 
     # setup related methods
 
@@ -178,7 +230,7 @@ class Game:
         self.num_players += 1
 
     def add_player_to_spot(self, name: str, spot: int) -> None:
-        assert self._names[spot] is None, f'player already in spot {spot}'
+        assert self._names[spot] is None, f"player already in spot {spot}"
         self._names[spot] = name
         self.num_players += 1
 
@@ -205,7 +257,7 @@ class Game:
     # game flow related methods
 
     def _start_round(self) -> None:
-        assert self.num_players == 4, 'four players required to start round'
+        assert self.num_players == 4, "four players required to start round"
         self._deal_cards()
         self._make_and_set_turn_manager()
         self._num_consecutive_rounds += 1
@@ -214,44 +266,56 @@ class Game:
 
     def _next_player(self) -> None:
         assert self._turn_manager is not None
+        # TODO this mypy error
         self._current_player = next(self._turn_manager)
         self._message(f"🎲 it's {self._names[self._current_player]}'s turn")
         assert self._current_player is not None
         self._start_timer(self._current_player, self._turn_time)
 
-    def _start_timer(self, spot: int, seconds: Union[int, float]) -> None:
+    def _start_timer(
+        self,
+        spot: int,
+        seconds: Optional[Union[int, float]]
+    ) -> None:
+        assert self._timer is not None
         self._timers[spot] = self._timer(seconds, self._handle_timeout, spot)
-    
+
     def _handle_timeout(self, spot: int) -> None:
-        reserve_time: Union[int, float] = self._reserve_times[spot]
+        reserve_time: Optional[Union[int, float]] = self._reserve_times[spot]
         if reserve_time:
+            self._reserve_times[spot] = 0
             self._reserve_time_use_starts[spot] = datetime.utcnow()
             self._start_timer(spot, reserve_time)
         else:
             self._auto_play_or_pass(spot)
-        
+
     def _auto_play_or_pass(self, spot: int) -> None:
+        assert self._current_player == spot, f"it is not spot {spot}'s turn"
+        if self._hand_in_play not in [base_hand, None]:
+            self._unlock_pass(spot)
+            self._pass_turn(spot)  # locks pass
+            return
         chamber: Chamber = self._chambers[spot]
         currently_selected_cards: List[int] = chamber.hand.to_list()
-        if currently_selected_cards:
+        if currently_selected_cards:  # not empty list
             chamber.deselect_selected()
         if self._hand_in_play is base_hand:
             chamber.select_card(1)
+            self._unlock(spot)
             self._play_current_hand(spot)
-        else:
-            # can play anyhand so play lowest single for them
-            if self._hand_in_play is None:
-                min_card: int = chamber._get_min_card()
-                chamber.select_card(min_card)
-                self._play_current_hand(spot)
-            else:
-                self._pass_turn(spot)
-        for card in currently_selected_cards:
+        elif self._hand_in_play is None:
+            min_card: int = chamber._get_min_card()
+            chamber.select_card(min_card)
+            self._unlock(spot)
+            self._play_current_hand(spot)
+    
+        for card in currently_selected_cards:  # could be empty list
             if card != min_card:
                 chamber.select_card(card)
 
     def _stop_timer(self, spot: int) -> None:
         now: datetime = datetime.utcnow()
+        assert self._timers[spot] is not None, 'timer is none for this spot'
         self._timers[spot].cancel()
         self._timers[spot] = None
         if self._reserve_time_use_starts[spot] is not None:
@@ -260,11 +324,16 @@ class Game:
             ).total_seconds()
             self._reserve_times[spot] -= seconds_used
             self._reserve_time_use_starts[spot] = None
-        
 
     def _player_finish(self, spot: int) -> None:
+        assert spot == self._current_player, 'only current player can finish'
+        assert self._chambers[spot].is_empty, (
+            'only players with no cards remaining can finish'
+        )
+        assert isinstance(self._hand_in_play, Hand), (
+            'winning last played must be a hand'
+        )
         self._positions.append(self._current_player)
-        self._winning_last_played = True
         self._turn_manager.remove(self._current_player)
         num_unfinished_players = self._num_unfinished_players
         if num_unfinished_players == 3:
@@ -278,8 +347,8 @@ class Game:
         else:
             self._set_vice_asshole(spot)
             self._current_player = next(self._turn_manager)
-            self._positions.append(self._current_player)
             self._set_asshole(self._current_player)
+            self._positions.append(self._current_player)
             self._message(
                 f"🏆 {self._names[spot]} is vice asshole 🥉 and {self._names[self._current_player]} is asshole 💩"
             )
@@ -296,8 +365,7 @@ class Game:
             chamber.select_card(card)
             if self._is_asking(spot):
                 self._deselect_asking_option(
-                    spot,
-                    self._selected_asking_option[spot]
+                    spot, self._selected_asking_option[spot]
                 )
             self._lock_if_unlocked(spot)
         except CardNotInChamberError:
@@ -318,11 +386,11 @@ class Game:
     # playing and passing related methods
 
     def maybe_unlock_play(self, spot: int):
-        '''
+        """
         Unlocking is allowed as long as one's current hand can be played
         on the current hand in play. Locking updates automatically as
         the hand in play changes.
-        '''
+        """
         self._lock_if_pass_unlocked(spot)
         hand = self._get_current_hand(spot)
         if hand.is_empty:
@@ -370,13 +438,14 @@ class Game:
             self._play_current_hand(spot)
 
     def _play_current_hand(self, spot: int, handle_post: bool = True) -> None:
+        assert self._unlocked[spot], 'play called without unlocking'
         self._stop_timer(spot)
         chamber = self._chambers[spot]
         hand = Hand.copy(chamber.hand)
         chamber.remove_cards(hand)
         self._num_consecutive_passes = 0
         self._set_hand_in_play(hand)
-        self._message(f"▶️ {self._names[spot]} played a {hand.id_desc}")
+        self._message(f"▶️ {self._names[spot]} played {str(hand)}")
         self.lock(spot)
         # lock others if their currently unlocked hand should no longer be unlocked
         for other_spot in range(4):
@@ -394,6 +463,7 @@ class Game:
     def _post_play_handler(self, spot: int) -> None:
         if self._chambers[spot].is_empty:
             # player_finish takes care of going to the next player
+            self._winning_last_played = True
             self._player_finish(spot)
         else:
             self._winning_last_played = False
@@ -427,6 +497,7 @@ class Game:
             self._pass_turn(spot)
 
     def _pass_turn(self, spot: int, handle_post: bool = True) -> None:
+        assert self._pass_unlocked[spot], "pass called without unlocking"
         self._stop_timer(spot)
         self._lock_pass(spot)
         self._num_consecutive_passes += 1
@@ -439,12 +510,14 @@ class Game:
         if self._winning_last_played:
             if self._num_consecutive_passes == self._num_unfinished_players:
                 self._clear_hand_in_play()
+                self._winning_last_played = False
                 self._next_player()
             else:
                 self._next_player()
         # all other players passed on a hand
         elif self._num_consecutive_passes == self._num_unfinished_players - 1:
             self._clear_hand_in_play()
+            self._winning_last_played = False
             self._next_player()
         else:
             self._next_player()
@@ -771,21 +844,45 @@ class Game:
 
     def _is_waiting(self, spot: int) -> bool:
         return self._waiting[spot]
-    
+
     def _is_finished(self, spot: int) -> bool:
         return self._chambers[spot].is_empty
 
+    def _is_president(self, spot: int) -> bool:
+        try:
+            return self._positions[0] == spot
+        except IndexError:
+            return False
+
+    def _is_vice_president(self, spot: int) -> bool:
+        try:
+            return self._positions[1] == spot
+        except IndexError:
+            return False
+
+    def _is_vice_asshole(self, spot: int) -> bool:
+        try:
+            return self._positions[2] == spot
+        except IndexError:
+            return False
+    
+    def _is_asshole(self, spot: int) -> bool:
+        try:
+            return self._positions[3] == spot
+        except IndexError:
+            return False
 
 class BaseHand:
     """hand at begininning of game; 3 of clubs must be played on it"""
-
     pass
-
-
 base_hand = BaseHand()
 
 
 class TurnManager:
+    '''
+    [spot] is True if spot is unfinished; False if finished
+    '''
+
     def __init__(self, first) -> None:
         self._cycling_list = cycle([i for i in range(4)])
         for _ in range(first):
@@ -793,25 +890,32 @@ class TurnManager:
         self._not_finished_dict: Dict[int, bool] = {i: True for i in range(4)}
         self._num_unfinished_players = 4
 
+    def __getitem__(self, spot: int) -> bool:
+        return self._not_finished_dict[spot]
+    
+    def __setitem__(self, spot: int, not_finished: bool) -> None:
+        self._not_finished_dict[spot] = not_finished
+
     def __next__(self) -> int:
         maybe_next = next(self._cycling_list)
-        while self._not_finished_dict[maybe_next] is False:
+        while self[maybe_next] is False:
             maybe_next = next(self._cycling_list)
         return maybe_next
 
     def remove(self, spot: int) -> None:
-        self._not_finished_dict[spot] = False
+        self[spot] = False
         self._num_unfinished_players -= 1
 
 
 class NoopTimer:
-    '''
+    """
     For games with no timer.
-    '''
+    """
+
     @classmethod
     def timer(cls, time: int, func: Callable, *args, **kwargs):
         return cls()
-    
+
     def cancel(self):
         pass
 

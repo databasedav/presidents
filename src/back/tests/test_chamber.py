@@ -6,7 +6,7 @@ from ..game.chamber import (
     HandPointerDLList,
     HandPointerNode,
     HandNodeDLList,
-    HandNode
+    HandNode,
 )
 from ..game.hand import CardNotInHandError, DuplicateCardError, FullHandError
 from ..game.utils import IterNodesDLList
@@ -348,20 +348,20 @@ def test_select_cards():
     assert 4 not in chamber.hand
 
     # dupe card assertion
-    with pytest.raises(AssertionError, match=r'bad select'):
+    with pytest.raises(AssertionError, match=r"bad select"):
         chamber.select_cards([1, 2])
-    
+
     # still selects individual cards if they are good
-    with pytest.raises(AssertionError, match=r'bad select'):
+    with pytest.raises(AssertionError, match=r"bad select"):
         chamber.select_cards([4, 1])
     assert chamber.hand == Hand([1, 2, 3, 4])
-    
+
     # full hand assertion; still selects individual cards if they are
     # good
-    with pytest.raises(AssertionError, match=r'bad select'):
+    with pytest.raises(AssertionError, match=r"bad select"):
         chamber.select_cards([5, 6])
     assert chamber.hand == Hand([1, 2, 3, 4, 5])
-    
+
 
 def test_deselect_card():
     # without hands
@@ -458,20 +458,20 @@ def test_deselect_cards():
     assert chamber.hand == Hand([2])
     assert chamber._hands.nodeat(0)._num_cards_selected == 1
     assert chamber._hands.nodeat(1)._num_cards_selected == 1
-    
+
     # card check
     with pytest.raises(CardNotInChamberError):
         chamber.deselect_card(14)
 
     # not in hand assertion
-    with pytest.raises(AssertionError, match=r'bad deselect'):
+    with pytest.raises(AssertionError, match=r"bad deselect"):
         chamber.deselect_cards([1, 3])
-    
+
     # still deselects individual cards if they are good
     assert chamber.hand == Hand([2])
     chamber.select_cards([1, 3])
     assert chamber.hand == Hand([1, 2, 3])
-    with pytest.raises(AssertionError, match=r'bad deselect'):
+    with pytest.raises(AssertionError, match=r"bad deselect"):
         chamber.deselect_cards([2, 3, 4])
     assert chamber.hand == Hand([1])
 
@@ -532,9 +532,31 @@ def test_check_cards_not_in():
         chamber._check_cards_not_in([14, 1])
 
 
+def test_get_min_card():
+    chamber: Chamber = Chamber(range(1, 14))
+    assert 1 in chamber
+    assert chamber._get_min_card() == 1
+    chamber.remove_card(1)
+    assert 2 in chamber
+    assert chamber._get_min_card() == 2
+
+
+def test_get_max_card():
+    chamber: Chamber = Chamber(range(1, 14))
+    assert 13 in chamber
+    assert chamber._get_max_card() == 13
+    chamber.remove_card(13)
+    assert 12 in chamber
+    assert chamber._get_max_card() == 12
+
+
 def test_IterNodesDLList_iter_nodes():
     iter_nodes_dllist: IterNodesDLList = IterNodesDLList([1, 2, 3])
-    assert all(i+1 == node.value for i, node in enumerate(iter_nodes_dllist.iter_nodes()))
+    assert all(
+        i + 1 == node.value
+        for i, node in enumerate(iter_nodes_dllist.iter_nodes())
+    )
+
 
 def test_HandPointerDLList_constructor():
     hand_pointer_dllist: HandPointerDLList = HandPointerDLList(1)
@@ -552,10 +574,9 @@ def test_HandPointerNode_constructor():
 def test_HandNode():
     hand_pointer_nodes = list()
     hand_node: HandNode = HandNode(hand_pointer_nodes)
-    hand_pointer_nodes.extend([
-        HandPointerNode(HandNode),
-        HandPointerNode(HandNode)
-    ])
+    hand_pointer_nodes.extend(
+        [HandPointerNode(HandNode), HandPointerNode(HandNode)]
+    )
     assert hand_node.value is hand_pointer_nodes
     assert hand_node._num_cards_selected == 0
 

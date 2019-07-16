@@ -192,7 +192,7 @@ class Chamber:
             # this is an assertion because multiple card selections
             # should be checked beforehand; same for deselection below
             except (DuplicateCardError, FullHandError):
-                raise AssertionError('bad select cards call')
+                raise AssertionError("bad select cards call")
 
     def deselect_card(self, card: int, check: bool = True) -> None:
         if check:
@@ -207,7 +207,7 @@ class Chamber:
             try:
                 self.deselect_card(card, check=False)  # already checked
             except CardNotInHandError:
-                raise AssertionError('bad deselect cards call')
+                raise AssertionError("bad deselect cards call")
 
     def deselect_selected(self) -> None:
         self.deselect_cards(self.hand)
@@ -241,8 +241,8 @@ class Chamber:
             return card
 
     def _get_max_card(self) -> int:
-        for card in range(52, 1, -1):
-            if self._cards[card]:
+        for card in range(52, 0, -1):
+            if self._cards[card] is not None:
                 return card
 
 
