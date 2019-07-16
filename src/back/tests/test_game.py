@@ -228,7 +228,7 @@ def test_set_up_testing_base():
     assert all(chamber.num_cards == 13 for chamber in game._chambers)
     assert game._num_consecutive_rounds == 1
     assert game._current_player is not None
-    
+    # TODO finish adding tests for feeding custom cards to start_round...
 
 def test_get_game_to_trading():
     game: Game = Game()
