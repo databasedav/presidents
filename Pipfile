@@ -19,7 +19,7 @@ pylint = "*"
 mypy = "*"
 flake8 = "*"
 black = "*"
-aiojobs = "*"
+eventlet = "*"
 
 [requires]
 python_version = "3.7"

@@ -1,6 +1,6 @@
 import random
 from itertools import cycle
-from typing import Any, Callable, Dict, List, Optional, Set, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union
 from datetime import datetime
 
 import numpy as np
@@ -32,10 +32,12 @@ logger = logging.getLogger(__name__)
 #       when it is their turn); else, cannot unlock
 # TODO: shuffle player spots after every round
 # uncommented asserts are for mypy
+# TODO: asserts should not be meaningless; if a funtion is only called
+#       from one place it doesn't make sense to check a bunch of things
+#       that must have been true in the first place; or is it?
 
 
 class Game:
-    # def __init__(self, populate_chambers: bool = True) -> None:
     def __init__(
         self,
         *,
@@ -176,14 +178,14 @@ class Game:
             self._gives_remaining
         )
 
-    def _set_up_testing_base(self) -> None:
+    def _set_up_testing_base(self, *, cards: List[Iterable[int]] = None) -> None:
         """
         Adds players and starts the round.
         """
         assert self.is_empty, "game must be empty to set up testing base"
         for i in range(4):
             self.add_player(f"player{i}")
-        self._start_round()
+        self._start_round(cards=cards)
 
     def _get_game_to_trading(self) -> None:
         """
@@ -213,7 +215,7 @@ class Game:
 
     # setup related methods
 
-    def _rand_open_spot(self, no_remove: bool = False) -> int:
+    def _rand_open_spot(self, *, no_remove: bool = False) -> int:
         """
         Returns random open spot. Should not happen when there are no
         open spots.
@@ -242,8 +244,8 @@ class Game:
     def _make_shuffled_deck(self) -> np.ndarray:
         return np.sort(np.random.permutation(range(1, 53)).reshape(4, 13))
 
-    def _deal_cards(self) -> None:
-        for spot, cards in enumerate(self._make_shuffled_deck()):
+    def _deal_cards(self, *, cards: Optional[List[Iterable[int]]] = None) -> None:
+        for spot, cards in enumerate(cards or self._make_shuffled_deck()):
             chamber: Chamber = self._chambers[spot]
             chamber.reset()
             chamber.add_cards(cards)
@@ -256,9 +258,9 @@ class Game:
 
     # game flow related methods
 
-    def _start_round(self) -> None:
+    def _start_round(self, *, cards: Optional[List[Iterable[int]]] = None) -> None:
         assert self.num_players == 4, "four players required to start round"
-        self._deal_cards()
+        self._deal_cards(cards=cards)
         self._make_and_set_turn_manager()
         self._num_consecutive_rounds += 1
         self._message(f"🏁 round {self._num_consecutive_rounds} has begun")
@@ -273,9 +275,7 @@ class Game:
         self._start_timer(self._current_player, self._turn_time)
 
     def _start_timer(
-        self,
-        spot: int,
-        seconds: Optional[Union[int, float]]
+        self, spot: int, seconds: Optional[Union[int, float]]
     ) -> None:
         assert self._timer is not None
         self._timers[spot] = self._timer(seconds, self._handle_timeout, spot)
@@ -308,14 +308,14 @@ class Game:
             chamber.select_card(min_card)
             self._unlock(spot)
             self._play_current_hand(spot)
-    
+
         for card in currently_selected_cards:  # could be empty list
             if card != min_card:
                 chamber.select_card(card)
 
     def _stop_timer(self, spot: int) -> None:
         now: datetime = datetime.utcnow()
-        assert self._timers[spot] is not None, 'timer is none for this spot'
+        assert self._timers[spot] is not None, "timer is none for this spot"
         self._timers[spot].cancel()
         self._timers[spot] = None
         if self._reserve_time_use_starts[spot] is not None:
@@ -326,13 +326,6 @@ class Game:
             self._reserve_time_use_starts[spot] = None
 
     def _player_finish(self, spot: int) -> None:
-        assert spot == self._current_player, 'only current player can finish'
-        assert self._chambers[spot].is_empty, (
-            'only players with no cards remaining can finish'
-        )
-        assert isinstance(self._hand_in_play, Hand), (
-            'winning last played must be a hand'
-        )
         self._positions.append(self._current_player)
         self._turn_manager.remove(self._current_player)
         num_unfinished_players = self._num_unfinished_players
@@ -358,9 +351,7 @@ class Game:
 
     def add_or_remove_card(self, spot: int, card: int) -> None:
         chamber: Chamber = self._chambers[spot]
-        # TODO: verify to add or remove to be first empirically; may
-        #       potentially justify looking before leaping if
-        #       distribution is symmetric
+        # EAFP is a magnitude faster than LBYL here
         try:
             chamber.select_card(card)
             if self._is_asking(spot):
@@ -406,7 +397,7 @@ class Game:
                     raise PresidentsError(
                         "the first hand must contain the 3 of clubs"
                     )
-                else:
+                else:  # 1 in hand
                     # any hand with the 3 of clubs is ok
                     self._unlock(spot)
             else:
@@ -427,18 +418,17 @@ class Game:
                 raise PresidentsError(str(e))
 
     def maybe_play_current_hand(self, spot: int) -> None:
-        # TODO: maybe switch order of first 2 cases (throughout)
-        if not self._is_current_player(spot):
-            raise PresidentsError("you can only play a hand on your turn")
-        elif not self._unlocked[spot]:
+        if not self._unlocked[spot]:
             # TODO: console use or dom modification
             self.lock(spot)
             raise PresidentsError("you must unlock before playing")
+        elif not self._is_current_player(spot):
+            raise PresidentsError("you can only play a hand on your turn")
         else:
             self._play_current_hand(spot)
 
     def _play_current_hand(self, spot: int, handle_post: bool = True) -> None:
-        assert self._unlocked[spot], 'play called without unlocking'
+        assert self._unlocked[spot], "play called without unlocking"
         self._stop_timer(spot)
         chamber = self._chambers[spot]
         hand = Hand.copy(chamber.hand)
@@ -487,12 +477,12 @@ class Game:
         self._pass_unlocked[spot] = False
 
     def maybe_pass_turn(self, spot: int) -> None:
-        if not self._is_current_player(spot):
-            raise PresidentsError("you can only pass on your turn")
-        elif not self._pass_unlocked[spot]:
+        if not self._pass_unlocked[spot]:
             # TODO: console use or dom modification
             self._lock_pass(spot)
             raise PresidentsError("you must unlock pass before passing")
+        elif not self._is_current_player(spot):
+            raise PresidentsError("you can only pass on your turn")
         else:
             self._pass_turn(spot)
 
@@ -865,23 +855,27 @@ class Game:
             return self._positions[2] == spot
         except IndexError:
             return False
-    
+
     def _is_asshole(self, spot: int) -> bool:
         try:
             return self._positions[3] == spot
         except IndexError:
             return False
 
+
 class BaseHand:
     """hand at begininning of game; 3 of clubs must be played on it"""
+
     pass
+
+
 base_hand = BaseHand()
 
 
 class TurnManager:
-    '''
+    """
     [spot] is True if spot is unfinished; False if finished
-    '''
+    """
 
     def __init__(self, first) -> None:
         self._cycling_list = cycle([i for i in range(4)])
@@ -892,7 +886,7 @@ class TurnManager:
 
     def __getitem__(self, spot: int) -> bool:
         return self._not_finished_dict[spot]
-    
+
     def __setitem__(self, spot: int, not_finished: bool) -> None:
         self._not_finished_dict[spot] = not_finished
 
