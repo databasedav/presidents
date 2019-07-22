@@ -236,6 +236,11 @@ def test_set_up_testing_base():
     assert game._num_consecutive_rounds == 1
     assert game._current_player is not None
 
+    game.reset()
+    game.add_player('player0')
+    with pytest.raises(AssertionError, match=r'must be empty'):
+        game._set_up_testing_base()
+
 
 def test_get_game_to_trading():
     game: Game = Game()

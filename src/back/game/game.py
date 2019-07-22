@@ -194,10 +194,6 @@ class Game:
         self._start_round(deck=deck)
 
     def _get_game_to_trading(self) -> None:
-        """
-        For use when testing to quickly get to trading state from 4 card
-        state, i.e. each player has one of the 3's.
-        """
         assert self._current_player is not None
         while not self.trading:
             spot: int = self._current_player
