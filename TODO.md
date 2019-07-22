@@ -15,9 +15,10 @@
 * testing view with iframes
 
 * ~~switch to async for base game timeout~~
-    * not doing
+    * not doing; base game has no timer, but can optionally use GreenThread
 
-* easiest to calculate hash
+* ~~easiest to calculate hash~~
+    * check that the hash is uniform
 
 * add support for deciding certain behavior like whether add cards to a hand deselects those cards or not, etc.
 
@@ -27,4 +28,6 @@
 
 * use cookie to remember user login
 
-* 
+* add checks for player being unfinished; finished players literally shouldn't be able to do anything
+
+* add `permitted` checks for `PresidentsError`'s

@@ -96,14 +96,12 @@ def rank_articler(value: int) -> str:
     return f'a{"n" if value in [6, 12] else ""} {ranks[value]}'
 
 
-# TODO: 53 might not be necessary to guarantee unique hashes;
-#       empirically minimize
 def hand_hash(hand: np.ndarray) -> int:
     return int(
         sum(
             [
-                hand[i] * (53 ** (5 - i))  # type: ignore
-                for i in range(5)
+                hand[i - 1] * (51 ** (5 - i))  # type: ignore
+                for i in range(1, 6)
             ]
         )
     )

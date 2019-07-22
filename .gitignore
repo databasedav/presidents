@@ -24,9 +24,10 @@ yarn-error.log*
 __pycache__
 .ipynb_checkpoints
 .cache
-# .pkl
+.pkl
 .mypy_cache
 
 playground.py
+playground.ipynb
 .lock
-/.pytest_cache
+.pytest_cache

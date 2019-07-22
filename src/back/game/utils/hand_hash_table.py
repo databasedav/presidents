@@ -1,23 +1,25 @@
 import numpy as np
 import pickle
+import os
 
 
 from itertools import combinations as comb
 from typing import Dict
-from .utils import hand_hash, cartesian_product_pp, main
+from utils import hand_hash, cartesian_product_pp, main
 
 
 cards = np.arange(1, 53, dtype=np.uint8)
 suits = cards.reshape(13, 4)
-
 
 # hash table for identifying combos
 hand_table: Dict[int, int] = {}
 
 
 def _save_hand_table() -> None:
-    with open("hand_table.pkl", "wb") as file:
-        pickle.dump(hand_table, file, pickle.HIGHEST_PROTOCOL)
+    with open(
+        f"{os.getcwd()}/src/back/game/utils/hand_table.pkl", "wb"
+    ) as file:
+        pickle.dump(hand_table, file)
 
 
 def _add_to_hand_table(hand, id: int) -> None:

@@ -1,10 +1,13 @@
 from ..game.game import Game, PresidentsError, base_hand, NoopTimer
+from ..game.chamber import Chamber
+from ..game.hand import NotPlayableOnError
 import numpy as np
 import pytest
 from eventlet import greenthread
 from eventlet.greenthread import GreenThread
 import time
 from ..game.hand import Hand
+from typing import List
 
 
 # TODO: hacker boi tests will really matter when testing the emitting
@@ -206,7 +209,7 @@ def test_set_up_testing_base():
     assert game._current_player is None
     game._set_up_testing_base()
     assert game.is_full
-    assert all(f'player{i}' in game._names for i in range(4))
+    assert all(f"player{i}" in game._names for i in range(4))
     assert all(chamber.num_cards == 13 for chamber in game._chambers)
     assert game._num_consecutive_rounds == 1
     assert game._current_player is not None
@@ -215,20 +218,24 @@ def test_set_up_testing_base():
         game = Game()
         game.add_player("player0")
         game._set_up_testing_base()
-    
+
     game.reset()
     game._set_up_testing_base(
-        cards=[range(lower, upper) for lower, upper in zip(
-            range(1, 53, 13),
-            range(14, 54, 13)
-        )]
+        deck=[
+            range(lower, upper)
+            for lower, upper in zip(range(1, 53, 13), range(14, 54, 13))
+        ]
     )
     assert game.is_full
-    assert all(f'player{i}' in game._names for i in range(4))
+    assert all(f"player{spot}" in game._names[spot] for spot in range(4))
     assert all(chamber.num_cards == 13 for chamber in game._chambers)
+    assert all(card in game._chambers[0] for card in range(1, 14))
+    assert all(card in game._chambers[1] for card in range(14, 27))
+    assert all(card in game._chambers[2] for card in range(27, 40))
+    assert all(card in game._chambers[3] for card in range(40, 53))
     assert game._num_consecutive_rounds == 1
     assert game._current_player is not None
-    # TODO finish adding tests for feeding custom cards to start_round...
+
 
 def test_get_game_to_trading():
     game: Game = Game()
@@ -315,6 +322,18 @@ def test_deal_cards():
     assert all(chamber.is_empty for chamber in game._chambers)
     game._deal_cards()
     assert all(chamber.num_cards == 13 for chamber in game._chambers)
+    game.reset()
+    game._deal_cards(
+        deck=[
+            range(lower, upper)
+            for lower, upper in zip(range(1, 53, 13), range(14, 54, 13))
+        ]
+    )
+    assert all(chamber.num_cards == 13 for chamber in game._chambers)
+    assert all(card in game._chambers[0] for card in range(1, 14))
+    assert all(card in game._chambers[1] for card in range(14, 27))
+    assert all(card in game._chambers[2] for card in range(27, 40))
+    assert all(card in game._chambers[3] for card in range(40, 53))
 
 
 def test_make_and_set_turn_manager():
@@ -339,6 +358,24 @@ def test_start_round():
     with pytest.raises(AssertionError, match=r"four players"):
         game = Game()
         game._start_round()
+
+    game.reset()
+    for i in range(4):
+        game.add_player(f"player{i}")
+    game._start_round(
+        deck=[
+            range(lower, upper)
+            for lower, upper in zip(range(1, 53, 13), range(14, 54, 13))
+        ]
+    )
+    assert all(chamber.num_cards == 13 for chamber in game._chambers)
+    assert all(card in game._chambers[0] for card in range(1, 14))
+    assert all(card in game._chambers[1] for card in range(14, 27))
+    assert all(card in game._chambers[2] for card in range(27, 40))
+    assert all(card in game._chambers[3] for card in range(40, 53))
+    assert game._turn_manager is not None
+    assert game._num_consecutive_rounds == 1
+    assert 1 in game._chambers[game._current_player]
 
 
 def test_next_player():
@@ -575,6 +612,12 @@ def test_player_finish():
     assert game._is_asshole(spots[0])
     assert game.trading
 
+    # empty chamber assertion
+    game.reset()
+    game._set_up_testing_base()
+    with pytest.raises(AssertionError, match=r"with no cards"):
+        game._player_finish(game._current_player)
+
 
 def test_add_or_remove_card():
     game: Game = Game()
@@ -628,8 +671,9 @@ def test_add_or_remove_card():
     assert not game._unlocked[spot]
 
     # dealing with the hacker bois
-    with pytest.raises(PresidentsError, match=r"don't have this"):
+    with pytest.raises(PresidentsError, match=r"don't have this") as e:
         game.add_or_remove_card(not game._current_player, 1)
+    assert not e.value.permitted
 
     # remove when not unlocked
     assert game._get_current_hand(spot) == Hand([1])
@@ -650,10 +694,24 @@ def test_add_or_remove_card():
     assert not game._unlocked[spot]
 
     # full hand error
-    with pytest.raises(PresidentsError, match=r"hand is full"):
+    with pytest.raises(PresidentsError, match=r"hand is full") as e:
         assert game._get_current_hand(spot).is_empty
         for card in game._chambers[spot]:
             game.add_or_remove_card(spot, card)
+    assert e.value.permitted
+
+    # already finished error
+    assert not game._is_finished(spot)
+    game._turn_manager.remove(spot)
+    assert game._is_finished(spot)
+    with pytest.raises(PresidentsError, match=r"already finished") as e:
+        game.add_or_remove_card(spot, 1)
+    assert not e.value.permitted
+
+
+def test_store_hand():
+    # TODO
+    ...
 
 
 def test_maybe_unlock_play():
@@ -681,8 +739,9 @@ def test_maybe_unlock_play():
     game._unlock_pass(spot)
     assert not game._unlocked[spot]
     assert game._pass_unlocked[spot]
-    with pytest.raises(PresidentsError, match=r"must add cards"):
+    with pytest.raises(PresidentsError, match=r"must add cards") as e:
         game.maybe_unlock_play(spot)
+    assert e.value.permitted
     assert not game._pass_unlocked[spot]
 
     # invalid hand
@@ -697,8 +756,9 @@ def test_maybe_unlock_play():
     game._unlock_pass(spot)
     assert not game._unlocked[spot]
     assert game._pass_unlocked[spot]
-    with pytest.raises(PresidentsError, match=r"play invalid"):
+    with pytest.raises(PresidentsError, match=r"play invalid") as e:
         game.maybe_unlock_play(spot)
+    assert e.value.permitted
     assert not game._pass_unlocked[spot]
 
     # base hand; player with 3 of clubs; no 3 of clubs in hand
@@ -710,8 +770,9 @@ def test_maybe_unlock_play():
     game._unlock_pass(spot)
     assert not game._unlocked[spot]
     assert game._pass_unlocked[spot]
-    with pytest.raises(PresidentsError, match=r"contain the 3"):
+    with pytest.raises(PresidentsError, match=r"contain the 3") as e:
         game.maybe_unlock_play(spot)
+    assert e.value.permitted
     assert not game._pass_unlocked[spot]
 
     # base hand; player other than player with 3 of clubs
@@ -748,7 +809,7 @@ def test_maybe_unlock_play():
         game.maybe_unlock_play(spot)
         assert game._unlocked[spot]
         assert not game._pass_unlocked[spot]
-    
+
     # hand in play is actually a hand; stronger hand
     game.reset()
     game._set_up_testing_base()
@@ -760,7 +821,7 @@ def test_maybe_unlock_play():
     assert game._hand_in_play == Hand([1])
     spot = game._current_player
     min_card: int = game._chambers[spot]._get_min_card()
-    game.add_or_remove_card(spot, min_card) 
+    game.add_or_remove_card(spot, min_card)
     assert game._get_current_hand(spot) == Hand([min_card])
     assert not game._unlocked[spot]
     assert not game._pass_unlocked[spot]
@@ -782,7 +843,7 @@ def test_maybe_unlock_play():
     game.maybe_unlock_play(spot)
     game._play_current_hand(spot)
     assert game._hand_in_play == Hand([max_card])
-    
+
     # go through players until you find a play with a min card that is
     # lower than the above max_card; it's possible that no one has such
     # a card but this is hilariously unlikely
@@ -796,19 +857,28 @@ def test_maybe_unlock_play():
             assert not game._pass_unlocked[spot]
             game._unlock_pass(spot)
             assert game._pass_unlocked[spot]
-            with pytest.raises(PresidentsError, match=r'hand is weaker'):
+            with pytest.raises(PresidentsError, match=r"hand is weaker") as e:
                 game.maybe_unlock_play(spot)
+            assert e.value.permitted
             break
         else:
             game._unlock_pass(spot)
             game._pass_turn(spot)
     assert not game._pass_unlocked[spot]
-    
+
     # hand in play is actually a hand; not playable on
     # keep resetting until the first player has a double 3
     game.reset()
     game._set_up_testing_base()
-    while not sum([card in game._chambers[game._current_player] for card in range(2, 5)]) >= 1:
+    while (
+        not sum(
+            [
+                card in game._chambers[game._current_player]
+                for card in range(2, 5)
+            ]
+        )
+        >= 1
+    ):  # thank you black for this beautiful while condition
         game.reset()
         game._set_up_testing_base()
     spot = game._current_player
@@ -829,8 +899,17 @@ def test_maybe_unlock_play():
     assert not game._pass_unlocked[spot]
     game._unlock_pass(spot)
     assert game._pass_unlocked[spot]
-    with pytest.raises(PresidentsError, match=r'cannot be'):
+    with pytest.raises(PresidentsError, match=r"cannot be") as e:
         game.maybe_unlock_play(spot)
+    assert e.value.permitted
+
+    # already finished error
+    assert not game._is_finished(spot)
+    game._turn_manager.remove(spot)
+    assert game._is_finished(spot)
+    with pytest.raises(PresidentsError, match=r"already finished") as e:
+        game.maybe_unlock_play(spot)
+    assert not e.value.permitted
 
 
 def test_maybe_play_current_hand():
@@ -840,8 +919,9 @@ def test_maybe_play_current_hand():
 
     # hackers bois
     assert not game._unlocked[spot]
-    with pytest.raises(PresidentsError, match=r'you must unlock'):
+    with pytest.raises(PresidentsError, match=r"you must unlock") as e:
         game.maybe_play_current_hand(game._current_player)
+    assert not e.value.permitted
     assert not game._unlocked[spot]
 
     # not current player
@@ -849,9 +929,10 @@ def test_maybe_play_current_hand():
     assert not game._unlocked[spot]
     game.add_or_remove_card(spot, game._chambers[spot]._get_min_card())
     game.maybe_unlock_play(spot)
-    with pytest.raises(PresidentsError, match=r'a hand on'):
+    with pytest.raises(PresidentsError, match=r"a hand on") as e:
         game.maybe_play_current_hand(spot)
-    
+    assert e.value.permitted
+
     # all good
     spot = game._current_player
     assert game._get_current_hand(spot).is_empty
@@ -863,6 +944,242 @@ def test_maybe_play_current_hand():
     game.maybe_play_current_hand(spot)
     assert game._hand_in_play == Hand([1])
 
+    # already finished error
+    assert not game._is_finished(spot)
+    game._turn_manager.remove(spot)
+    assert game._is_finished(spot)
+    with pytest.raises(PresidentsError, match=r"already finished") as e:
+        game.maybe_play_current_hand(spot)
+    assert not e.value.permitted
+
 
 def test_play_current_hand():
+    game: Game = Game()
+    game._set_up_testing_base()
+
+    with pytest.raises(AssertionError, match=r"called without"):
+        game._play_current_hand(game._current_player)
+
+    # other players are not unlocked; no post handling; no passes
+    spot: int = game._current_player
+    game.add_or_remove_card(spot, 1)
+    game.maybe_unlock_play(spot)
+    assert game._timers[spot] is not None
+    assert 1 in game._chambers[spot]
+    assert game._num_consecutive_passes == 0
+    assert game._hand_in_play is base_hand
+    assert game._unlocked[spot]
+    assert all(
+        not game._unlocked[other_spot]
+        for other_spot in game._get_other_spots(spot)
+    )
+    assert game._is_current_player(spot)
+    assert not game._winning_last_played
+    game._play_current_hand(spot, handle_post=False)
+    assert game._timers[spot] is None
+    assert 1 not in game._chambers[spot]
+    assert game._num_consecutive_passes == 0
+    assert game._hand_in_play == Hand([1])
+    assert not game._unlocked[spot]
+    assert all(
+        not game._unlocked[other_spot]
+        for other_spot in game._get_other_spots(spot)
+    )
+    assert game._is_current_player(spot)
+    assert not game._winning_last_played
+
+    # other players not unlocked; handle post; some passes
+    game._post_play_handler(spot)
+    game._unlock_pass(game._current_player)
+    game._pass_turn(game._current_player)
+    game._unlock_pass(game._current_player)
+    game._pass_turn(game._current_player)
+    spot = game._current_player
+    min_card: int = game._chambers[spot]._get_min_card()
+    game.add_or_remove_card(spot, min_card)
+    game.maybe_unlock_play(spot)
+    assert game._timers[spot] is not None
+    assert min_card in game._chambers[spot]
+    assert game._num_consecutive_passes == 2
+    assert game._hand_in_play == Hand([1])
+    assert game._unlocked[spot]
+    assert all(
+        not game._unlocked[other_spot]
+        for other_spot in game._get_other_spots(spot)
+    )
+    assert game._is_current_player(spot)
+    assert not game._winning_last_played
+    game._play_current_hand(spot)
+    assert game._timers[spot] is None
+    assert min_card not in game._chambers[spot]
+    assert game._num_consecutive_passes == 0
+    assert game._hand_in_play == Hand([min_card])
+    assert not game._unlocked[spot]
+    assert all(
+        not game._unlocked[other_spot]
+        for other_spot in game._get_other_spots(spot)
+    )
+    assert not game._is_current_player(spot)
+    assert not game._winning_last_played
+
+    # other players unlocked; handle post; no passes
+    game.reset()
+    game._set_up_testing_base(
+        deck=[
+            range(lower, upper)
+            for lower, upper in zip(range(1, 53, 13), range(14, 54, 13))
+        ]
+    )
+    game.add_or_remove_card(0, 1)
+    game.maybe_unlock_play(0)
+    assert game._timers[0] is not None
+    assert 1 in game._chambers[0]
+    assert game._num_consecutive_passes == 0
+    assert game._hand_in_play is base_hand
+    assert game._unlocked[0]
+    assert all(
+        not game._unlocked[other_spot]
+        for other_spot in game._get_other_spots(0)
+    )
+    game.add_or_remove_card(1, 14)
+    game.add_or_remove_card(1, 15)
+    game.maybe_unlock_play(1)
+    game.add_or_remove_card(2, 27)
+    game.add_or_remove_card(2, 28)
+    game.maybe_unlock_play(2)
+    game.add_or_remove_card(3, 41)
+    game.add_or_remove_card(3, 42)
+    game.maybe_unlock_play(3)
+    assert all(
+        game._unlocked[other_spot] for other_spot in game._get_other_spots(0)
+    )
+    assert game._is_current_player(0)
+    assert not game._winning_last_played
+    game._play_current_hand(0)
+    assert game._timers[0] is None
+    assert 1 not in game._chambers[0]
+    assert game._num_consecutive_passes == 0
+    assert game._hand_in_play == Hand([1])
+    assert not game._unlocked[0]
+    assert all(
+        not game._unlocked[other_spot]
+        for other_spot in game._get_other_spots(0)
+    )
+    assert not game._is_current_player(0)
+    assert not game._winning_last_played
+
+    # handling not playable on
+    game.reset()
+    game._set_up_testing_base(
+        deck=[
+            range(lower, upper)
+            for lower, upper in zip(range(1, 53, 13), range(14, 54, 13))
+        ]
+    )
+    game.add_or_remove_card(0, 1)
+    game.add_or_remove_card(0, 2)
+    game.add_or_remove_card(0, 3)
+    game.add_or_remove_card(0, 4)
+    game.add_or_remove_card(0, 5)
+    assert game._get_current_hand(0).is_bomb
+    game.maybe_unlock_play(0)
+    assert game._timers[0] is not None
+    assert 1 in game._chambers[0]
+    assert game._num_consecutive_passes == 0
+    assert game._hand_in_play is base_hand
+    assert game._unlocked[0]
+    assert all(
+        not game._unlocked[other_spot]
+        for other_spot in game._get_other_spots(0)
+    )
+    game.add_or_remove_card(1, 14)
+    game.maybe_unlock_play(1)
+    assert game._unlocked[1]
+    assert game._is_current_player(0)
+    assert not game._winning_last_played
+    with pytest.raises(NotPlayableOnError, match=r'on a bomb'):
+        game._get_current_hand(1) < game._get_current_hand(0)
+    game._play_current_hand(0)
+    assert game._timers[0] is None
+    assert 1 not in game._chambers[0]
+    assert game._num_consecutive_passes == 0
+    assert game._hand_in_play == Hand([1, 2, 3, 4, 5])
+    assert not game._unlocked[0]
+    assert not game._unlocked[1]
+    assert not game._is_current_player(0)
+    assert not game._winning_last_played
+
+    # don't lock if stronger than hand in play
+    game.reset()
+    game._set_up_testing_base(
+        deck=[
+            range(lower, upper)
+            for lower, upper in zip(range(1, 53, 13), range(14, 54, 13))
+        ]
+    )
+    game.add_or_remove_card(0, 1)
+    game.maybe_unlock_play(0)
+    assert game._timers[0] is not None
+    assert 1 in game._chambers[0]
+    assert game._num_consecutive_passes == 0
+    assert game._hand_in_play is base_hand
+    assert game._unlocked[0]
+    assert all(
+        not game._unlocked[other_spot]
+        for other_spot in game._get_other_spots(0)
+    )
+    game.add_or_remove_card(1, 14)
+    game.maybe_unlock_play(1)
+    assert game._unlocked[1]
+    assert game._is_current_player(0)
+    assert not game._winning_last_played
+    game._play_current_hand(0)
+    assert game._timers[0] is None
+    assert 1 not in game._chambers[0]
+    assert game._num_consecutive_passes == 0
+    assert game._hand_in_play == Hand([1])
+    assert not game._unlocked[0]
+    assert game._unlocked[1]
+    assert not game._is_current_player(0)
+    assert not game._winning_last_played
+
+    # handling player finishes
+    game.reset()
+    game._set_up_testing_base()
+    spot = game._current_player
+    chamber: Chamber = game._chambers[spot]
+    for i, card in enumerate(chamber):
+        if i == 0:
+            continue
+        else:
+            chamber.remove_card(card)
+    assert chamber.num_cards == 1
+    assert 1 in chamber
+    game.add_or_remove_card(spot, 1)
+    game.maybe_unlock_play(spot)
+    assert game._timers[spot] is not None
+    assert 1 in game._chambers[spot]
+    assert game._num_consecutive_passes == 0
+    assert game._hand_in_play is base_hand
+    assert game._unlocked[spot]
+    other_spot: int = not spot
+    game.add_or_remove_card(other_spot, game._chambers[other_spot]._get_min_card())
+    assert not game._unlocked[other_spot]
+    game.maybe_unlock_play(other_spot)
+    assert game._unlocked[other_spot]
+    assert game._is_current_player(spot)
+    assert not game._winning_last_played
+    game._play_current_hand(spot)
+    assert game._timers[spot] is None
+    assert game._chambers[spot].is_empty
+    assert game._num_consecutive_passes == 0
+    assert game._hand_in_play == Hand([1])
+    assert not game._unlocked[spot]
+    assert game._unlocked[other_spot]
+    assert not game._is_current_player(spot)
+    assert game._winning_last_played
+    assert game._is_finished(spot)
+
+
+def test_post_play_handler():
     ...

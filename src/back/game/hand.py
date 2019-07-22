@@ -22,10 +22,7 @@ import os
 
 # TODO create the .pkl if it doesn't exist
 # hash table for identifying hands
-with open(
-    f"{os.path.expanduser('~')}/presidents/src/back/game/utils/hand_table.pkl",
-    "rb",
-) as file:
+with open(f"{os.getcwd()}/src/back/game/utils/hand_table.pkl", "rb") as file:
     hand_table = pickle.load(file)
 
 
@@ -145,6 +142,12 @@ class Hand:
         return not self == other
 
     def _is_comparable(self, other: Hand) -> bool:
+        '''
+        Returns comparability for self to be played on other;
+        one-directional as non-bombs cannot be played on bombs and thus
+        cannot be compared to them, however, bombs can be played on non-
+        bombs and and thus can be compared.
+        '''
         if not self.is_valid or not other.is_valid:
             raise AssertionError(
                 "attempting to compare 1 or more invalid hands."
