@@ -1,5 +1,5 @@
 from faust import Record
-import datetime
+from datetime import datetime
 
 
 class GameClick(Record):
@@ -9,5 +9,7 @@ class GameClick(Record):
     action: str
 
 
-class PlayedHand(Record):
-    hash: int
+class HandPlay(Record):
+    hand_hash: int
+    timestamp: datetime
+    sid: str

@@ -1,16 +1,22 @@
-from .records import GameClick
+from .records import GameClick, HandPlay
 from faust import App
-from ..db import GameClicks
+from ..db.models import GameClicks
 from datetime import timedelta
+from socketio import AsyncRedisManager
+import asyncio
 
 app = App("presidents-app", broker="kafka://localhost:9092")
 
 game_click_topic = app.topic("game_click", value_type=GameClick)
 
-played_hand_topic = app.topic("played_hand", value_type=PlayedHand)
-played_hand_table = app.Table("played_hands", default=int).hopping(
-    size=2, step=1, expires=timedelta(minutes=15)
+hand_play_topic = app.topic("hand_play", value_type=HandPlay)
+hand_player_sids_table = (
+    app.Table("hand_players", default=int)
+    .hopping(size=2, step=1, expires=timedelta(minutes=15))
+    .relative_to_field(HandPlay.timestamp)
 )
+# emits same hand played increment events to appropriate sids
+external_sio = AsyncRedisManager("redis://", write_only=True)
 
 
 @app.agent(game_click_topic)
@@ -23,8 +29,15 @@ async def game_click_agent(game_clicks) -> None:
         ).async_update(timestamps__append=[game_click.timestamp])
 
 
-@app.agent(played_hand_topic)
-async def played_hand_agent(played_hands) -> None:
-    async for played_hand in played_hands:
-        played_hand_table[played_hand.hash] += 1
-        # update all players subscribed to this hash's 2 second window
+@app.agent(hand_play_topic)
+async def hand_play_agent(hand_plays) -> None:
+    async for hand_play in hand_plays:
+        hand_player_sids = hand_player_sids_table[hand_play.hand_hash]
+        hand_player_sids.append(hand_play.sid)
+        await asyncio.gather(
+            *[
+                external_sio.emit("increment_same_hand_players", {}, room=sid)
+                for sid in hand_player_sids
+            ]
+        )
+        hand_player_sids_table[hand_play.hand_hash] = hand_player_sids

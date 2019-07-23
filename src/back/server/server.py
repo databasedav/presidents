@@ -93,8 +93,9 @@ class Server(AsyncNamespace):
         self.game.lock_handler(sid)
 
     def on_play(self, sid) -> None:
+        timestamp: datetime.datetime = datetime.utcnow()
         assert self.game is not None
-        self.game.maybe_play_current_hand(sid)
+        self.game.maybe_play_current_hand(sid, timestamp)
 
     def on_unlock_pass(self, sid) -> None:
         assert self.game is not None

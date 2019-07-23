@@ -29,5 +29,5 @@ __pycache__
 
 playground.py
 playground.ipynb
-.lock
+*.lock
 .pytest_cache

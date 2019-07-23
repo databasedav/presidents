@@ -21,6 +21,7 @@ flake8 = "*"
 black = "*"
 eventlet = "*"
 jupyterlab = "*"
+aioredis = "*"
 
 [requires]
 python_version = "3.7"
