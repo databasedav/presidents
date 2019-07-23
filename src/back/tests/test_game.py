@@ -14,6 +14,7 @@ from typing import List
 #       versions because the client will have changed a variable
 #       allowing them to make an illegal action, and the resulting
 #       backend error should correct this variable value
+# TODO: add GreenThread testing
 
 
 def test_constructor():
@@ -1209,6 +1210,10 @@ def test_post_play_handler():
         game.add_or_remove_card(spot, game._chambers[spot]._get_min_card())
         game.maybe_unlock_play(spot)
         game._play_current_hand(spot)
+    for _ in range(3):
+        game._unlock_pass(game._current_player)
+        game._pass_turn(game._current_player)
+    assert game._is_current_player(spot)
     assert game._chambers[spot].num_cards == 1
     game.add_or_remove_card(spot, game._chambers[spot]._get_min_card())
     game.maybe_unlock_play(spot)
@@ -1224,6 +1229,170 @@ def test_post_play_handler():
 
     # playing on a finishing last played
     game.reset()
-    # game.
+    game._set_up_testing_base(
+        deck=[
+            range(lower, upper)
+            for lower, upper in zip(range(1, 53, 13), range(14, 54, 13))
+        ]
+    )
+    for card in range(1, 14):
+        game.add_or_remove_card(0, card)
+        game.maybe_unlock_play(0)
+        game._play_current_hand(0)
+        if card == 13:
+            break
+        for spot in range(1, 4):
+            game._unlock_pass(spot)
+            game._pass_turn(spot)
+    game.add_or_remove_card(1, 14)
+    game.maybe_unlock_play(1)
+    game._play_current_hand(1, handle_post=False)
+    assert game._finishing_last_played
+    assert game._is_current_player(1)
+    game._post_play_handler(1)
+    assert not game._finishing_last_played
+    assert game._is_current_player(2)
 
+
+def test_maybe_unlock_pass_turn():
+    game: Game = Game()
+    game._set_up_testing_base()
+    spot: int = game._current_player
     
+    # already finished error
+    game._chambers[spot].reset()
+    game._player_finish(spot)
+    with pytest.raises(PresidentsError, match=r'already finished') as e:
+        game.maybe_unlock_pass_turn(spot)
+    assert not e.value.permitted
+
+    # is current player with 3 of clubs
+    game.reset()
+    game._set_up_testing_base()
+    spot = game._current_player
+    assert game._is_current_player(spot)
+    assert game._hand_in_play is base_hand
+    with pytest.raises(PresidentsError, match=r'have the 3') as e:
+        game.maybe_unlock_pass_turn(spot)
+    assert e.value.permitted
+
+    # is current player who can play anyhand
+    game.add_or_remove_card(spot, 1)
+    game.maybe_unlock_play(spot)
+    game.maybe_play_current_hand(spot)
+    for _ in range(3):
+        game._unlock_pass(game._current_player)
+        game._pass_turn(game._current_player)
+    assert game._is_current_player(spot)
+    assert game._hand_in_play is None
+    with pytest.raises(PresidentsError, match=r'play anyhand') as e:
+        game.maybe_unlock_pass_turn(spot)
+    assert e.value.permitted
+
+
+def test_unlock_pass():
+    game: Game = Game()
+    assert not game._unlocked[0]
+    assert not game._pass_unlocked[0]
+    game._unlock_pass(0)
+    assert not game._unlocked[0]
+    assert game._pass_unlocked[0]
+
+    game._unlock(1)
+    assert game._unlocked[1]
+    assert not game._pass_unlocked[1]
+    game._unlock_pass(1)
+    assert not game._unlocked[1]
+    assert game._pass_unlocked[1]
+
+
+def test_lock_pass():
+    game: Game = Game()
+    game._unlock_pass(0)
+    assert game._pass_unlocked[0]
+    game._lock_pass(0)
+    assert not game._pass_unlocked[0]
+
+
+def test_maybe_pass_turn():
+    game: Game = Game()
+    game._set_up_testing_base()
+    spot: int = game._current_player
+    
+    # already finished error
+    game._chambers[spot].reset()
+    game._player_finish(spot)
+    with pytest.raises(PresidentsError, match=r'already finished') as e:
+        game.maybe_pass_turn(spot)
+    assert not e.value.permitted
+
+    # pass is not unlocked
+    game.reset()
+    game._set_up_testing_base()
+    spot = game._current_player
+    assert not game._pass_unlocked[spot]
+    with pytest.raises(PresidentsError, match=r'must unlock pass') as e:
+        game.maybe_pass_turn(spot)
+    assert not e.value.permitted
+
+    # not current player
+    assert not game._pass_unlocked[not spot]
+    game._unlock_pass(not spot)
+    assert game._pass_unlocked[not spot]
+    with pytest.raises(PresidentsError, match=r'only pass on') as e:
+        game.maybe_pass_turn(not spot)
+    assert e.value.permitted
+
+    # is current player and pass unlocked
+    game.add_or_remove_card(spot, 1)
+    game.maybe_unlock_play(spot)
+    game.maybe_play_current_hand(spot)
+    spot = game._current_player
+    game._unlock_pass(spot)
+    assert game._hand_in_play == Hand([1])
+    game.maybe_pass_turn(spot)
+    assert game._hand_in_play == Hand([1])
+    assert not game._is_current_player(spot)
+
+
+def test_pass_turn():
+    game: Game = Game()
+    game._set_up_testing_base()
+    spot: int = game._current_player
+    with pytest.raises(AssertionError, match=r'pass called'):
+        game._pass_turn(spot)
+    game.add_or_remove_card(spot, 1)
+    game.maybe_unlock_play(spot)
+    game.maybe_play_current_hand(spot)
+
+    # don't handle post
+    spot = game._current_player
+    game.maybe_unlock_pass_turn(spot)
+    assert game._timers[spot] is not None
+    assert game._pass_unlocked[spot]
+    assert game._num_consecutive_passes == 0
+    assert game._is_current_player(spot)
+    game._pass_turn(spot, handle_post=False)
+    assert game._timers[spot] is None
+    assert not game._unlocked[spot]
+    assert game._num_consecutive_passes == 1
+    assert game._is_current_player(spot)
+
+    # handle post
+    game._post_pass_handler()
+    assert not game._is_current_player(spot)
+    spot = game._current_player
+    game.maybe_unlock_pass_turn(spot)
+    assert game._timers[spot] is not None
+    assert game._pass_unlocked[spot]
+    assert game._num_consecutive_passes == 1
+    assert game._is_current_player(spot)
+    game._pass_turn(spot)
+    assert game._timers[spot] is None
+    assert not game._unlocked[spot]
+    assert game._num_consecutive_passes == 2
+    assert not game._is_current_player(spot)
+
+
+def test_post_pass_handler():
+    ...

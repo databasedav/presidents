@@ -40,3 +40,5 @@
     * users should not continue to get updates after the 2 second block that they fell in at play time (this should be the time that the play command was received by the server) expires
 
 * add in-game chat
+
+* test messaging

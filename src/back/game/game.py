@@ -424,13 +424,13 @@ class Game:
                         permitted=True,
                     )
                 else:  # 1 in hand
-                    # any hand with the 3 of clubs is ok
+                    # anyhand with the 3 of clubs is ok
                     self._unlock(spot)
             else:
                 # other players (without the 3 of clubs) can unlock
                 # whatever hand they want
                 self._unlock(spot)
-        elif hip is None:  # current player won last hand and can play any hand
+        elif hip is None:  # current player won last hand and can play anyhand
             self._unlock(spot)
         else:
             try:
@@ -518,7 +518,7 @@ class Game:
                     permitted=True,
                 )
             if self._hand_in_play is None:
-                raise PresidentsError("you can play any hand", permitted=True)
+                raise PresidentsError("you can play anyhand", permitted=True)
         self._unlock_pass(spot)
 
     def _unlock_pass(self, spot: int) -> None:
@@ -538,7 +538,7 @@ class Game:
             raise PresidentsError(
                 "you must unlock pass before passing", permitted=False
             )
-        elif not self._is_current_player(spot):
+        if not self._is_current_player(spot):
             raise PresidentsError(
                 "you can only pass on your turn", permitted=True
             )
