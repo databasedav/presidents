@@ -1,5 +1,6 @@
 from ..game import EmittingGame
-from ..data import game_click_agent, GameClick
+from ..data.stream.agents import game_click_agent
+from ..data.stream.agents import GameClick
 
 from socketio import AsyncNamespace
 
@@ -8,6 +9,8 @@ from itertools import cycle
 from datetime import datetime
 
 names = cycle(["aa", "bb", "cc", "dd"])
+
+
 
 
 class Server(AsyncNamespace):
@@ -22,7 +25,7 @@ class Server(AsyncNamespace):
     def __init__(
         self, server_id: str, name: str, game: Optional[EmittingGame] = None
     ) -> None:
-        super().__init__(namespace=f"/server_{server_id}")
+        super().__init__(namespace=f"/server={server_id}")
         self.name: str = name
         self.game: Optional[EmittingGame] = game
 

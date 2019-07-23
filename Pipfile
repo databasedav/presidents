@@ -4,6 +4,7 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+pytest = "*"
 
 [packages]
 ipython = "*"
@@ -22,6 +23,9 @@ black = "*"
 eventlet = "*"
 jupyterlab = "*"
 aioredis = "*"
+uvloop = "*"
+pytest-asyncio = "*"
+uvicorn = "*"
 
 [requires]
 python_version = "3.7"

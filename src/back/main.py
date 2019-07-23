@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from typing import Dict
 import socketio
 import logging
-from app.server import ServerBrowser
+from .server.server_browser import ServerBrowser
 import uvicorn
 
 
@@ -10,13 +10,12 @@ logger = logging.getLogger(__name__)
 
 
 app = FastAPI(debug=True)
-sio = socketio.AsyncServer(async_mode="asgi")
+sio = socketio.AsyncServer(async_mode="asgi", logger=True)
 sio_asgi_app = socketio.ASGIApp(
     socketio_server=sio, other_asgi_app=app, socketio_path="/socket.io"
 )
 
-
-server_browser = ServerBrowser("US-West")
+server_browser = ServerBrowser("us-west")
 sio.register_namespace(server_browser)
 for name in ["hello"]:
     server_browser.add_server(name, server_id="test")

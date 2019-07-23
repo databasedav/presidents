@@ -21,12 +21,9 @@ logger = logging.getLogger(__name__)
 # TODO: add pre-game chat server that also has "copy server id" button
 
 
-# producer = Producer({'bootstrap.servers': 'localhost:9092'})
-
-
 class ServerBrowser(AsyncNamespace):
     def __init__(self, server_browser_id: str):
-        super().__init__(namespace=f"/server_browser_{server_browser_id}")
+        super().__init__(namespace=f"/server_browser={server_browser_id}")
         self._server_dict: Dict[str, Server] = dict()
 
     def on_connect(self, sid, payload):
@@ -54,9 +51,8 @@ class ServerBrowser(AsyncNamespace):
         server_id: str = server_id or str(uuid.uuid4())
         server: Server = Server(server_id, name)
         self._server_dict[server_id] = server
-        self.server.register_namespace(
-            server
-        )  # self.server is the socket.io server
+        # self.server is the socket.io server
+        self.server.register_namespace(server)
 
     async def on_join_server(self, sid, payload):
         await self._join_server(sid, payload["server_id"], payload["name"])

@@ -42,3 +42,5 @@
 * add in-game chat
 
 * test messaging
+
+* separate rooms for players and spectators so namespace can be used to emit to all people sitting in a server (since namespace is unique per server) and game specific events (that should not be visible to spectators) can be emitted to the 'players' room
