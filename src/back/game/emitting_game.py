@@ -14,15 +14,19 @@ from . import (
     PresidentsError,
 )
 
+from datetime import datetime
+
+from ..data.stream.records import HandPlay
+from ..data.stream.agents import hand_play_agent
 
 # TODO: decide what to do for the removal of asking options
-# TODO: add reserve time
 
 
 class EmittingGame(Game):
     def __init__(self, sio: AsyncServer, namespace: str):
 
         super().__init__(populate_chambers=False)
+        # TODO: server stuff (including emitting should be entirely handled by the Server, which is an AsyncNamespace)
         self._sio: AsyncServer = sio
         self._namespace: str = namespace
         self._chambers: List[Optional[EmittingChamber]] = [
@@ -129,19 +133,26 @@ class EmittingGame(Game):
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
 
-    async def maybe_play_current_hand(self, sid: str) -> None:
+    async def maybe_play_current_hand(
+        self, sid: str, timestamp: datetime
+    ) -> None:
         spot: int = self._get_spot(sid)
         try:
-            super().maybe_play_current_hand(spot)
+            super().maybe_play_current_hand(spot, sid=sid, timestamp=timestamp)
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
 
-    async def _play_current_hand(self, spot):
-        super()._play_current_hand(spot, handle_post=False)
+    async def _play_current_hand(self, spot, **kwargs):
+        hand: Hand = super()._play_current_hand(spot, handle_post=False)
+        await hand_play_agent.send(
+            HandPlay(
+                hand_hash=hash(hand),
+                sid=kwargs.get("sid"),
+                timestamp=kwargs.get("timestamp"),
+            )
+        )
         self._set_dot_color(spot, "blue")
-        for other_spot in range(4):
-            if other_spot == spot or other_spot in self._positions:
-                continue
+        for other_spot in self._get_other_spots(spot, exclude_finished=True):
             self._set_dot_color(other_spot, "red")
         await self._emit_to_all_players(
             "set_cards_remaining",

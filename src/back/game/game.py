@@ -95,7 +95,7 @@ class Game:
         # played on it; when it is None, anyhand can be played on it
         self._hand_in_play: Optional[Union[BaseHand, Hand]] = base_hand
         self._num_consecutive_passes: int = 0
-        self._winning_last_played: bool = False
+        self._finishing_last_played: bool = False
         self._positions: List[int] = list()
         self._unlocked: List[bool] = [False for _ in range_4]
         self._pass_unlocked: List[bool] = [False for _ in range_4]
@@ -144,7 +144,7 @@ class Game:
         self._chambers = [Chamber() for _ in range_4]
         self._hand_in_play = base_hand
         self._num_consecutive_passes = 0
-        self._winning_last_played = False
+        self._finishing_last_played = False
         self._positions = list()
         self._unlocked = [False for _ in range_4]
         self._pass_unlocked = [False for _ in range_4]
@@ -349,7 +349,7 @@ class Game:
             self._set_vice_president(spot)
             self._message(f"🏆 {self._names[spot]} is vice president 🥈")
             self._next_player()
-        else:
+        else:  # num_unfinished
             self._set_vice_asshole(spot)
             self._current_player = next(self._turn_manager)
             self._set_asshole(self._current_player)
@@ -444,7 +444,7 @@ class Game:
             except NotPlayableOnError as e:
                 raise PresidentsError(str(e), permitted=True)
 
-    def maybe_play_current_hand(self, spot: int) -> None:
+    def maybe_play_current_hand(self, spot: int, **kwargs) -> None:
         if self._is_finished(spot):
             raise PresidentsError(
                 "you have already finished this round", permitted=False
@@ -459,9 +459,9 @@ class Game:
                 "you can only play a hand on your turn", permitted=True
             )
         else:
-            self._play_current_hand(spot)
+            self._play_current_hand(spot, **kwargs)
 
-    def _play_current_hand(self, spot: int, handle_post: bool = True) -> None:
+    def _play_current_hand(self, spot: int, handle_post: bool = True) -> Hand:
         """
         In this class' context, playing a hand means only to place the
         hand in play while appropriately changing the state such that
@@ -495,14 +495,15 @@ class Game:
                     self.lock(other_spot)
         if handle_post:
             self._post_play_handler(spot)
+        return hand  # for EmittingGame to use
 
     def _post_play_handler(self, spot: int) -> None:
         if self._chambers[spot].is_empty:
             # player_finish takes care of going to the next player
-            self._winning_last_played = True
+            self._finishing_last_played = True
             self._player_finish(spot)
         else:
-            self._winning_last_played = False
+            self._finishing_last_played = False
             self._next_player()
 
     def maybe_unlock_pass_turn(self, spot: int) -> None:
@@ -555,17 +556,17 @@ class Game:
 
     def _post_pass_handler(self) -> None:
         # all remaining players passed on a winning hand
-        if self._winning_last_played:
+        if self._finishing_last_played:
             if self._num_consecutive_passes == self._num_unfinished_players:
                 self._clear_hand_in_play()
-                self._winning_last_played = False
+                self._finishing_last_played = False
                 self._next_player()
             else:
                 self._next_player()
         # all other players passed on a hand
         elif self._num_consecutive_passes == self._num_unfinished_players - 1:
             self._clear_hand_in_play()
-            self._winning_last_played = False
+            self._finishing_last_played = False
             self._next_player()
         else:
             self._next_player()
@@ -577,7 +578,7 @@ class Game:
 
     def _initiate_trading(self) -> None:
         self._num_consecutive_passes: int = 0
-        self._winning_last_played: bool = False
+        self._finishing_last_played: bool = False
         self._timers: List[Optional[Timeout]] = [None for _ in range(4)]
         self._selected_asking_option: List[Optional[int]] = [
             None for _ in range(4)
@@ -795,19 +796,6 @@ class Game:
         self._lock_if_unlocked(spot)
         self._lock_if_pass_unlocked(spot)
 
-    def _get_other_spots(
-        self, spot: int, *, exclude_finished: bool = False
-    ) -> Generator[int, None, None]:
-        for maybe_other_spot in range(4):
-            if (
-                maybe_other_spot == spot
-                or exclude_finished
-                and self._is_finished(maybe_other_spot)
-            ):
-                continue
-            else:
-                yield maybe_other_spot
-
     def _message(self, message: str) -> None:
         print(message)
 
@@ -838,6 +826,19 @@ class Game:
     def _get_current_player_name(self) -> str:
         return self._names[self._current_player]
 
+    def _get_other_spots(
+        self, spot: int, *, exclude_finished: bool = False
+    ) -> Generator[int, None, None]:
+        for maybe_other_spot in range(4):
+            if (
+                maybe_other_spot == spot
+                or exclude_finished
+                and self._is_finished(maybe_other_spot)
+            ):
+                continue
+            else:
+                yield maybe_other_spot
+
     # setters
 
     def _set_hand_in_play(self, hand: Hand) -> None:
@@ -863,10 +864,7 @@ class Game:
         self.trading = trading
 
     def _set_giver(self, spot: int, giver: bool) -> None:
-        # TODO: is this the correct way to do this?; i.e. a case where
-        #       the base game class need not do anything when setting
-        #       the giver
-        pass
+        pass  # this does something in EmittingGame
 
     def _set_takes_remaining(self, spot: int, takes_remaining: int) -> None:
         self._takes_remaining[spot] = takes_remaining
