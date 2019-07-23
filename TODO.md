@@ -31,3 +31,5 @@
 * add checks for player being unfinished; finished players literally shouldn't be able to do anything
 
 * add `permitted` checks for `PresidentsError`'s
+
+* rewrite front end in typescript
