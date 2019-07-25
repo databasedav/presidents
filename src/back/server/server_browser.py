@@ -40,11 +40,13 @@ class ServerBrowser(AsyncNamespace):
         ]
 
     async def on_add_server(self, sid, payload):
-        self._add_server(payload["name"])
-        try:
-            await self._refresh()
-        except AttributeError:  # nobody has entered the server browser
-            pass
+        logger.info('fuckkckckakdakckkck')
+        self.add_server(payload["name"])
+        logger.info(list(self._server_dict.items()))
+        # try:
+        #     await self._refresh()
+        # except AttributeError:  # nobody has entered the server browser
+        #     pass
 
     # allows multiple servers with the same name (will have different server ids)
     def add_server(self, name: str, server_id: str = None):
