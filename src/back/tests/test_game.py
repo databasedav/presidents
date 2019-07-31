@@ -1395,4 +1395,9 @@ def test_pass_turn():
 
 
 def test_post_pass_handler():
-    ...
+    game: Game = Game()
+    game._set_up_testing_base()
+    
+    
+    # all remaining players passed on a winning hand
+

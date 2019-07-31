@@ -43,7 +43,15 @@ class Bot:
     
 
 class ClientBot(Bot, AsyncClient):
+    '''
+    The client bot has the same 'view' of the game state that a human
+    player does and communicates with the server with the same socket.io
+    events that the web client does.
+    '''
     def __init__(self)
         ...
     
     def 
+
+# TODO: orchestrator for client bots that auto rejoins them to reset
+#       games to avoid having to deal with trading

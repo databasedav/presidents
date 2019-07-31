@@ -8,7 +8,6 @@ pytest = "*"
 
 [packages]
 ipython = "*"
-fastapi = "*"
 python-socketio = "*"
 numpy = "*"
 llist = "*"
@@ -26,6 +25,9 @@ aioredis = "*"
 uvloop = "*"
 pytest-asyncio = "*"
 uvicorn = "*"
+fastapi = "*"
+requests = "*"
+pytest-xdist = "*"
 
 [requires]
 python_version = "3.7"
