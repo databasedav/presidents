@@ -2,6 +2,7 @@ from cassandra.cqlengine.models import Model
 from cassandra.cqlengine.columns import (
     Boolean,
     DateTime,
+    Integer,
     List,
     Map,
     Text,
@@ -69,7 +70,7 @@ class Round(Model):
     game_id = UUID(required=True)
     start_timestamp = DateTime(required=True)
     end_timestamp = DateTime(required=False)
-    game_first = Boolean(required=True)
+    round_number = Integer(required=True)
 
 
 class RoundCards(Model):

@@ -74,7 +74,7 @@ class Server(AsyncNamespace):
         if self.game.num_players == 4:
             self.game._start_round(testing=True)  # TODO
 
-    async def on_card_click(self, sid, payload) -> None:
+    async def on_card_click(self, sid: str, payload: Dict[str, Union[]]) -> None:
         timestamp: datetime.datetime = datetime.utcnow()
         assert self.game is not None
         self.game.add_or_remove_card(sid, payload["card"])

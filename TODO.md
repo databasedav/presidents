@@ -44,3 +44,13 @@
 * test messaging
 
 * separate rooms for players and spectators so namespace can be used to emit to all people sitting in a server (since namespace is unique per server) and game specific events (that should not be visible to spectators) can be emitted to the 'players' room
+
+* full demonstration of the same hand played feature via docker-compose
+    * multiple container setup
+        * uvicorn server
+        * faust workers
+        * dumb bot farm
+        * viewing container which just allows you to play any card/hand (this can potentially be wrapped in a vue) 
+    * this doesn't actually need the database to be set up but is obviously preferred to show off more stuff
+
+* write out complete rules of presidents
