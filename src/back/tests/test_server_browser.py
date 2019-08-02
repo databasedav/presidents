@@ -5,6 +5,7 @@ import pytest
 from starlette.testclient import TestClient
 from ..main import app
 from ..server import ServerBrowser
+from ..bots.bot_farm import Client, ClientBot
 from fastapi import FastAPI
 from socketio import AsyncServer, AsyncClient, ASGIApp
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
@@ -31,14 +32,40 @@ PORT = 5000
 #     subprocess.Popen(commands.split())
 
 
+# @pytest.mark.asyncio
+# async def test_on_add_server():
+#     test_passed = list()
+#     client = AsyncClient(logger=True)
+#     await client.connect(f'http://{HOST}:{PORT}', namespaces=['/server_browser=us-west'])
+#     await client.emit('add_server', {'name': 'test'}, namespace='/server_browser=us-west', callback=lambda: test_passed.append(True))
+#     await client.sleep(0.01)
+#     assert test_passed[0]
+
+#     client = ClientBot(logger=True)
+#     await client.connect(f'http://{HOST}:{PORT}', namespaces=['/server_browser=us-west'])
+#     assert not client.wut
+#     await client.emit('test')
+#     await client.sleep(0.01)
+#     return client.wut
+
 @pytest.mark.asyncio
-async def test_on_add_server():
-    test_passed = list()
-    client = AsyncClient(logger=True)
-    await client.connect(f'http://{HOST}:{PORT}', namespaces=['/server_browser=us-west'])
-    await client.emit('add_server', {'name': 'test'}, namespace='/server_browser=us-west', callback=lambda: test_passed.append(True))
-    await client.sleep(0.01)
-    assert test_passed[0]
+async def test_lil_baby_game():
+    clients = [Client(logger=True) for _ in range(4)]
+    await asyncio.gather(*[client.connect(f'http://{HOST}:{PORT}', namespaces=['/server_browser=us-west']) for client in clients])
+    await client[0].emit('add_server', {'name': 'test', 'server_id': '12345'}, namespace='/server_browser=us-west')
+    for client in clients:
+        client.register_namespace(ClientBot('/server=12345'))
+    await asyncio.gather(*[client.emit('join_server', {'server_id': '12345', 'name': str(i)}, namespace='/server_browser=us-west') for i, client in enumerate(clients)])
+    await client[0].sleep(20)
+    await asyncio.sleep(10000)
+
+# async def main():
+#     res = await test_on_add_server()
+#     print(res)
+#     return res
+
+# if __name__ == '__main__':
+#     asyncio.run(main())
 
 # need to decide what I am testing exactly with this
 

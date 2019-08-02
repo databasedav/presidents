@@ -6,6 +6,8 @@ from socketio import AsyncServer
 from typing import Dict, List, Any, Optional
 import numpy as np
 
+# from ..server.server import Server
+
 
 # TODO: make repr's more meaningful
 # TODO: type hints
@@ -17,18 +19,13 @@ class EmittingChamber(Chamber):
     to be debugged without needing an active HTTP request.
     """
 
-    def __init__(
-        self, sio: AsyncServer, namespace: str, cards: np.ndarray = None
-    ) -> None:
+    def __init__(self, server: Server, cards: np.ndarray = None) -> None:
         super().__init__(cards)
-        self._namespace: str = namespace
-        self._sio: AsyncServer = sio
+        self._server: Server = server
         self._sid: str = None
 
-    def _emit(self, event: str, payload: Dict[str, Any]):
-        self._sio.emit(
-            event, payload, namespace=self._namespace, server=self._sid
-        )
+    def _emit(self, *args, **kwargs):
+        self._server.emit(*args, room=self._sid, **kwargs)
 
     def reset(self) -> None:
         self._emit("clear_cards", {})
@@ -43,14 +40,13 @@ class EmittingChamber(Chamber):
         for hand_node in self._hands.iter_nodes():
             hand_node.set_sid(sid)
 
-    # TODO: card maybe both a python int and np.uint8
-    def add_card(self, card: np.uint8) -> None:
-        self._emit("add_card", {"card": int(card)})
-        super().add_card(card)
+    async def add_card(self, card: int, **kwargs) -> None:
+        super().add_card(card, **kwargs)
+        await self._emit("add_card", {"card": card})
 
-    def remove_card(self, card: np.uint8, check: bool = True) -> None:
-        super().remove_card(card, check)
-        self._emit("remove_card", {"card": int(card)})
+    async def remove_card(self, card: int, **kwargs) -> None:
+        super().remove_card(card, **kwargs)
+        await self._emit("remove_card", {"card": card})
         self._emit_update_current_hand_str()
 
     def add_hand(self, hand: Hand) -> None:
@@ -66,7 +62,7 @@ class EmittingChamber(Chamber):
         )
         hand_pointer_nodes: List[HandPointerNode] = list()
         hand_node: HandNode = EmittingHandNode(
-            hand_pointer_nodes, self._namespace, self._sio
+            hand_pointer_nodes, self._server
         )
         for card in hand:
             hand_pointer_node: HandPointerNode = HandPointerNode(hand_node)
@@ -91,23 +87,17 @@ class EmittingChamber(Chamber):
 
 class EmittingHandNode(HandNode):
     def __init__(
-        self,
-        hand_pointer_nodes: List[HandPointerNode],
-        socketio: SocketIO,
-        namespace: str,
+        self, hand_pointer_nodes: List[HandPointerNode], server
     ) -> None:
-        self._socketio: SocketIO = socketio
-        self._namespace: str = namespace
+        self._server: Server = server
         self._id = None  # TODO: random number or string (which one is better?)
-        self._sid = None
+        self._sid: str = None
 
     def __repr__(self):
-        return "EmittingHandNode"
+        return "EmittingHandNode"  # TODO
 
-    def _emit(self, event, paylaod) -> None:
-        self._socketio.emit(
-            event, {"id": self._id}, namespace=self._namespace, room=self._sid
-        )
+    def _emit(self, *args, **kwargs) -> None:
+        self._server.emit(*args, {"id": self._sid}, room=self._sid, **kwargs)
 
     def set_sid(self, sid: str) -> None:
         self._sid = sid

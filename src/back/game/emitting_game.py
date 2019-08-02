@@ -3,6 +3,9 @@ from typing import Callable, Dict, List, Optional, Set, Union
 from bidict import bidict
 from socketio import AsyncServer
 
+# from ..server.server import Server
+Server = None
+
 from . import (
     Hand,
     DuplicateCardError,
@@ -23,14 +26,11 @@ from ..data.stream.agents import hand_play_agent
 
 
 class EmittingGame(Game):
-    def __init__(self, sio: AsyncServer, namespace: str):
-
-        super().__init__(populate_chambers=False)
+    def __init__(self, server: Server):
         # TODO: server stuff (including emitting should be entirely handled by the Server, which is an AsyncNamespace)
-        self._sio: AsyncServer = sio
-        self._namespace: str = namespace
+        self._server: Server = server
         self._chambers: List[Optional[EmittingChamber]] = [
-            EmittingChamber(self._sio, self._namespace) for _ in range(4)
+            EmittingChamber(self._server) for _ in range(4)
         ]
         self._server: Optional[str] = None
         self._spot_sid_bidict: bidict = bidict()
@@ -379,21 +379,8 @@ class EmittingGame(Game):
 
     # emitters
 
-    async def _emit(
-        self,
-        event: str,
-        payload: Dict[str, Union[int, str, List[int]]],
-        sid: str,
-        *,
-        callback: Optional[Callable] = None
-    ) -> None:
-        await self._sio.emit(
-            event,
-            payload,
-            namespace=self._namespace,
-            room=sid,
-            callback=callback,
-        )
+    async def _emit(self, *args, **kwargs) -> None:
+        await self._server.emit(*args, **kwargs)
 
     async def _emit_to_all_players(
         self,

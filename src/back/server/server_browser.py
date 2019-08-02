@@ -40,9 +40,7 @@ class ServerBrowser(AsyncNamespace):
         ]
 
     async def on_add_server(self, sid, payload):
-        logger.info('fuckkckckakdakckkck')
-        self.add_server(payload["name"])
-        logger.info(list(self._server_dict.items()))
+        self.add_server(**payload)
         # try:
         #     await self._refresh()
         # except AttributeError:  # nobody has entered the server browser
@@ -61,7 +59,7 @@ class ServerBrowser(AsyncNamespace):
 
     async def _join_server(self, sid: str, server_id: str, name: str):
         assert server_id in self._server_dict
-        # TODO timeout if server isn't join in a few seconds; prompt user to retry
+        # TODO timeout if server isn't joined in a few seconds; prompt user to retry
         await self._server_dict[server_id].join(self.namespace, sid, name)
 
     async def on_refresh(self, sid) -> None:
@@ -72,4 +70,11 @@ class ServerBrowser(AsyncNamespace):
             "refresh",
             {"servers": self._server_list()},
             callback=lambda: print("refreshed"),
+        )
+
+    def _get_servers(name: str):
+        return list(
+            filter(
+                lambda server: server.name == name, self._server_dict.values()
+            )
         )

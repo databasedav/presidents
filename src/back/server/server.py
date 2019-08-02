@@ -4,13 +4,11 @@ from ..data.stream.agents import GameClick
 
 from socketio import AsyncNamespace
 
-from typing import Optional
+from typing import Optional, Dict
 from itertools import cycle
 from datetime import datetime
 
 names = cycle(["aa", "bb", "cc", "dd"])
-
-
 
 
 class Server(AsyncNamespace):
@@ -36,7 +34,7 @@ class Server(AsyncNamespace):
         self, server_browser_namespace: str, sid: str, name: str
     ) -> None:
         if not self.game:
-            self._set_game(EmittingGame(self.server, self.namespace))
+            self._set_game(EmittingGame(self))
         elif self.game.is_full:
             await self.emit(
                 "server_full", namespace=server_browser_namespace, room=sid
@@ -50,8 +48,15 @@ class Server(AsyncNamespace):
         )
         assert self.game is not None
         self.game.add_player(sid, name)
-        if self.game.num_players == 1:
-            self.game._start_round(testing=True)  # TODO
+        if self.game.num_players == 4:
+            self.game._start_round(
+                deck=[
+                    range(lower, upper)
+                    for lower, upper in zip(
+                        range(1, 53, 13), range(14, 54, 13)
+                    )
+                ]
+            )
 
     def on_connect(self, sid, payload):
         self.test_join(
@@ -74,7 +79,7 @@ class Server(AsyncNamespace):
         if self.game.num_players == 4:
             self.game._start_round(testing=True)  # TODO
 
-    async def on_card_click(self, sid: str, payload: Dict[str, Union[]]) -> None:
+    async def on_card_click(self, sid: str, payload: Dict) -> None:
         timestamp: datetime.datetime = datetime.utcnow()
         assert self.game is not None
         self.game.add_or_remove_card(sid, payload["card"])

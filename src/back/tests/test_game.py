@@ -238,8 +238,8 @@ def test_set_up_testing_base():
     assert game._current_player is not None
 
     game.reset()
-    game.add_player('player0')
-    with pytest.raises(AssertionError, match=r'must be empty'):
+    game.add_player("player0")
+    with pytest.raises(AssertionError, match=r"must be empty"):
         game._set_up_testing_base()
 
 
@@ -1103,7 +1103,7 @@ def test_play_current_hand():
     assert game._unlocked[1]
     assert game._is_current_player(0)
     assert not game._finishing_last_played
-    with pytest.raises(NotPlayableOnError, match=r'on a bomb'):
+    with pytest.raises(NotPlayableOnError, match=r"on a bomb"):
         game._get_current_hand(1) < game._get_current_hand(0)
     game._play_current_hand(0)
     assert game._timers[0] is None
@@ -1169,7 +1169,9 @@ def test_play_current_hand():
     assert game._hand_in_play is base_hand
     assert game._unlocked[spot]
     other_spot: int = not spot
-    game.add_or_remove_card(other_spot, game._chambers[other_spot]._get_min_card())
+    game.add_or_remove_card(
+        other_spot, game._chambers[other_spot]._get_min_card()
+    )
     assert not game._unlocked[other_spot]
     game.maybe_unlock_play(other_spot)
     assert game._unlocked[other_spot]
@@ -1258,11 +1260,11 @@ def test_maybe_unlock_pass_turn():
     game: Game = Game()
     game._set_up_testing_base()
     spot: int = game._current_player
-    
+
     # already finished error
     game._chambers[spot].reset()
     game._player_finish(spot)
-    with pytest.raises(PresidentsError, match=r'already finished') as e:
+    with pytest.raises(PresidentsError, match=r"already finished") as e:
         game.maybe_unlock_pass_turn(spot)
     assert not e.value.permitted
 
@@ -1272,7 +1274,7 @@ def test_maybe_unlock_pass_turn():
     spot = game._current_player
     assert game._is_current_player(spot)
     assert game._hand_in_play is base_hand
-    with pytest.raises(PresidentsError, match=r'have the 3') as e:
+    with pytest.raises(PresidentsError, match=r"have the 3") as e:
         game.maybe_unlock_pass_turn(spot)
     assert e.value.permitted
 
@@ -1285,7 +1287,7 @@ def test_maybe_unlock_pass_turn():
         game._pass_turn(game._current_player)
     assert game._is_current_player(spot)
     assert game._hand_in_play is None
-    with pytest.raises(PresidentsError, match=r'play anyhand') as e:
+    with pytest.raises(PresidentsError, match=r"play anyhand") as e:
         game.maybe_unlock_pass_turn(spot)
     assert e.value.permitted
 
@@ -1318,11 +1320,11 @@ def test_maybe_pass_turn():
     game: Game = Game()
     game._set_up_testing_base()
     spot: int = game._current_player
-    
+
     # already finished error
     game._chambers[spot].reset()
     game._player_finish(spot)
-    with pytest.raises(PresidentsError, match=r'already finished') as e:
+    with pytest.raises(PresidentsError, match=r"already finished") as e:
         game.maybe_pass_turn(spot)
     assert not e.value.permitted
 
@@ -1331,7 +1333,7 @@ def test_maybe_pass_turn():
     game._set_up_testing_base()
     spot = game._current_player
     assert not game._pass_unlocked[spot]
-    with pytest.raises(PresidentsError, match=r'must unlock pass') as e:
+    with pytest.raises(PresidentsError, match=r"must unlock pass") as e:
         game.maybe_pass_turn(spot)
     assert not e.value.permitted
 
@@ -1339,7 +1341,7 @@ def test_maybe_pass_turn():
     assert not game._pass_unlocked[not spot]
     game._unlock_pass(not spot)
     assert game._pass_unlocked[not spot]
-    with pytest.raises(PresidentsError, match=r'only pass on') as e:
+    with pytest.raises(PresidentsError, match=r"only pass on") as e:
         game.maybe_pass_turn(not spot)
     assert e.value.permitted
 
@@ -1359,7 +1361,7 @@ def test_pass_turn():
     game: Game = Game()
     game._set_up_testing_base()
     spot: int = game._current_player
-    with pytest.raises(AssertionError, match=r'pass called'):
+    with pytest.raises(AssertionError, match=r"pass called"):
         game._pass_turn(spot)
     game.add_or_remove_card(spot, 1)
     game.maybe_unlock_play(spot)
@@ -1397,7 +1399,5 @@ def test_pass_turn():
 def test_post_pass_handler():
     game: Game = Game()
     game._set_up_testing_base()
-    
-    
-    # all remaining players passed on a winning hand
 
+    # all remaining players passed on a winning hand
