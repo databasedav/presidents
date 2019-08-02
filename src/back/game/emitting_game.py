@@ -1,7 +1,9 @@
-from typing import Callable, Dict, List, Optional, Set, Union
+from typing import Callable, Dict, List, Optional, Set, Union, Iterable
 
 from bidict import bidict
 from socketio import AsyncServer
+
+import asyncio
 
 # from ..server.server import Server
 Server = None
@@ -23,12 +25,16 @@ from ..data.stream.records import HandPlay
 from ..data.stream.agents import hand_play_agent
 
 # TODO: decide what to do for the removal of asking options
-
+# TODO: spectators should get a completely hidden view of the game being
+#       played and maybe if you are friends with another player, you can
+#       see that player's cards and stuff like that
 
 class EmittingGame(Game):
-    def __init__(self, server: Server):
+    def __init__(self, server: Server, **kwargs):
+        super().__init__(**kwargs)
         # TODO: server stuff (including emitting should be entirely handled by the Server, which is an AsyncNamespace)
         self._server: Server = server
+        assert self._server is None
         self._chambers: List[Optional[EmittingChamber]] = [
             EmittingChamber(self._server) for _ in range(4)
         ]
@@ -48,31 +54,49 @@ class EmittingGame(Game):
     def set_server(self, server: str) -> None:
         self._server = server
 
-    def add_player(self, sid: str, name: str) -> None:
+    async def add_player(self, sid: str, name: str) -> None:
         rand_open_spot: int = self._rand_open_spot()
         self._chambers[rand_open_spot].set_sid(sid)
         self._spot_sid_bidict.inv[sid] = rand_open_spot
-        self._set_name(rand_open_spot, name)
+        await self._set_name(rand_open_spot, name)
         self.num_players += 1
 
     def remove_player(self, sid: str) -> None:
         self._spot_sid_bidict.inv.pop(sid)
         super().remove_player(self._get_spot(sid))
 
-    async def _deal_cards(self, testing: bool = False) -> None:
-        decks = self._make_shuffled_decks(testing)
-        for spot, sid in self._spot_sid_bidict.items():
-            chamber = self._chambers[spot]
-            chamber.reset()
-            chamber.set_sid(sid)
-            chamber.add_cards(decks[spot])
-            await self._emit("set_spot", {"spot": spot}, sid)
+    async def _deal_cards(self, deck: Optional[List[Iterable[int]]] = None) -> None:
+        '''
+        Deals cards to all players.
+        '''
+        await asyncio.gather(*[self._deal_cards_indiv(spot, sid, cards) for (spot, sid), cards in zip(self._spot_sid_bidict.items(), deck or self._make_shuffled_deck())])
+
+    async def _deal_cards_indiv(self, spot: str, sid: str, cards: Iterable[int]):
+        '''
+        Deals cards to a single player; for utilizing concurrency with
+        asyncio.gather.
+        '''
+        chamber = self._chambers[spot]
+        await chamber.reset()
+        chamber.set_sid(sid)
+        await chamber.add_cards(cards)
+        await self._emit("set_spot", {"spot": spot}, sid)
 
     # game flow related methods
 
+    async def _start_round(
+        self, *, deck: Optional[List[Iterable[int]]] = None
+    ) -> None:
+        assert self.num_players == 4, "four players required to start round"
+        await self._deal_cards(deck=deck)
+        self._make_and_set_turn_manager()
+        self._num_consecutive_rounds += 1
+        self._message(f"🏁 round {self._num_consecutive_rounds} has begun")
+        await self._next_player()
+
     async def _next_player(self) -> None:
         try:  # current player is no longer on turn
-            await self._emit_to_all_players(
+            await self._emit_to_players(
                 "set_on_turn",
                 {"on_turn": False, "spot": self._current_player, "time": 0},
             )
@@ -100,7 +124,7 @@ class EmittingGame(Game):
             self._current_player_sid,
             callback=lambda: self._start_timer(self._current_player, time),
         )
-        await self._emit_to_all_players(
+        await self._emit_to_players(
             "set_time",
             {"spot": self._current_player, "time": time * 1000},
             skip_sid=self._current_player_sid,
@@ -154,7 +178,7 @@ class EmittingGame(Game):
         self._set_dot_color(spot, "blue")
         for other_spot in self._get_other_spots(spot, exclude_finished=True):
             self._set_dot_color(other_spot, "red")
-        await self._emit_to_all_players(
+        await self._emit_to_players(
             "set_cards_remaining",
             {"spot": spot, "cards_remaining": self._chambers[spot].num_cards},
         )
@@ -193,7 +217,7 @@ class EmittingGame(Game):
 
     async def _clear_hand_in_play(self) -> None:
         super()._clear_hand_in_play()
-        await self._emit_to_all_players("clear_hand_in_play", {})
+        await self._emit_to_players("clear_hand_in_play", {})
 
     # trading related methods
 
@@ -201,7 +225,7 @@ class EmittingGame(Game):
         super()._initiate_trading()
         for spot in range(4):
             self._set_dot_color(spot, "red")
-        await self._emit_to_all_players("set_on_turn", {"on_turn": False})
+        await self._emit_to_players("set_on_turn", {"on_turn": False})
 
     async def set_selected_asking_option(self, sid: str, value: int) -> None:
         spot: int = self._get_spot(sid)
@@ -317,11 +341,11 @@ class EmittingGame(Game):
 
     async def _set_name(self, spot: int, name: str) -> None:
         self._names[spot] = name
-        await self._emit_to_all_players("set_names", {"names": self._names})
+        await self._emit_to_players("set_names", {"names": self._names})
 
     async def _set_hand_in_play(self, hand: Hand) -> None:
         super()._set_hand_in_play(hand)
-        await self._emit_to_all_players(
+        await self._emit_to_players(
             "set_hand_in_play",
             {
                 "hand_in_play": hand.to_list(),
@@ -367,12 +391,12 @@ class EmittingGame(Game):
         # await self._emit('remove_asking_option', {'value': value}, self._get_sid(spot))
 
     async def _set_dot_color(self, spot: int, dot_color: str) -> None:
-        await self._emit_to_all_players(
+        await self._emit_to_players(
             "set_dot_color", {"spot": spot, "dot_color": dot_color}
         )
 
     async def _set_vice_asshole(self, spot):
-        await self._emit_to_all_players(
+        await self._emit_to_players(
             "set_on_turn", {"on_turn": False, "spot": spot, "time": 0}
         )
         super()._set_vice_asshole(spot)
@@ -382,24 +406,28 @@ class EmittingGame(Game):
     async def _emit(self, *args, **kwargs) -> None:
         await self._server.emit(*args, **kwargs)
 
-    async def _emit_to_all_players(
-        self,
-        event: str,
-        payload: Dict[str, Union[int, str, List[int]]],
-        *,
-        skip_sid: Optional[str] = None
-    ):
-        for sid in self._spot_sid_bidict.values():
-            if sid == skip_sid:
-                continue
-            await self._emit(event, payload, sid)
+    async def _emit_to_players(self, *args, **kwargs):
+        '''
+        Emits to all players by default. Pass in skip_sid with a string
+        or a list to skip players.
 
-    async def _emit_to_server(
-        self, event: str, payload: Dict[str, Union[int, str, List[int]]]
-    ):
-        await self._emit(event, payload, self._server)
+        The difference between this and _emit_to_server is that the
+        latter emits to spectators as well.
+        '''
+        maybe_skip_sid = kwargs.get('skip_sid')
+        if not maybe_skip_sid:
+            await asyncio.gather(*[self._emit(*args, room=sid, **kwargs) for sid in self._spot_sid_bidict.values()])
+        elif isinstance(maybe_skip_sid, str):
+            await asyncio.gather(*[self._emit(*args, room=sid, **kwargs) for sid in self._spot_sid_bidict.values() if sid != maybe_skip_sid])
+        elif isinstance(maybe_skip_sid, list):
+            await asyncio.gather(*[self._emit(*args, room=sid, **kwargs) for sid in self._spot_sid_bidict.values() if sid not in maybe_skip_sid])
+        else:
+            raise AssertionError('skip_sid can only be a string or a list')
+
+    async def _emit_to_server(self, *args, **kwargs):
+        await self._emit(*args, **kwargs)
 
     # alerting related methods
 
     async def _emit_alert(self, alert, sid: str) -> None:
-        await self._emit("alert", {"alert": alert}, sid)
+        await self._emit("alert", {"alert": alert}, room=sid)

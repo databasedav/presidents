@@ -52,12 +52,17 @@ PORT = 5000
 async def test_lil_baby_game():
     clients = [Client(logger=True) for _ in range(4)]
     await asyncio.gather(*[client.connect(f'http://{HOST}:{PORT}', namespaces=['/server_browser=us-west']) for client in clients])
-    await client[0].emit('add_server', {'name': 'test', 'server_id': '12345'}, namespace='/server_browser=us-west')
+    asyncio.sleep(1)
+    await clients[0].emit('add_server', {'name': 'test', 'server_id': '12345'}, namespace='/server_browser=us-west')
+    asyncio.sleep(1)
     for client in clients:
         client.register_namespace(ClientBot('/server=12345'))
+    # clients[0].emit('join_server', {'server_id': '12345', 'name': str(0)}, namespace='/server_browser=us-west')
     await asyncio.gather(*[client.emit('join_server', {'server_id': '12345', 'name': str(i)}, namespace='/server_browser=us-west') for i, client in enumerate(clients)])
-    await client[0].sleep(20)
+    # await client[0].sleep(100)
     await asyncio.sleep(10000)
+
+
 
 # async def main():
 #     res = await test_on_add_server()

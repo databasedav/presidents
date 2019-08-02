@@ -81,22 +81,22 @@ class ClientBot(Bot, AsyncClientNamespace):
     def __init__(self, *args, **kwargs):
         AsyncClientNamespace.__init__(self, *args, **kwargs)
 
-    def on_add_card(payload):
+    def on_add_card(self, payload):
         self._cards[payload["card"]] = False
 
-    def on_remove_card(payload):
+    def on_remove_card(self, payload):
         del self._cards[payload["card"]]
 
-    async def on_set_on_turn(payload):
+    async def on_set_on_turn(self, payload):
         await self._turn_up()
 
-    def on_set_unlocked(payload):
+    def on_set_unlocked(self, payload):
         self._unlocked = payload["unlocked"]
 
-    def on_set_pass_unlocked(payload):
+    def on_set_pass_unlocked(self, payload):
         self._pass_unlocked = payload["pass_unlocked"]
 
-    async def on_alert(payload):
+    async def on_alert(self, payload):
         await self._panic_pass()
 
     async def turn_up(self):

@@ -8,7 +8,10 @@ from typing import Optional, Dict
 from itertools import cycle
 from datetime import datetime
 
-names = cycle(["aa", "bb", "cc", "dd"])
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Server(AsyncNamespace):
@@ -34,22 +37,28 @@ class Server(AsyncNamespace):
         self, server_browser_namespace: str, sid: str, name: str
     ) -> None:
         if not self.game:
-            self._set_game(EmittingGame(self))
+            game = EmittingGame()
+            game._set_server(self)
+            assert game._server is not None
+            self._set_game(game)
+            # self.game._server = self
         elif self.game.is_full:
             await self.emit(
                 "server_full", namespace=server_browser_namespace, room=sid
             )
             return
-        await self.emit(
-            "send_to_server",
-            {"server_namespace": self.namespace},
-            namespace=server_browser_namespace,
-            room=sid,
-        )
+        # await self.emit(
+        #     "send_to_server",
+        #     {"server_namespace": self.namespace},
+        #     namespace=server_browser_namespace,
+        #     room=sid,
+        # )
         assert self.game is not None
-        self.game.add_player(sid, name)
+        # self.game._server = self
+        assert self.game._server is not None
+        await self.game.add_player(sid, name)
         if self.game.num_players == 4:
-            self.game._start_round(
+            await self.game._start_round(
                 deck=[
                     range(lower, upper)
                     for lower, upper in zip(
@@ -58,10 +67,10 @@ class Server(AsyncNamespace):
                 ]
             )
 
-    def on_connect(self, sid, payload):
-        self.test_join(
-            server_browser_namespace=self.namespace, sid=sid, name=next(names)
-        )
+    # def on_connect(self, sid, payload):
+    #     self.test_join(
+    #         server_browser_namespace=self.namespace, sid=sid, name=next(names)
+    #     )
 
     def test_join(
         self, server_browser_namespace: str, sid: str, name: str

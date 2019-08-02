@@ -6,6 +6,8 @@ from socketio import AsyncServer
 from typing import Dict, List, Any, Optional
 import numpy as np
 
+import asyncio
+
 # from ..server.server import Server
 
 
@@ -24,12 +26,12 @@ class EmittingChamber(Chamber):
         self._server: Server = server
         self._sid: str = None
 
-    def _emit(self, *args, **kwargs):
-        self._server.emit(*args, room=self._sid, **kwargs)
+    async def _emit(self, *args, **kwargs):
+        await self._server.emit(*args, room=self._sid, **kwargs)
 
-    def reset(self) -> None:
-        self._emit("clear_cards", {})
-        self._emit_update_current_hand_str()
+    async def reset(self) -> None:
+        await self._emit("clear_cards", {})
+        await self._emit_update_current_hand_str()
         self.set_sid(None)
         # TODO: deal with hands being removed, i.e. the asshole's stored
         #       hands must be removed
@@ -43,13 +45,18 @@ class EmittingChamber(Chamber):
     async def add_card(self, card: int, **kwargs) -> None:
         super().add_card(card, **kwargs)
         await self._emit("add_card", {"card": card})
+    
+    async def add_cards(self, cards) -> None:
+        self._check_cards_not_in(cards)
+        # already checked
+        await asyncio.gather(*[self.add_card(card, check=False) for card in cards])
 
     async def remove_card(self, card: int, **kwargs) -> None:
         super().remove_card(card, **kwargs)
         await self._emit("remove_card", {"card": card})
         self._emit_update_current_hand_str()
 
-    def add_hand(self, hand: Hand) -> None:
+    async def add_hand(self, hand: Hand) -> None:
         """
         Emits hand storage and uses EmittingHandNodes instead of
         HandNodes.

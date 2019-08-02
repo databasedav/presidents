@@ -27,7 +27,7 @@ class ServerBrowser(AsyncNamespace):
         self._server_dict: Dict[str, Server] = dict()
 
     def on_connect(self, sid, payload):
-        logger.info(f"{sid} connected.")
+        logger.info(f"{sid} connected to {self.namespace}")
 
     def _server_list(self) -> List:
         return [
