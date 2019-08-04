@@ -3,7 +3,9 @@ from socketio import AsyncServer, ASGIApp
 from ..server.server_browser import ServerBrowser
 import uvicorn
 from ..utils import main
+import logging
 
+logging.basicConfig(level=logging.DEBUG)
 
 app = FastAPI(debug=False)
 

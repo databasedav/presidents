@@ -57,9 +57,9 @@ async def test_lil_baby_game():
     for client, client_bot in zip(clients, client_bots):
         client.register_namespace(client_bot)
     await asyncio.gather(*[client.connect(f'http://{HOST}:{PORT}', namespaces=['/server_browser=us-west', '/server=12345']) for client in clients])
-    await asyncio.sleep(0.01)
+    await asyncio.sleep(0.05)
     await clients[0].emit('add_server', {'name': 'test', 'server_id': '12345'}, namespace='/server_browser=us-west')
-    await asyncio.sleep(0.01)
+    await asyncio.sleep(0.5)
     await asyncio.gather(*[client.emit('join_server', {'server_id': '12345', 'name': names[i]}, namespace='/server_browser=us-west') for i, client in enumerate(clients)])
     await asyncio.sleep(10000)
 

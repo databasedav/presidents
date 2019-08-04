@@ -87,14 +87,14 @@ class Server(AsyncNamespace):
         timestamp: datetime.datetime = datetime.utcnow()
         assert self.game is not None
         await self.game.add_or_remove_card(sid, payload["card"])
-        await game_click_agent.send(
-            GameClick(
-                game_id=self.game.id,
-                user_id=self.game.get_user_id(sid),
-                timestamp=timestamp,
-                action=payload["card"],
-            )
-        )
+        # await game_click_agent.send(
+        #     GameClick(
+        #         game_id=self.game.id,
+        #         user_id=self.game.get_user_id(sid),
+        #         timestamp=timestamp,
+        #         action=payload["card"],
+        #     )
+        # )
 
     async def on_unlock(self, sid) -> None:
         assert self.game is not None

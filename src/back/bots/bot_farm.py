@@ -1,5 +1,6 @@
 from socketio import AsyncClient, AsyncClientNamespace
 from typing import Dict
+import asyncio
 
 import logging
 
@@ -49,9 +50,8 @@ class Bot:
 
     def __init__(self):
         self._game = None
-        self._cards: Dict[
-            int, bool
-        ] = dict()  # whether or not card is selected
+        # whether or not card is selected
+        self._cards: Dict[int, bool] = dict()
         self._unlocked: bool = False
         self._pass_unlocked: bool = False
 
@@ -113,10 +113,14 @@ class ClientBot(Bot, AsyncClientNamespace):
         min_card: int = min(self._cards)
         if not self._cards[min_card]:
             await self._click_card(min_card)
+            await asyncio.sleep(0.01)
         if not self._unlocked:
             await self._unlock()
+            await asyncio.sleep(0.1)
         if self._unlocked:  # either already unlocked or the above unlocked
             await self._play()
+            await asyncio.sleep(0.01)
+
 
     async def _click_card(self, card: int) -> None:
         await self.emit("card_click", {"card": card})

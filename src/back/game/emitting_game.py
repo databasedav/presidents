@@ -5,6 +5,7 @@ from socketio import AsyncServer
 
 import asyncio
 
+from ..game.hand import NotPlayableOnError
 # from ..server.server import Server
 Server = None
 
@@ -146,9 +147,35 @@ class EmittingGame(Game):
     async def add_or_remove_card(self, sid: str, card: int) -> None:
         spot: int = self._get_spot(sid)
         try:
-            super().add_or_remove_card(spot, card)
+            await self.add_or_remove_card_helper(spot, card)
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
+    
+    async def add_or_remove_card_helper(self, spot: int, card: int) -> None:
+        """
+        Copy/paste from base game class with asynced methods.
+        """
+        if self._is_finished(spot):
+            raise PresidentsError(
+                "you have already finished this round", permitted=False
+            )
+        chamber: Chamber = self._chambers[spot]
+        # EAFP is a magnitude faster than LBYL here
+        try:
+            await chamber.select_card(card)
+            if self._is_asking(spot):
+                await self._deselect_asking_option(
+                    spot, self._selected_asking_option[spot]
+                )
+            await self._lock_if_unlocked(spot)
+        except CardNotInChamberError:
+            raise PresidentsError("you don't have this card", permitted=False)
+        except DuplicateCardError:
+            # such an error can only occur if check passes
+            await chamber.deselect_card(card, check=False)
+            await self._lock_if_unlocked(spot)
+        except FullHandError:
+            raise PresidentsError("your current hand is full", permitted=True)
 
     # TODO
     def store_hand(self, spot: int) -> None:
@@ -160,23 +187,91 @@ class EmittingGame(Game):
 
     async def maybe_unlock_play(self, spot: int, sid: str) -> None:
         try:
-            super().maybe_unlock_play(spot)
+            await self.maybe_unlock_play_helper(spot)
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
+
+    async def maybe_unlock_play_helper(self, spot: int):
+        """
+        Copy/paste from base game class with asynced methods.
+        """
+        if self._is_finished(spot):
+            raise PresidentsError(
+                "you have already finished this round", permitted=False
+            )
+        self._lock_if_pass_unlocked(spot)
+        hand = self._get_current_hand(spot)
+        if hand.is_empty:
+            raise PresidentsError(
+                "you must add cards before attempting to unlock",
+                permitted=True,
+            )
+        if not hand.is_valid:
+            raise PresidentsError(
+                "you can't play invalid hands", permitted=True
+            )
+        hip = self._hand_in_play
+        if hip is base_hand:  # start of the game
+            if self._is_current_player(spot):  # player with 3 of clubs
+                if 1 not in hand:  # card 1 is the 3 of clubs
+                    raise PresidentsError(
+                        "the first hand must contain the 3 of clubs",
+                        permitted=True,
+                    )
+                else:  # 1 in hand
+                    # anyhand with the 3 of clubs is ok
+                    await self._unlock(spot)
+            else:
+                # other players (without the 3 of clubs) can unlock
+                # whatever hand they want
+                await self._unlock(spot)
+        elif hip is None:  # current player won last hand and can play anyhand
+            await self._unlock(spot)
+        else:
+            try:
+                if hand > hip:
+                    await self._unlock(spot)
+                else:
+                    raise PresidentsError(
+                        "your current hand is weaker than the hand in play",
+                        permitted=True,
+                    )
+            except NotPlayableOnError as e:
+                raise PresidentsError(str(e), permitted=True)
 
     async def maybe_play_current_hand(
         self, sid: str, timestamp: datetime
     ) -> None:
         spot: int = self._get_spot(sid)
         try:
-            super().maybe_play_current_hand(spot, sid=sid, timestamp=timestamp)
+            await self.maybe_play_current_hand_helper(spot, sid=sid, timestamp=timestamp)
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
 
+    async def maybe_play_current_hand_helper(self, spot: int, **kwargs) -> None:
+        """
+        Copy/paste from base game class with asynced methods.
+        """
+        if self._is_finished(spot):
+            raise PresidentsError(
+                "you have already finished this round", permitted=False
+            )
+        if not self._unlocked[spot]:
+            # self.lock(spot)  # TODO doing this should be part of resetting the DOM, say
+            raise PresidentsError(
+                "you must unlock before playing", permitted=False
+            )
+        if not self._is_current_player(spot):
+            raise PresidentsError(
+                "you can only play a hand on your turn", permitted=True
+            )
+        else:
+            await self._play_current_hand(spot, **kwargs)
+
     async def _play_current_hand(self, spot, **kwargs):
-        hand: Hand = super()._play_current_hand(spot, handle_post=False)
+        hand: Hand = await self._play_current_hand_helper(spot, handle_post=False)
         await hand_play_agent.send(
-            HandPlay(
+            value=HandPlay(
                 hand_hash=hash(hand),
                 sid=kwargs.get("sid"),
                 timestamp=kwargs.get("timestamp"),
@@ -190,6 +285,36 @@ class EmittingGame(Game):
             {"spot": spot, "cards_remaining": self._chambers[spot].num_cards},
         )
         self._post_play_handler(spot)
+
+    async def _play_current_hand_helper(self, spot: int, handle_post: bool = True) -> Hand:
+        """
+        Copy/paste from base game class with asynced methods.
+        """
+        assert self._unlocked[spot], "play called without unlocking"
+        self._stop_timer(spot)
+        chamber = self._chambers[spot]
+        hand = Hand.copy(chamber.hand)
+        chamber.remove_cards(hand)
+        self._num_consecutive_passes = 0
+        await self._set_hand_in_play(hand)
+        await self._message(f"▶️ {self._names[spot]} played {str(hand)}")
+        await self.lock(spot)
+        # lock others if their currently unlocked hand should no longer be unlocked
+        for other_spot in self._get_other_spots(spot, exclude_finished=True):
+            if other_spot == spot:
+                continue
+            if self._unlocked[other_spot]:
+                try:
+                    if self._get_current_hand(other_spot) < self._hand_in_play:
+                        await self.lock(other_spot)
+                # occurs either when base_hand is the hand in play since
+                # anything can be unlocked or when a bomb is played on a
+                # non-bomb that other players have unlocked on
+                except NotPlayableOnError:
+                    self.lock(other_spot)
+        if handle_post:
+            self._post_play_handler(spot)
+        return hand  # for EmittingGame to use
 
     async def maybe_unlock_pass_turn(self, sid: str) -> None:
         spot: int = self._get_spot(sid)
@@ -303,16 +428,16 @@ class EmittingGame(Game):
         spot: int = self._get_spot(sid)
         if self.trading:
             if self._is_asking(spot):
-                self.maybe_unlock_ask(spot, sid)
+                await self.maybe_unlock_ask(spot, sid)
             elif self._is_giving(spot):
-                self.maybe_unlock_give(spot, sid)
+                await self.maybe_unlock_give(spot, sid)
             else:
                 await self._emit_alert(
                     "you must select something before attempting to unlock",
                     sid,
                 )
         else:
-            self.maybe_unlock_play(spot, sid)
+            await self.maybe_unlock_play(spot, sid)
 
     def lock_handler(self, sid: str) -> None:
         self.lock(self._get_spot(sid))
@@ -328,6 +453,13 @@ class EmittingGame(Game):
         await self._emit(
             "set_unlocked", {"unlocked": False}, self._get_sid(spot)
         )
+    
+    async def _lock_if_unlocked(self, spot: int) -> None:
+        """
+        Copy/paste from base game class with asynced methods.
+        """
+        if self._unlocked[spot]:
+            await self.lock(spot)
 
     async def _message(self, message: str) -> None:
         super()._message(message)
