@@ -34,11 +34,9 @@ class EmittingGame(Game):
         super().__init__(**kwargs)
         # TODO: server stuff (including emitting should be entirely handled by the Server, which is an AsyncNamespace)
         self._server: Server = server
-        assert self._server is None
         self._chambers: List[Optional[EmittingChamber]] = [
             EmittingChamber(self._server) for _ in range(4)
         ]
-        self._server: Optional[str] = None
         self._spot_sid_bidict: bidict = bidict()
         self.sid_user_id_dict: Dict[str, str] = dict()
         self.num_spectators: int = 0  # TODO
@@ -91,18 +89,26 @@ class EmittingGame(Game):
         await self._deal_cards(deck=deck)
         self._make_and_set_turn_manager()
         self._num_consecutive_rounds += 1
-        self._message(f"🏁 round {self._num_consecutive_rounds} has begun")
+        await self._message(f"🏁 round {self._num_consecutive_rounds} has begun")
         await self._next_player()
 
     async def _next_player(self) -> None:
         try:  # current player is no longer on turn
-            await self._emit_to_players(
+            await self._emit(
                 "set_on_turn",
-                {"on_turn": False, "spot": self._current_player, "time": 0},
+                {"on_turn": False, "spot": self._current_player},
+                room=self._current_player_sid
             )
+            # TODO handle time setting with a concurrent call to set_time
+            #      like is done in _emit_set_on_turn_handler
         except KeyError:  # self._current_player is None (round start)
             pass
-        super()._next_player(timer=False)
+        assert self._turn_manager is not None
+        # TODO this mypy error
+        self._current_player = next(self._turn_manager)
+        await self._message(f"🎲 it's {self._names[self._current_player]}'s turn")
+        assert self._current_player is not None
+        self._start_timer(self._current_player, self._turn_time)
         await self._emit_set_on_turn_handler()
 
     async def _emit_set_on_turn_handler(self):
@@ -113,25 +119,26 @@ class EmittingGame(Game):
         TODO: clean
         """
         time: int = 2
-        self._set_dot_color(self._current_player, "green")
-        await self._emit(
+        events = list()
+        events.append(self._set_dot_color(self._current_player, "green"))
+        events.append(self._emit(
             "set_on_turn",
             {
                 "on_turn": True,
                 "spot": self._current_player,
-                "time": time * 1000,
             },
-            self._current_player_sid,
+            room=self._current_player_sid,
             callback=lambda: self._start_timer(self._current_player, time),
-        )
-        await self._emit_to_players(
+        ))
+        events.append(self._emit_to_players(
             "set_time",
             {"spot": self._current_player, "time": time * 1000},
             skip_sid=self._current_player_sid,
-        )
+        ))
+        await asyncio.gather(*events)
 
-    def _player_finish(self, spot: int) -> None:
-        self._set_dot_color(spot, "purple")
+    async def _player_finish(self, spot: int) -> None:
+        await self._set_dot_color(spot, "purple")
         super()._player_finish(spot)
 
     # card management related methods
@@ -175,9 +182,9 @@ class EmittingGame(Game):
                 timestamp=kwargs.get("timestamp"),
             )
         )
-        self._set_dot_color(spot, "blue")
+        await self._set_dot_color(spot, "blue")
         for other_spot in self._get_other_spots(spot, exclude_finished=True):
-            self._set_dot_color(other_spot, "red")
+            await self._set_dot_color(other_spot, "red")
         await self._emit_to_players(
             "set_cards_remaining",
             {"spot": spot, "cards_remaining": self._chambers[spot].num_cards},
@@ -210,9 +217,9 @@ class EmittingGame(Game):
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
 
-    def _pass_turn(self, spot):
+    async def _pass_turn(self, spot):
         super()._pass_turn(spot, handle_post=False)
-        self._set_dot_color(spot, "yellow")
+        await self._set_dot_color(spot, "yellow")
         self._post_pass_handler()
 
     async def _clear_hand_in_play(self) -> None:
@@ -224,7 +231,7 @@ class EmittingGame(Game):
     async def _initiate_trading(self) -> None:
         super()._initiate_trading()
         for spot in range(4):
-            self._set_dot_color(spot, "red")
+            await self._set_dot_color(spot, "red")
         await self._emit_to_players("set_on_turn", {"on_turn": False})
 
     async def set_selected_asking_option(self, sid: str, value: int) -> None:

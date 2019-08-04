@@ -54,7 +54,7 @@ class EmittingChamber(Chamber):
     async def remove_card(self, card: int, **kwargs) -> None:
         super().remove_card(card, **kwargs)
         await self._emit("remove_card", {"card": card})
-        self._emit_update_current_hand_str()
+        await self._emit_update_current_hand_str()
 
     async def add_hand(self, hand: Hand) -> None:
         """
@@ -63,7 +63,7 @@ class EmittingChamber(Chamber):
         """
         # TODO: POLL: should the cards be deselected after creating a hand?
         self.deselect_cards(hand)
-        self._emit(
+        await self._emit(
             "store_hand",
             {"id": xxhash.xxh64().intdigest(), "cards": hand.to_list()},
         )
@@ -77,19 +77,19 @@ class EmittingChamber(Chamber):
             self._cards[card].appendnode(hand_pointer_node)
         self._hands.appendnode(hand_node)
 
-    def select_card(self, card: int, check: bool = True) -> None:
+    async def select_card(self, card: int, check: bool = True) -> None:
         super().select_card(card, check)
-        self._emit("select_card", {"card": card})
-        self._emit_update_current_hand_str()
+        await self._emit("select_card", {"card": card})
+        await self._emit_update_current_hand_str()
 
-    def deselect_card(self, card: int, check: bool = True) -> None:
+    async def deselect_card(self, card: int, check: bool = True) -> None:
         super().deselect_card(card, check)
-        self._emit("deselect_card", {"card": int(card)})
+        await self._emit("deselect_card", {"card": int(card)})
         # TODO: current hand str shouldn't be lazy loaded
-        self._emit_update_current_hand_str()
+        await self._emit_update_current_hand_str()
 
-    def _emit_update_current_hand_str(self) -> None:
-        self._emit("update_current_hand_str", {"str": str(self.hand)})
+    async def _emit_update_current_hand_str(self) -> None:
+        await self._emit("update_current_hand_str", {"str": str(self.hand)})
 
 
 class EmittingHandNode(HandNode):
@@ -109,12 +109,12 @@ class EmittingHandNode(HandNode):
     def set_sid(self, sid: str) -> None:
         self._sid = sid
 
-    def increment_num_selected_cards(self) -> None:
+    async def increment_num_selected_cards(self) -> None:
         super().increment_num_selected_cards()
         if self._num_cards_selected == 1:
-            self._emit("select_hand")
+            await self._emit("select_hand")
 
-    def decrement_num_selected_cards(self) -> None:
+    async def decrement_num_selected_cards(self) -> None:
         super().decrement_num_selected_cards()
         if self._num_cards_selected == 0:
-            self._emit("deselect_hand")
+            await self._emit("deselect_hand")

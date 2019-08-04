@@ -37,10 +37,7 @@ class Server(AsyncNamespace):
         self, server_browser_namespace: str, sid: str, name: str
     ) -> None:
         if not self.game:
-            game = EmittingGame()
-            game._set_server(self)
-            assert game._server is not None
-            self._set_game(game)
+            self._set_game(EmittingGame(self))
             # self.game._server = self
         elif self.game.is_full:
             await self.emit(
@@ -53,9 +50,7 @@ class Server(AsyncNamespace):
         #     namespace=server_browser_namespace,
         #     room=sid,
         # )
-        assert self.game is not None
-        # self.game._server = self
-        assert self.game._server is not None
+        # await self.emit('test')
         await self.game.add_player(sid, name)
         if self.game.num_players == 4:
             await self.game._start_round(
@@ -91,7 +86,7 @@ class Server(AsyncNamespace):
     async def on_card_click(self, sid: str, payload: Dict) -> None:
         timestamp: datetime.datetime = datetime.utcnow()
         assert self.game is not None
-        self.game.add_or_remove_card(sid, payload["card"])
+        await self.game.add_or_remove_card(sid, payload["card"])
         await game_click_agent.send(
             GameClick(
                 game_id=self.game.id,
@@ -101,35 +96,35 @@ class Server(AsyncNamespace):
             )
         )
 
-    def on_unlock(self, sid) -> None:
+    async def on_unlock(self, sid) -> None:
         assert self.game is not None
-        self.game.unlock_handler(sid)
+        await self.game.unlock_handler(sid)
 
     def on_lock(self, sid) -> None:
         assert self.game is not None
         self.game.lock_handler(sid)
 
-    def on_play(self, sid) -> None:
+    async def on_play(self, sid) -> None:
         timestamp: datetime.datetime = datetime.utcnow()
         assert self.game is not None
-        self.game.maybe_play_current_hand(sid, timestamp)
+        await self.game.maybe_play_current_hand(sid, timestamp)
 
-    def on_unlock_pass(self, sid) -> None:
+    async def on_unlock_pass(self, sid) -> None:
         assert self.game is not None
-        self.game.maybe_unlock_pass_turn(sid)
+        await self.game.maybe_unlock_pass_turn(sid)
 
-    def on_pass_turn(self, sid) -> None:
+    async def on_pass_turn(self, sid) -> None:
         assert self.game is not None
-        self.game.maybe_pass_turn(sid)
+        await self.game.maybe_pass_turn(sid)
 
-    def on_select_asking_option(self, sid, payload) -> None:
+    async def on_select_asking_option(self, sid, payload) -> None:
         assert self.game is not None
-        self.game.set_selected_asking_option(sid, payload["value"])
+        await self.game.set_selected_asking_option(sid, payload["value"])
 
-    def on_ask(self, sid) -> None:
+    async def on_ask(self, sid) -> None:
         assert self.game is not None
-        self.game.ask_for_card(sid)
+        await self.game.ask_for_card(sid)
 
-    def on_give(self, sid) -> None:
+    async def on_give(self, sid) -> None:
         assert self.game is not None
-        self.game.give_card(sid)
+        await self.game.give_card(sid)

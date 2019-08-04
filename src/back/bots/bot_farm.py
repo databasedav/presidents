@@ -1,6 +1,10 @@
 from socketio import AsyncClient, AsyncClientNamespace
 from typing import Dict
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class BotFarm:
     def __init__(self) -> None:
@@ -12,6 +16,9 @@ class BotFarm:
 #       and then replays all the moves with assertions and then put the
 #       rounds into a database that just marks that they have passed
 #       playing the game with assertions
+
+# TODO: create issue on python socketio to allow client connecting to
+#       namespaces after initial connection
 
 
 class Bot:
@@ -80,12 +87,13 @@ class ClientBot(Bot, AsyncClientNamespace):
     """
     def __init__(self, *args, **kwargs):
         AsyncClientNamespace.__init__(self, *args, **kwargs)
+        Bot.__init__(self)
 
-    def on_add_card(self, payload):
+    async def on_add_card(self, payload):
         self._cards[payload["card"]] = False
 
     def on_remove_card(self, payload):
-        del self._cards[payload["card"]]
+        self._cards.pop([payload["card"]])
 
     async def on_set_on_turn(self, payload):
         await self._turn_up()
@@ -99,7 +107,7 @@ class ClientBot(Bot, AsyncClientNamespace):
     async def on_alert(self, payload):
         await self._panic_pass()
 
-    async def turn_up(self):
+    async def _turn_up(self):
         # select lowest card if not already selected and attempt to
         # play, otherwise receival of alert will pass instead
         min_card: int = min(self._cards)
@@ -108,15 +116,15 @@ class ClientBot(Bot, AsyncClientNamespace):
         if not self._unlocked:
             await self._unlock()
         if self._unlocked:  # either already unlocked or the above unlocked
-            await self.play()
+            await self._play()
 
-    async def click_card(self, card: int) -> None:
+    async def _click_card(self, card: int) -> None:
         await self.emit("card_click", {"card": card})
 
-    async def unlock(self) -> None:
+    async def _unlock(self) -> None:
         await self.emit("unlock")
 
-    async def play(self) -> None:
+    async def _play(self) -> None:
         await self.emit("play")
 
     async def _panic_pass(self) -> None:

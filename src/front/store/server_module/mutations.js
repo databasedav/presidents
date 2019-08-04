@@ -7,7 +7,6 @@ export default {
 
   SOCKET_set_on_turn (state, payload, callback) {
     state.on_turn = payload.on_turn
-    state.times.splice(payload.spot, 1, payload.time)
     if (callback) {
       callback()
     }
