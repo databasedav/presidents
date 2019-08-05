@@ -52,6 +52,7 @@ names = ['a', 'b', 'c', 'd']
 
 @pytest.mark.asyncio
 async def test_lil_baby_game():
+    await asyncio.sleep(1.5)
     clients = [Client() for _ in range(4)]
     client_bots = [ClientBot('/server=12345') for _ in range(4)]
     for client, client_bot in zip(clients, client_bots):
