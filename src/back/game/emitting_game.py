@@ -270,7 +270,7 @@ class EmittingGame(Game):
 
     async def _play_current_hand(self, spot, **kwargs):
         hand: Hand = await self._play_current_hand_helper(spot, handle_post=False)
-        await self._server.hand_play_agent.send(
+        await hand_play_agent.send(
             value=HandPlay(
                 hand_hash=hash(hand),
                 sid=kwargs.get("sid"),

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from socketio import AsyncServer, ASGIApp
 from ..server.server_browser import ServerBrowser
-import uvicorn
+from uvicorn import Uvicorn
 from ..utils import main
 import logging
 from ..data.stream.records import GameClick, HandPlay
@@ -17,7 +17,20 @@ logging.basicConfig(level=logging.DEBUG)
 
 app = FastAPI(debug=False)
 
-fapp = App("presidents-app", broker="kafka://localhost:9092", loop=asyncio.get_event_loop())
+sio = AsyncServer(
+    async_mode="asgi", logger=True, ping_timeout=1000, ping_interval=5
+)
+
+server_browser = ServerBrowser("us-west")
+sio.register_namespace(server_browser)
+
+sio_asgi_app = ASGIApp(socketio_server=sio, other_asgi_app=app)
+
+Uvicorn.add_config(sio_asgi_app, host="127.0.0.1", port=5000)
+Uvicorn.add_server()
+Uvicorn.extract_loop()
+
+fapp = App("presidents-app", broker="kafka://localhost:9092", loop=Uvicorn.loop)
 
 game_click_topic = fapp.topic("game_click", value_type=GameClick)
 
@@ -54,22 +67,6 @@ async def hand_play_agent(hand_plays) -> None:
         )
         hand_player_sids_table[hand_play.hand_hash] = hand_player_sids
 
-sio = AsyncServer(
-    async_mode="asgi", logger=True, ping_timeout=1000, ping_interval=5
-)
-
-
-
-server_browser = ServerBrowser("us-west")
-sio.register_namespace(server_browser)
-
-
-sio_asgi_app = ASGIApp(socketio_server=sio, other_asgi_app=app)
-
-
-
-
-
 @main
 def run():
-    uvicorn.run(sio_asgi_app, host="127.0.0.1", port=5000, loop=loop)
+    Uvicorn.run(sio_asgi_app)
