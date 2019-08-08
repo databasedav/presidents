@@ -45,11 +45,13 @@ class EmittingChamber(Chamber):
     async def add_card(self, card: int, **kwargs) -> None:
         super().add_card(card, **kwargs)
         await self._emit("add_card", {"card": card})
-    
+
     async def add_cards(self, cards) -> None:
         self._check_cards_not_in(cards)
         # already checked
-        await asyncio.gather(*[self.add_card(card, check=False) for card in cards])
+        await asyncio.gather(
+            *[self.add_card(card, check=False) for card in cards]
+        )
 
     async def remove_card(self, card: int, **kwargs) -> None:
         super().remove_card(card, **kwargs)

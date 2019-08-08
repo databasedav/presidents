@@ -38,11 +38,21 @@ def create_app(*, debug=False):
 
     asgi_app = ASGIApp(socketio_server=None, other_asgi_app=fastapi_app)
 
-    uvicorn = Uvicorn(asgi_app, host='127.0.0.1', port=5000)
+    uvicorn = Uvicorn(asgi_app, host="127.0.0.1", port=5000)
 
-    faust_app = Faust("presidents-app", broker="kafka://localhost:9092", loop=uvicorn.get_event_loop())
+    faust_app = Faust(
+        "presidents-app",
+        broker="kafka://localhost:9092",
+        loop=uvicorn.get_event_loop(),
+    )
 
-    sio = FaustfulAsyncServer(faust_app, async_mode="asgi", logger=True, ping_timeout=1000, ping_interval=5)
+    sio = FaustfulAsyncServer(
+        faust_app,
+        async_mode="asgi",
+        logger=True,
+        ping_timeout=1000,
+        ping_interval=5,
+    )
     server_browser = ServerBrowser("us-west")
     sio.register_namespace(server_browser)
     asgi_app.engineio_server = sio

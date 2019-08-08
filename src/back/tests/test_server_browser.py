@@ -8,16 +8,18 @@ from ..server import ServerBrowser
 from ..bots.bot_farm import Client, ClientBot
 from fastapi import FastAPI
 from socketio import AsyncServer, AsyncClient, ASGIApp
+
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 import subprocess
 import os
 import logging
+
 # from .testing_server import server_browser
 
 logging.basicConfig(level=logging.DEBUG)
 
 
-HOST = '127.0.0.1'
+HOST = "127.0.0.1"
 PORT = 5000
 
 
@@ -48,20 +50,42 @@ PORT = 5000
 #     await client.sleep(0.01)
 #     return client.wut
 
-names = ['a', 'b', 'c', 'd']
+names = ["a", "b", "c", "d"]
+
 
 @pytest.mark.asyncio
 async def test_lil_baby_game():
     await asyncio.sleep(1.5)
     clients = [Client() for _ in range(4)]
-    client_bots = [ClientBot('/server=12345') for _ in range(4)]
+    client_bots = [ClientBot("/server=12345") for _ in range(4)]
     for client, client_bot in zip(clients, client_bots):
         client.register_namespace(client_bot)
-    await asyncio.gather(*[client.connect(f'http://{HOST}:{PORT}', namespaces=['/server_browser=us-west', '/server=12345']) for client in clients])
+    await asyncio.gather(
+        *[
+            client.connect(
+                f"http://{HOST}:{PORT}",
+                namespaces=["/server_browser=us-west", "/server=12345"],
+            )
+            for client in clients
+        ]
+    )
     await asyncio.sleep(0.05)
-    await clients[0].emit('add_server', {'name': 'test', 'server_id': '12345'}, namespace='/server_browser=us-west')
+    await clients[0].emit(
+        "add_server",
+        {"name": "test", "server_id": "12345"},
+        namespace="/server_browser=us-west",
+    )
     await asyncio.sleep(0.5)
-    await asyncio.gather(*[client.emit('join_server', {'server_id': '12345', 'name': names[i]}, namespace='/server_browser=us-west') for i, client in enumerate(clients)])
+    await asyncio.gather(
+        *[
+            client.emit(
+                "join_server",
+                {"server_id": "12345", "name": names[i]},
+                namespace="/server_browser=us-west",
+            )
+            for i, client in enumerate(clients)
+        ]
+    )
     await asyncio.sleep(10000)
 
 
@@ -84,4 +108,3 @@ async def test_lil_baby_game():
 # exists in the database
 
 # have to find a way to test the actual objects being used
-

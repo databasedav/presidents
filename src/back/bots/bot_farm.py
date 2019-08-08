@@ -69,6 +69,7 @@ class Client(AsyncClient):
     """
     For connecting to server browsers and servers.
     """
+
     ...
 
 
@@ -85,6 +86,7 @@ class ClientBot(Bot, AsyncClientNamespace):
     AsyncNamespaces); supports doing so from multiple servers, i.e.
     multiple games.
     """
+
     def __init__(self, *args, **kwargs):
         AsyncClientNamespace.__init__(self, *args, **kwargs)
         Bot.__init__(self)
@@ -120,7 +122,6 @@ class ClientBot(Bot, AsyncClientNamespace):
         if self._unlocked:  # either already unlocked or the above unlocked
             await self._play()
             await asyncio.sleep(0.01)
-
 
     async def _click_card(self, card: int) -> None:
         await self.emit("card_click", {"card": card})

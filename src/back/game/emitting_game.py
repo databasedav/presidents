@@ -6,6 +6,7 @@ from socketio import AsyncServer
 import asyncio
 
 from ..game.hand import NotPlayableOnError
+
 # from ..server.server import Server
 Server = None
 
@@ -23,12 +24,14 @@ from . import (
 from datetime import datetime
 
 from ..data.stream.records import HandPlay
+
 # from ..data.stream.agents import hand_play_agent
 
 # TODO: decide what to do for the removal of asking options
 # TODO: spectators should get a completely hidden view of the game being
 #       played and maybe if you are friends with another player, you can
 #       see that player's cards and stuff like that
+
 
 class EmittingGame(Game):
     def __init__(self, server: Server, **kwargs):
@@ -40,6 +43,7 @@ class EmittingGame(Game):
         ]
         self._spot_sid_bidict: bidict = bidict()
         self.sid_user_id_dict: Dict[str, str] = dict()
+        self.hand_play_agent = server.agents["hand_play_agent"]
         self.num_spectators: int = 0  # TODO
 
     # properties
@@ -64,17 +68,29 @@ class EmittingGame(Game):
         self._spot_sid_bidict.inv.pop(sid)
         super().remove_player(self._get_spot(sid))
 
-    async def _deal_cards(self, deck: Optional[List[Iterable[int]]] = None) -> None:
-        '''
+    async def _deal_cards(
+        self, deck: Optional[List[Iterable[int]]] = None
+    ) -> None:
+        """
         Deals cards to all players.
-        '''
-        await asyncio.gather(*[self._deal_cards_indiv(spot, sid, cards) for (spot, sid), cards in zip(self._spot_sid_bidict.items(), deck or self._make_shuffled_deck())])
+        """
+        await asyncio.gather(
+            *[
+                self._deal_cards_indiv(spot, sid, cards)
+                for (spot, sid), cards in zip(
+                    self._spot_sid_bidict.items(),
+                    deck or self._make_shuffled_deck(),
+                )
+            ]
+        )
 
-    async def _deal_cards_indiv(self, spot: str, sid: str, cards: Iterable[int]):
-        '''
+    async def _deal_cards_indiv(
+        self, spot: str, sid: str, cards: Iterable[int]
+    ):
+        """
         Deals cards to a single player; for utilizing concurrency with
         asyncio.gather.
-        '''
+        """
         chamber = self._chambers[spot]
         await chamber.reset()
         chamber.set_sid(sid)
@@ -90,7 +106,9 @@ class EmittingGame(Game):
         await self._deal_cards(deck=deck)
         self._make_and_set_turn_manager()
         self._num_consecutive_rounds += 1
-        await self._message(f"🏁 round {self._num_consecutive_rounds} has begun")
+        await self._message(
+            f"🏁 round {self._num_consecutive_rounds} has begun"
+        )
         await self._next_player()
 
     async def _next_player(self) -> None:
@@ -98,7 +116,7 @@ class EmittingGame(Game):
             await self._emit(
                 "set_on_turn",
                 {"on_turn": False, "spot": self._current_player},
-                room=self._current_player_sid
+                room=self._current_player_sid,
             )
             # TODO handle time setting with a concurrent call to set_time
             #      like is done in _emit_set_on_turn_handler
@@ -107,7 +125,9 @@ class EmittingGame(Game):
         assert self._turn_manager is not None
         # TODO this mypy error
         self._current_player = next(self._turn_manager)
-        await self._message(f"🎲 it's {self._names[self._current_player]}'s turn")
+        await self._message(
+            f"🎲 it's {self._names[self._current_player]}'s turn"
+        )
         assert self._current_player is not None
         self._start_timer(self._current_player, self._turn_time)
         await self._emit_set_on_turn_handler()
@@ -122,20 +142,21 @@ class EmittingGame(Game):
         time: int = 2
         events = list()
         events.append(self._set_dot_color(self._current_player, "green"))
-        events.append(self._emit(
-            "set_on_turn",
-            {
-                "on_turn": True,
-                "spot": self._current_player,
-            },
-            room=self._current_player_sid,
-            callback=lambda: self._start_timer(self._current_player, time),
-        ))
-        events.append(self._emit_to_players(
-            "set_time",
-            {"spot": self._current_player, "time": time * 1000},
-            skip_sid=self._current_player_sid,
-        ))
+        events.append(
+            self._emit(
+                "set_on_turn",
+                {"on_turn": True, "spot": self._current_player},
+                room=self._current_player_sid,
+                callback=lambda: self._start_timer(self._current_player, time),
+            )
+        )
+        events.append(
+            self._emit_to_players(
+                "set_time",
+                {"spot": self._current_player, "time": time * 1000},
+                skip_sid=self._current_player_sid,
+            )
+        )
         await asyncio.gather(*events)
 
     async def _player_finish(self, spot: int) -> None:
@@ -150,7 +171,7 @@ class EmittingGame(Game):
             await self.add_or_remove_card_helper(spot, card)
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
-    
+
     async def add_or_remove_card_helper(self, spot: int, card: int) -> None:
         """
         Copy/paste from base game class with asynced methods.
@@ -244,11 +265,15 @@ class EmittingGame(Game):
     ) -> None:
         spot: int = self._get_spot(sid)
         try:
-            await self.maybe_play_current_hand_helper(spot, sid=sid, timestamp=timestamp)
+            await self.maybe_play_current_hand_helper(
+                spot, sid=sid, timestamp=timestamp
+            )
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
 
-    async def maybe_play_current_hand_helper(self, spot: int, **kwargs) -> None:
+    async def maybe_play_current_hand_helper(
+        self, spot: int, **kwargs
+    ) -> None:
         """
         Copy/paste from base game class with asynced methods.
         """
@@ -279,7 +304,9 @@ class EmittingGame(Game):
         )
         self._post_play_handler(spot)
 
-    async def _play_current_hand_helper(self, spot: int, *,  handle_post: bool = True, **kwargs) -> Hand:
+    async def _play_current_hand_helper(
+        self, spot: int, *, handle_post: bool = True, **kwargs
+    ) -> Hand:
         """
         Copy/paste from base game class with asynced methods.
         """
@@ -287,9 +314,8 @@ class EmittingGame(Game):
         self._stop_timer(spot)
         chamber = self._chambers[spot]
         hand = Hand.copy(chamber.hand)
-        await self._server.server.agents['hand_play_agent'].send(
-        # await hand_play_agent.send(
-            value=HandPlay(
+        await self.hand_play_agent.cast(
+            HandPlay(
                 hand_hash=hash(hand),
                 sid=kwargs.get("sid"),
                 timestamp=kwargs.get("timestamp"),
@@ -452,7 +478,7 @@ class EmittingGame(Game):
         await self._emit(
             "set_unlocked", {"unlocked": False}, self._get_sid(spot)
         )
-    
+
     async def _lock_if_unlocked(self, spot: int) -> None:
         """
         Copy/paste from base game class with asynced methods.
@@ -545,22 +571,39 @@ class EmittingGame(Game):
         await self._server.emit(*args, **kwargs)
 
     async def _emit_to_players(self, *args, **kwargs):
-        '''
+        """
         Emits to all players by default. Pass in skip_sid with a string
         or a list to skip players.
 
         The difference between this and _emit_to_server is that the
         latter emits to spectators as well.
-        '''
-        maybe_skip_sid = kwargs.get('skip_sid')
+        """
+        maybe_skip_sid = kwargs.get("skip_sid")
         if not maybe_skip_sid:
-            await asyncio.gather(*[self._emit(*args, room=sid, **kwargs) for sid in self._spot_sid_bidict.values()])
+            await asyncio.gather(
+                *[
+                    self._emit(*args, room=sid, **kwargs)
+                    for sid in self._spot_sid_bidict.values()
+                ]
+            )
         elif isinstance(maybe_skip_sid, str):
-            await asyncio.gather(*[self._emit(*args, room=sid, **kwargs) for sid in self._spot_sid_bidict.values() if sid != maybe_skip_sid])
+            await asyncio.gather(
+                *[
+                    self._emit(*args, room=sid, **kwargs)
+                    for sid in self._spot_sid_bidict.values()
+                    if sid != maybe_skip_sid
+                ]
+            )
         elif isinstance(maybe_skip_sid, list):
-            await asyncio.gather(*[self._emit(*args, room=sid, **kwargs) for sid in self._spot_sid_bidict.values() if sid not in maybe_skip_sid])
+            await asyncio.gather(
+                *[
+                    self._emit(*args, room=sid, **kwargs)
+                    for sid in self._spot_sid_bidict.values()
+                    if sid not in maybe_skip_sid
+                ]
+            )
         else:
-            raise AssertionError('skip_sid can only be a string or a list')
+            raise AssertionError("skip_sid can only be a string or a list")
 
     async def _emit_to_server(self, *args, **kwargs):
         await self._emit(*args, **kwargs)

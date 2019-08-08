@@ -1,6 +1,7 @@
 from ..app import create_app
 from ..utils import main
 
+
 @main
 def run():
     create_app(debug=True).run()
@@ -10,4 +11,3 @@ def run():
 # faust app needs to be given the same event loop that the ASGI app uses
 # during serving with uvicorn but want the faust app and agents to be in
 # separate modules
-
