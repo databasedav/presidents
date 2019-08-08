@@ -4,19 +4,6 @@ from ..db.models import GameClicks
 from datetime import timedelta
 from socketio import AsyncRedisManager
 import asyncio
-import uvloop
-
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-
-app = App(
-    "presidents-app",
-    broker="kafka://localhost:9092",
-    loop=asyncio.get_event_loop(),
-)
-
-game_click_topic = app.topic("game_click", value_type=GameClick)
-
-hand_play_topic = app.topic("hand_play", value_type=HandPlay)
 
 
 async def game_click_processor(game_clicks) -> None:
