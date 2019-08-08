@@ -1,6 +1,6 @@
 from ..game import EmittingGame
-from ..data.stream.agents import game_click_agent
-from ..data.stream.agents import GameClick
+# from ..data.stream.agents import game_click_agent
+from ..data.stream.records import GameClick
 
 from socketio import AsyncNamespace
 

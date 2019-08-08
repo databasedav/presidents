@@ -12,6 +12,7 @@ from datetime import timedelta
 from socketio import AsyncRedisManager
 import asyncio
 import uvloop
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 logging.basicConfig(level=logging.DEBUG)

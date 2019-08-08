@@ -23,8 +23,7 @@ from . import (
 from datetime import datetime
 
 from ..data.stream.records import HandPlay
-from ..data.stream.agents import hand_play_agent
-# from ..tests.testing_server import hand_play_agent
+# from ..data.stream.agents import hand_play_agent
 
 # TODO: decide what to do for the removal of asking options
 # TODO: spectators should get a completely hidden view of the game being
@@ -288,8 +287,8 @@ class EmittingGame(Game):
         self._stop_timer(spot)
         chamber = self._chambers[spot]
         hand = Hand.copy(chamber.hand)
-        # await self._server.server.agents['hand_play_agent'].send(
-        await hand_play_agent.send(
+        await self._server.server.agents['hand_play_agent'].send(
+        # await hand_play_agent.send(
             value=HandPlay(
                 hand_hash=hash(hand),
                 sid=kwargs.get("sid"),

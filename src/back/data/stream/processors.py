@@ -12,17 +12,13 @@ app = App("presidents-app", broker="kafka://localhost:9092", loop=asyncio.get_ev
 game_click_topic = app.topic("game_click", value_type=GameClick)
 
 hand_play_topic = app.topic("hand_play", value_type=HandPlay)
-hand_player_sids_table = (
-    app.Table("hand_players", default=int)
-    .hopping(size=2, step=1, expires=timedelta(minutes=15))
-    .relative_to_field(HandPlay.timestamp)
-)
-# emits same hand played increment events to appropriate sids
-external_sio = AsyncRedisManager("redis://", write_only=True)
 
 
-@app.agent(game_click_topic)
-async def game_click_agent(game_clicks) -> None:
+
+async def game_click_processor(game_clicks) -> None:
+    '''
+    Writes game clicks to database.
+    '''
     async for game_click in game_clicks:
         await GameClicks.objects(
             game_id=game_click.game_id,
@@ -31,17 +27,23 @@ async def game_click_agent(game_clicks) -> None:
         ).async_update(timestamps__append=[game_click.timestamp])
 
 
-# @app.agent(hand_play_topic)
-async def hand_play_processor(hand_plays) -> None:
-    async for hand_play in hand_plays:
-        hand_player_sids = hand_player_sids_table[hand_play.hand_hash]
-        hand_player_sids.append(hand_play.sid)
-        await asyncio.gather(
-            *[
-                external_sio.emit("increment_same_hand_players", {}, room=sid)
-                for sid in hand_player_sids
-            ]
-        )
-        hand_player_sids_table[hand_play.hand_hash] = hand_player_sids
+# emits same hand played increment events to appropriate sids
+external_sio = AsyncRedisManager("redis://", write_only=True)
 
-hand_play_agent = app.agent(hand_play_topic)(hand_play_processor)
+def get_hand_play_processor(hand_player_sids_table):
+    async def hand_play_processor(hand_plays) -> None:
+        '''
+        Writes sids to windowed hand play table and emits increment same
+        hand players to all sids corresponding to the hand played.
+        '''
+        async for hand_play in hand_plays:
+            hand_player_sids = hand_player_sids_table[hand_play.hand_hash]
+            hand_player_sids.append(hand_play.sid)
+            await asyncio.gather(
+                *[
+                    external_sio.emit("increment_same_hand_players", {}, room=sid)
+                    for sid in hand_player_sids
+                ]
+            )
+            hand_player_sids_table[hand_play.hand_hash] = hand_player_sids
+    return hand_play_processor
