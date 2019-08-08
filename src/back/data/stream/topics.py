@@ -17,4 +17,4 @@ def register_topic(app: App, topic, **kwargs):
 
 
 def register_presidents_topics(app: App):
-    return {topic: register_topic(topic, **kwargs) for topic, kwargs in PRESIDENTS_TOPICS.items()}
+    return {topic: register_topic(app, topic, **kwargs) for topic, kwargs in PRESIDENTS_TOPICS.items()}
