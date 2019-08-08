@@ -31,8 +31,8 @@ async def game_click_agent(game_clicks) -> None:
         ).async_update(timestamps__append=[game_click.timestamp])
 
 
-@app.agent(hand_play_topic)
-async def hand_play_agent(hand_plays) -> None:
+# @app.agent(hand_play_topic)
+async def hand_play_processor(hand_plays) -> None:
     async for hand_play in hand_plays:
         hand_player_sids = hand_player_sids_table[hand_play.hand_hash]
         hand_player_sids.append(hand_play.sid)
@@ -43,3 +43,5 @@ async def hand_play_agent(hand_plays) -> None:
             ]
         )
         hand_player_sids_table[hand_play.hand_hash] = hand_player_sids
+
+hand_play_agent = app.agent(hand_play_topic)(hand_play_processor)
