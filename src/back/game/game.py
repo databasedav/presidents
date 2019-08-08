@@ -482,8 +482,6 @@ class Game:
         self.lock(spot)
         # lock others if their currently unlocked hand should no longer be unlocked
         for other_spot in self._get_other_spots(spot, exclude_finished=True):
-            if other_spot == spot:
-                continue
             if self._unlocked[other_spot]:
                 try:
                     if self._get_current_hand(other_spot) < self._hand_in_play:

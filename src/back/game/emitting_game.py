@@ -24,6 +24,7 @@ from datetime import datetime
 
 from ..data.stream.records import HandPlay
 from ..data.stream.agents import hand_play_agent
+# from ..tests.testing_server import hand_play_agent
 
 # TODO: decide what to do for the removal of asking options
 # TODO: spectators should get a completely hidden view of the game being
@@ -269,14 +270,7 @@ class EmittingGame(Game):
             await self._play_current_hand(spot, **kwargs)
 
     async def _play_current_hand(self, spot, **kwargs):
-        hand: Hand = await self._play_current_hand_helper(spot, handle_post=False)
-        await hand_play_agent.send(
-            value=HandPlay(
-                hand_hash=hash(hand),
-                sid=kwargs.get("sid"),
-                timestamp=kwargs.get("timestamp"),
-            )
-        )
+        await self._play_current_hand_helper(spot, handle_post=False, **kwargs)
         await self._set_dot_color(spot, "blue")
         for other_spot in self._get_other_spots(spot, exclude_finished=True):
             await self._set_dot_color(other_spot, "red")
@@ -286,7 +280,7 @@ class EmittingGame(Game):
         )
         self._post_play_handler(spot)
 
-    async def _play_current_hand_helper(self, spot: int, *,  handle_post: bool = True) -> Hand:
+    async def _play_current_hand_helper(self, spot: int, *,  handle_post: bool = True, **kwargs) -> Hand:
         """
         Copy/paste from base game class with asynced methods.
         """
@@ -294,6 +288,14 @@ class EmittingGame(Game):
         self._stop_timer(spot)
         chamber = self._chambers[spot]
         hand = Hand.copy(chamber.hand)
+        # await self._server.server.agents['hand_play_agent'].send(
+        await hand_play_agent.send(
+            value=HandPlay(
+                hand_hash=hash(hand),
+                sid=kwargs.get("sid"),
+                timestamp=kwargs.get("timestamp"),
+            )
+        )
         chamber.remove_cards(hand)
         self._num_consecutive_passes = 0
         await self._set_hand_in_play(hand)
@@ -301,8 +303,6 @@ class EmittingGame(Game):
         await self.lock(spot)
         # lock others if their currently unlocked hand should no longer be unlocked
         for other_spot in self._get_other_spots(spot, exclude_finished=True):
-            if other_spot == spot:
-                continue
             if self._unlocked[other_spot]:
                 try:
                     if self._get_current_hand(other_spot) < self._hand_in_play:

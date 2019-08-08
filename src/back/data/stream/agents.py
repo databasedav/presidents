@@ -5,9 +5,9 @@ from datetime import timedelta
 from socketio import AsyncRedisManager
 import asyncio
 import uvloop
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
-# loop = uvloop.new_event_loop()
-app = App("presidents-app", broker="kafka://localhost:9092")
+app = App("presidents-app", broker="kafka://localhost:9092", loop=asyncio.get_event_loop())
 
 game_click_topic = app.topic("game_click", value_type=GameClick)
 

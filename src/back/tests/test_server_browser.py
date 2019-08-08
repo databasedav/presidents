@@ -12,7 +12,7 @@ asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 import subprocess
 import os
 import logging
-from .testing_server import server_browser
+# from .testing_server import server_browser
 
 logging.basicConfig(level=logging.DEBUG)
 
