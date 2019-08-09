@@ -4,6 +4,7 @@ from ..db.models import GameClicks
 from datetime import timedelta
 from socketio import AsyncRedisManager
 import asyncio
+import uvloop
 
 
 async def game_click_processor(game_clicks) -> None:
@@ -29,16 +30,17 @@ def get_hand_play_processor(hand_player_sids_table):
         hand players to all sids corresponding to the hand played.
         """
         async for hand_play in hand_plays:
-            hand_player_sids = hand_player_sids_table[hand_play.hand_hash]
-            hand_player_sids.append(hand_play.sid)
-            await asyncio.gather(
-                *[
-                    external_sio.emit(
-                        "increment_same_hand_players", {}, room=sid
-                    )
-                    for sid in hand_player_sids
-                ]
-            )
-            hand_player_sids_table[hand_play.hand_hash] = hand_player_sids
+            print(hand_play)
+            # hand_player_sids = hand_player_sids_table[hand_play.hand_hash]
+            # hand_player_sids.append(hand_play.sid)
+            # # await asyncio.gather(
+            # #     *[
+            # #         external_sio.emit(
+            # #             "increment_same_hand_players", {}, room=sid
+            # #         )
+            # #         for sid in hand_player_sids
+            # #     ]
+            # # )
+            # hand_player_sids_table[hand_play.hand_hash] = hand_player_sids
 
     return hand_play_processor

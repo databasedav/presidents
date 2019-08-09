@@ -54,3 +54,10 @@
     * this doesn't actually need the database to be set up but is obviously preferred to show off more stuff
 
 * write out complete rules of presidents
+
+* look into making presidents a mode service
+
+* better way to do the game methods that just need to be re-written with awaits for emitting game
+
+* switch to java null pointer exception bait
+

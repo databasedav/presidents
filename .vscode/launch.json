@@ -4,6 +4,14 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        },
         {
             "name": "presidents test server",
             "type": "python",
@@ -15,7 +23,9 @@
             "name": "pytest server browser",
             "type": "python",
             "request": "launch",
-            "args": ["${workspaceFolder}/src/back/tests/test_server_browser.py"]
+            "args": [
+                "${workspaceFolder}/src/back/tests/test_server_browser.py"
+            ]
             "module": "pytest", //"src.back.tests.test_server_browser",
             "console": "integratedTerminal"
         }
@@ -23,7 +33,10 @@
     "compounds": [
         {
             "name": "client testing",
-            "configurations": ["presidents test server", "pytest server browser"]
+            "configurations": [
+                "presidents test server",
+                "pytest server browser"
+            ]
         }
     ]
 }

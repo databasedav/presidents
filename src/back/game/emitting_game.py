@@ -43,7 +43,7 @@ class EmittingGame(Game):
         ]
         self._spot_sid_bidict: bidict = bidict()
         self.sid_user_id_dict: Dict[str, str] = dict()
-        self.hand_play_agent = server.agents["hand_play_agent"]
+        self.hand_play_agent = server.server.agents["hand_play_agent"]
         self.num_spectators: int = 0  # TODO
 
     # properties
@@ -302,7 +302,7 @@ class EmittingGame(Game):
             "set_cards_remaining",
             {"spot": spot, "cards_remaining": self._chambers[spot].num_cards},
         )
-        self._post_play_handler(spot)
+        await self._post_play_handler(spot)
 
     async def _play_current_hand_helper(
         self, spot: int, *, handle_post: bool = True, **kwargs
@@ -313,6 +313,7 @@ class EmittingGame(Game):
         assert self._unlocked[spot], "play called without unlocking"
         self._stop_timer(spot)
         chamber = self._chambers[spot]
+        assert chamber
         hand = Hand.copy(chamber.hand)
         await self.hand_play_agent.cast(
             HandPlay(
@@ -340,6 +341,15 @@ class EmittingGame(Game):
         if handle_post:
             self._post_play_handler(spot)
         return hand  # for EmittingGame to use
+
+    async def _post_play_handler(self, spot: int) -> None:
+        if self._chambers[spot].is_empty:
+            # player_finish takes care of going to the next player
+            self._finishing_last_played = True
+            await self._player_finish(spot)
+        else:
+            self._finishing_last_played = False
+            await self._next_player()
 
     async def maybe_unlock_pass_turn(self, sid: str) -> None:
         spot: int = self._get_spot(sid)

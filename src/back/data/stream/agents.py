@@ -17,14 +17,11 @@ def register_agent(app: App, topic, processor):
     return app.agent(topic)(processor)
 
 
-def register_presidents_agents(app: App):
-    topics = register_presidents_topics(app)
+def register_presidents_agents(app: App, topics, tables):
     agents = dict()
     for agent, config in PRESIDENTS_AGENTS.items():
         if agent == "hand_play_agent":
-            config["processor"] = get_hand_play_processor(
-                register_hand_player_sids_table(app)
-            )
+            config["processor"] = get_hand_play_processor(tables['hand_player_sids'])
         agents[agent] = register_agent(
             app, topics[config["topic"]], config["processor"]
         )
