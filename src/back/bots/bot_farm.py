@@ -95,10 +95,17 @@ class ClientBot(Bot, AsyncClientNamespace):
         self._cards[payload["card"]] = False
 
     def on_remove_card(self, payload):
-        self._cards.pop([payload["card"]])
+        self._cards.pop(payload["card"])
+
+    def on_select_card(self, payload):
+        self._cards[payload['card']] = True
+    
+    def on_deselect_card(self, payload):
+        self._cards[payload['card']] = False
 
     async def on_set_on_turn(self, payload):
-        await self._turn_up()
+        if payload['on_turn']:
+            await self._turn_up()
 
     def on_set_unlocked(self, payload):
         self._unlocked = payload["unlocked"]
@@ -115,13 +122,10 @@ class ClientBot(Bot, AsyncClientNamespace):
         min_card: int = min(self._cards)
         if not self._cards[min_card]:
             await self._click_card(min_card)
-            await asyncio.sleep(0.01)
         if not self._unlocked:
             await self._unlock()
-            await asyncio.sleep(0.1)
         if self._unlocked:  # either already unlocked or the above unlocked
             await self._play()
-            await asyncio.sleep(0.01)
 
     async def _click_card(self, card: int) -> None:
         await self.emit("card_click", {"card": card})
@@ -137,6 +141,10 @@ class ClientBot(Bot, AsyncClientNamespace):
             await self.emit("unlock_pass")
         if self._pass_unlocked:
             await self.emit("pass_turn")
+    
+    async def emit(self, *args, **kwargs):
+        await super().emit(*args, **kwargs)
+        await asyncio.sleep(0.05)
 
 
 # TODO: orchestrator for client bots that auto rejoins them to reset

@@ -16,7 +16,7 @@ import logging
 
 # from .testing_server import server_browser
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 
 HOST = "127.0.0.1"
@@ -88,6 +88,8 @@ async def test_lil_baby_game():
     )
     await asyncio.sleep(10000)
 
+if __name__ == '__main__':
+    asyncio.run(test_lil_baby_game())
 
 # async def main():
 #     res = await test_on_add_server()

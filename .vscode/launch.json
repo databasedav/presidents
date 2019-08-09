@@ -25,7 +25,7 @@
             "request": "launch",
             "args": [
                 "${workspaceFolder}/src/back/tests/test_server_browser.py"
-            ]
+            ],
             "module": "pytest", //"src.back.tests.test_server_browser",
             "console": "integratedTerminal"
         }

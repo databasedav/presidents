@@ -44,7 +44,7 @@ class EmittingChamber(Chamber):
 
     async def add_card(self, card: int, **kwargs) -> None:
         super().add_card(card, **kwargs)
-        await self._emit("add_card", {"card": card})
+        await self._emit("add_card", {"card": int(card)})
 
     async def add_cards(self, cards) -> None:
         self._check_cards_not_in(cards)
@@ -53,9 +53,18 @@ class EmittingChamber(Chamber):
             *[self.add_card(card, check=False) for card in cards]
         )
 
-    async def remove_card(self, card: int, **kwargs) -> None:
+    async def remove_card(self, card: int, *, update_current_hand_str: bool = True, **kwargs) -> None:
         super().remove_card(card, **kwargs)
-        await self._emit("remove_card", {"card": card})
+        await self._emit("remove_card", {"card": int(card)})
+        if update_current_hand_str:
+            await self._emit_update_current_hand_str()
+    
+    async def remove_cards(self, cards) -> None:
+        self._check_cards_in(cards)
+        # already checked
+        await asyncio.gather(
+            *[self.remove_card(card, update_current_hand_str=False, check=False) for card in cards]
+        )
         await self._emit_update_current_hand_str()
 
     async def add_hand(self, hand: Hand) -> None:
