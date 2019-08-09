@@ -6,18 +6,6 @@ from socketio import AsyncRedisManager
 import asyncio
 import uvloop
 
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-
-app = App(
-    "presidents-app",
-    broker="kafka://localhost:9092",
-    loop=asyncio.get_event_loop(),
-)
-
-game_click_topic = app.topic("game_click", value_type=GameClick)
-
-hand_play_topic = app.topic("hand_play", value_type=HandPlay)
-
 
 async def game_click_processor(game_clicks) -> None:
     """
@@ -42,16 +30,17 @@ def get_hand_play_processor(hand_player_sids_table):
         hand players to all sids corresponding to the hand played.
         """
         async for hand_play in hand_plays:
-            hand_player_sids = hand_player_sids_table[hand_play.hand_hash]
-            hand_player_sids.append(hand_play.sid)
-            await asyncio.gather(
-                *[
-                    external_sio.emit(
-                        "increment_same_hand_players", {}, room=sid
-                    )
-                    for sid in hand_player_sids
-                ]
-            )
-            hand_player_sids_table[hand_play.hand_hash] = hand_player_sids
+            print(hand_play)
+            # hand_player_sids = hand_player_sids_table[hand_play.hand_hash]
+            # hand_player_sids.append(hand_play.sid)
+            # # await asyncio.gather(
+            # #     *[
+            # #         external_sio.emit(
+            # #             "increment_same_hand_players", {}, room=sid
+            # #         )
+            # #         for sid in hand_player_sids
+            # #     ]
+            # # )
+            # hand_player_sids_table[hand_play.hand_hash] = hand_player_sids
 
     return hand_play_processor

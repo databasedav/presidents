@@ -9,7 +9,7 @@ from ..bots.bot_farm import Client, ClientBot
 from fastapi import FastAPI
 from socketio import AsyncServer, AsyncClient, ASGIApp
 
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+# asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 import subprocess
 import os
 import logging
