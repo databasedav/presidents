@@ -31,6 +31,9 @@ def create_app(*, debug=False):
         # ping_timeout=1000,
         # ping_interval=5,
     )
+
+    @
+
     server_browser = ServerBrowser("us-west")
     sio.register_namespace(server_browser)
     asgi_app.engineio_server = sio

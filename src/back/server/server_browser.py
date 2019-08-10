@@ -54,8 +54,15 @@ class ServerBrowser(AsyncNamespace):
         # self.server is the socket.io server
         self.server.register_namespace(server)
 
-    async def on_join_server(self, sid, payload):
+    async def on_join_server_as_player(self, sid, payload):
+        self._join_server_as_player(sid, payload)
         await self._join_server(payload.get('client_bot_farm_sid') or sid, payload["server_id"], payload["name"])
+
+    async def _join_server_as_player(self, sid, payload):
+        ...
+    
+    async def _join_server_as_spectator(self, sid, payload):
+        ...
 
     async def _join_server(self, sid: str, server_id: str, name: str):
         # TODO timeout if server isn't joined in a few seconds; prompt user to retry

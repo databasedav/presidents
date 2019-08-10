@@ -13,6 +13,13 @@ from cassandra.cqlengine.columns import (
 DateTime.truncate_microseconds = False
 
 
+class User(Model):
+    __table_name__ = 'user'
+    __keyspace__ = 'presidents'
+    user_id = UUID(primary_key=True, partition_key=True, required=True)
+    
+
+
 class GameClicks(Model):
     __table_name__ = "game_user_clicks"
     __keyspace__ = "presidents"
@@ -30,7 +37,7 @@ class UserGames(Model):
 
 
 class UserRoundtimeSpots(Model):
-    __table_name__ = "user_jointime_spots"
+    __table_name__ = "user_roundtime_spots"
     __keyspace__ = "presidents"
     user_id = UUID(primary_key=True, partition_key=True, required=True)
     round_id = UUID(primary_key=True, partition_key=True, required=True)
