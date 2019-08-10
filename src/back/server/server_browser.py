@@ -55,11 +55,13 @@ class ServerBrowser(AsyncNamespace):
         self.server.register_namespace(server)
 
     async def on_join_server(self, sid, payload):
-        await self._join_server(sid, payload["server_id"], payload["name"])
+        await self._join_server(payload.get('client_bot_farm_sid') or sid, payload["server_id"], payload["name"])
 
     async def _join_server(self, sid: str, server_id: str, name: str):
-        assert server_id in self._server_dict
         # TODO timeout if server isn't joined in a few seconds; prompt user to retry
+        if self._server_dict[server_id].is_full:
+            await self.emit("server_full", room=sid)
+            return
         await self._server_dict[server_id].join(self.namespace, sid, name)
 
     async def on_refresh(self, sid) -> None:

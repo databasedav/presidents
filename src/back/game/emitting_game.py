@@ -42,7 +42,7 @@ class EmittingGame(Game):
             EmittingChamber(self._server) for _ in range(4)
         ]
         self._spot_sid_bidict: bidict = bidict()
-        self.sid_user_id_dict: Dict[str, str] = dict()
+        self._sid_user_id_dict: Dict[str, str] = dict()
         self.hand_play_agent = server.server.agents["hand_play_agent"]
         self.num_spectators: int = 0  # TODO
 
@@ -57,10 +57,11 @@ class EmittingGame(Game):
     def set_server(self, server: str) -> None:
         self._server = server
 
-    async def add_player(self, sid: str, name: str) -> None:
+    async def add_player(self, sid: str, user_id: str, name: str) -> None:
         rand_open_spot: int = self._rand_open_spot()
         self._chambers[rand_open_spot].set_sid(sid)
         self._spot_sid_bidict.inv[sid] = rand_open_spot
+        self._sid_user_id_dict[sid] = user_id
         await self._set_name(rand_open_spot, name)
         self.num_players += 1
 
@@ -606,7 +607,7 @@ class EmittingGame(Game):
         return self._spot_sid_bidict.inv[sid]
 
     def get_user_id(self, sid: str) -> str:
-        return self.sid_user_id_dict[sid]
+        return self._sid_user_id_dict[sid]
 
     # setters
 

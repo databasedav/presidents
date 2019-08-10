@@ -1,16 +1,49 @@
 from socketio import AsyncClient, AsyncClientNamespace
 from typing import Dict
 import asyncio
+from uuid import uuid4
 
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class BotFarm:
+class ClientBotFarm:
+    '''
+    Orchestrates individual bots; i.e. what games they join, the model
+    they are based on, etc.
+
+    ClientBotFarms can only be connected to a single server browser.
+
+    Adds servers for Clients to join.
+    '''
+
+    
     def __init__(self) -> None:
         self._num_bots: int = 0
-        self._bot_dict: Dict[str, Bot]
+        self._bot_dict: Dict[str, Bot]  # bot_id to Bot
+        self.client: AsyncClient = AsyncClient()
+
+    async def connect_to_server_browser(self, host: str, port: str, server_browser_id: str) -> None:
+        client.register_namespace(ServerBrowserClient(f'/server_browser={server_browser_id}'))
+        await client.connect(f'http://{host}:{port}')
+
+    def client_join_server(self, bot_id: str, server_id: str):
+        self.client.emit('join_server', {'server_id': server_id, })
+        self._bot_dict[bot_id].join_server(server_id)
+
+    def build_a_bot_workshop(self) -> Bot:
+        ...
+
+class ServerBrowserClient(AsyncClientNamespace):
+    '''
+    Keeps a live view of the a server browser. Handles server fulls.
+    '''
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.servers: Dict[str, Server] = dict()  # server id to server
+
+
 
 
 # TODO: another thing that receives rounds that have just been completed
@@ -50,6 +83,7 @@ class Bot:
 
     def __init__(self):
         self._game = None
+        self.bot_id = str(uuid4())
         # whether or not card is selected
         self._cards: Dict[int, bool] = dict()
         self._unlocked: bool = False
@@ -59,7 +93,25 @@ class Bot:
         """
         against humanity
         """
+    
+    def _add_card(self, card: int) -> None:
+        self._cards[card] = False
+    
+    def _remove_card(self, card: int) -> None:
+        del self._cards.[card]
+    
+    def _select_card(self, card: int) -> None:
+        self._cards[card] = True
 
+    def _deselect_card(self, card: int) -> None:
+        self._cards[card] = False
+    
+    def _set_unlocked(self, unlocked: bool) -> None:
+        self._unlocked = unlocked
+    
+    def _set_pass_unlocked(self, pass_unlocked: bool) -> None:
+        self._pass_unlocked = pass_unlocked
+    
 
 class ServerBot(Bot):
     ...
@@ -67,10 +119,26 @@ class ServerBot(Bot):
 
 class Client(AsyncClient):
     """
-    For connecting to server browsers and servers.
+    For connecting to servers. This is not a general client for
+    interacting with the presidents app; it is solely for hosting bots.
+    
+    Allows emitting and receiving events from Servers (which are
+    AsyncNamespaces); supports doing so from multiple servers, i.e.
+    multiple games.
     """
+    def __init__(self, name: str):
+        ...
 
-    ...
+    def connect_to_namespace(self, namespace: str) -> None:
+        '''
+        Simply allows emitting to the given namespace.
+        '''
+        self.connection_namespaces.append(namespace)
+        self.namespaces.append(namespace)
+    
+    async def join_server(self, server_id: str) -> None:
+        await self.emit('join_server', {'server_id': server_id})
+    
 
 
 class ClientBot(Bot, AsyncClientNamespace):
@@ -82,9 +150,7 @@ class ClientBot(Bot, AsyncClientNamespace):
     Unlike a server bot, the client bot does not have direct access to
     the game instance.
 
-    Allows emitting and receiving events from Servers (which are
-    AsyncNamespaces); supports doing so from multiple servers, i.e.
-    multiple games.
+    
     """
 
     def __init__(self, *args, **kwargs):
@@ -92,26 +158,26 @@ class ClientBot(Bot, AsyncClientNamespace):
         Bot.__init__(self)
 
     async def on_add_card(self, payload):
-        self._cards[payload["card"]] = False
+        self._add_card(payload["card"])
 
     def on_remove_card(self, payload):
-        self._cards.pop(payload["card"])
+        self._remove_card(payload["card"])
 
     def on_select_card(self, payload):
-        self._cards[payload['card']] = True
+        self._select_card(payload['card'])
     
     def on_deselect_card(self, payload):
-        self._cards[payload['card']] = False
+        self._deselect_card(payload['card'])
 
     async def on_set_on_turn(self, payload):
         if payload['on_turn']:
             await self._turn_up()
 
     def on_set_unlocked(self, payload):
-        self._unlocked = payload["unlocked"]
+        self._set_unlocked(payload["unlocked"])
 
     def on_set_pass_unlocked(self, payload):
-        self._pass_unlocked = payload["pass_unlocked"]
+        self._set_pass_unlocked(payload["pass_unlocked"])
 
     async def on_alert(self, payload):
         await self._panic_pass()

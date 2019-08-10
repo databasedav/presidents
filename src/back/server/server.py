@@ -30,16 +30,29 @@ class Server(AsyncNamespace):
         super().__init__(namespace=f"/server={server_id}")
         self.name: str = name
         self.game: Optional[EmittingGame] = game
+    
+    def is_full(self) -> None:
+        return self.game.is_full if self.game else False
 
     def _set_game(self, game: EmittingGame) -> None:
         self.game = game
+    
+    def add_player(self):
+        if not self.game:
+            self._set_game(EmittingGame(self))
+        elif self.game.is_full:
+            await self.emit("server_full", namespace=server_browser_namespace, room=sid)
+            return
+        await self.game.add_player(sid, name)
+
+    def add_spectator(self):
+        ...
 
     async def join(
         self, server_browser_namespace: str, sid: str, name: str
     ) -> None:
         if not self.game:
             self._set_game(EmittingGame(self))
-            # self.game._server = self
         elif self.game.is_full:
             await self.emit(
                 "server_full", namespace=server_browser_namespace, room=sid
@@ -51,8 +64,8 @@ class Server(AsyncNamespace):
         #     namespace=server_browser_namespace,
         #     room=sid,
         # )
-        # await self.emit('test')
         await self.game.add_player(sid, name)
+        # TODO: this shouldn't be here
         if self.game.num_players == 4:
             await self.game._start_round(
                 deck=[
