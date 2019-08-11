@@ -290,12 +290,19 @@ class Game:
         self._timers[spot] = self._timer(seconds, self._handle_timeout, spot)
 
     def _handle_timeout(self, spot: int) -> None:
+        reserve_time_use_start: datetime = self._reserve_time_use_starts[spot]
         reserve_time: Optional[Union[int, float]] = self._reserve_times[spot]
-        if reserve_time:
-            self._reserve_times[spot] = 0
+        if not reserve_time_use_start and reserve_time:
             self._reserve_time_use_starts[spot] = datetime.utcnow()
             self._start_timer(spot, reserve_time)
+        # either was using reserve time or was not using reserve time
+        # and simply has no reserve time remaining
         else:
+            if reserve_time_use_start:
+                self._reserve_time_use_starts[spot] = None
+            if reserve_time:
+                self._reserve_times[spot] = 0
+            self._timers[spot] = None
             self._auto_play_or_pass(spot)
 
     def _auto_play_or_pass(self, spot: int) -> None:

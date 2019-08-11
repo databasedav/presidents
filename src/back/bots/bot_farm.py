@@ -202,7 +202,6 @@ class ClientBot(Bot, AsyncClientNamespace):
         AsyncClientNamespace.__init__(self, f"/server={server_id}")
         Bot.__init__(self)
         self.server_id: str = server_id
-        self._consecutive_alerts = 0
 
     async def on_add_card(self, payload):
         self._add_card(payload["card"])
@@ -228,21 +227,9 @@ class ClientBot(Bot, AsyncClientNamespace):
         self._set_pass_unlocked(payload["pass_unlocked"])
 
     async def on_alert(self, payload):
-        self._consecutive_alerts += 1
-        if self._consecutive_alerts >= 2:
-            import sys
-            sys.exit
-            for card, is_selected in self._cards.items():
-                if is_selected:
-                    await self._click_card(card)
-            await self._turn_up()
-            return
         await self._panic_pass()
 
     async def _turn_up(self):
-        # select lowest card if not already selected and attempt to
-        # play, otherwise receival of alert will pass instead
-        self._consecutive_alerts = 0
         if 1 in self._cards:
             card = 1
         else:

@@ -151,7 +151,7 @@ class EmittingGame(Game):
                 "set_on_turn",
                 {"on_turn": True, "spot": self._current_player},
                 room=self._current_player_sid,
-                # callback=lambda: self._start_timer(self._current_player, time),
+                callback=lambda: self._start_timer(self._current_player, time),
             )
         )
         events.append(
@@ -769,3 +769,17 @@ class EmittingGame(Game):
 
     async def _emit_alert(self, alert, sid: str) -> None:
         await self._emit("alert", {"alert": alert}, room=sid)
+
+
+class AsyncTimer:
+    def __init__(self, timeout, callback, *args, **kwargs):
+        self._timeout = timeout
+        self._callback = callback
+        self._task = asyncio.ensure_future(self._job())
+
+    async def _job(self):
+        await asyncio.sleep(self._timeout)
+        await self._callback()
+
+    def cancel(self):
+        self._task.cancel()
