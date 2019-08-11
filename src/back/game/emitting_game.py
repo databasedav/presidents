@@ -64,13 +64,16 @@ class EmittingGame(Game):
         self._sid_user_id_dict[sid] = user_id
         await self._set_name(rand_open_spot, name)
         self.num_players += 1
+        # TODO: THIS SHOULD NOT BE HERE.
+        if self.num_players == 4:
+            await self._start_round()
 
     def remove_player(self, sid: str) -> None:
         self._spot_sid_bidict.inv.pop(sid)
         super().remove_player(self._get_spot(sid))
 
     async def _deal_cards(
-        self, deck: Optional[List[Iterable[int]]] = None
+        self, *, deck: Optional[List[Iterable[int]]] = None
     ) -> None:
         """
         Deals cards to all players.
@@ -86,7 +89,7 @@ class EmittingGame(Game):
         )
 
     async def _deal_cards_indiv(
-        self, spot: str, sid: str, cards: Iterable[int]
+        self, spot: int, sid: str, cards: Iterable[int]
     ):
         """
         Deals cards to a single player; for utilizing concurrency with
@@ -148,7 +151,7 @@ class EmittingGame(Game):
                 "set_on_turn",
                 {"on_turn": True, "spot": self._current_player},
                 room=self._current_player_sid,
-                callback=lambda: self._start_timer(self._current_player, time),
+                # callback=lambda: self._start_timer(self._current_player, time),
             )
         )
         events.append(
@@ -337,7 +340,7 @@ class EmittingGame(Game):
         Copy/paste from base game class with asynced methods.
         """
         assert self._unlocked[spot], "play called without unlocking"
-        self._stop_timer(spot)
+        # self._stop_timer(spot)  # TODO: do async timer shit
         chamber = self._chambers[spot]
         assert chamber
         hand = Hand.copy(chamber.hand)
@@ -456,7 +459,7 @@ class EmittingGame(Game):
         Copy/paste from base game class with asynced methods.
         """
         assert self._pass_unlocked[spot], "pass called without unlocking"
-        self._stop_timer(spot)
+        # self._stop_timer(spot)  # TODO: do async timer shit
         await self._lock_pass(spot)
         self._num_consecutive_passes += 1
         await self._message(f"⏭️ {self._names[spot]} passed")
@@ -487,9 +490,25 @@ class EmittingGame(Game):
     # trading related methods
 
     async def _initiate_trading(self) -> None:
-        import sys
-
-        sys.exit()
+        # TODO: THIS SHOULD NOT BE HERE.
+        self._num_consecutive_passes: int = 0
+        self._finishing_last_played: bool = False
+        self._timers = [None for _ in range(4)]
+        self._selected_asking_option: List[Optional[int]] = [
+            None for _ in range(4)
+        ]
+        self._already_asked: List[Set[int]] = [set() for _ in range(4)]
+        self._giving_options: List[Optional[Set[int]]] = [
+            set() for _ in range(4)
+        ]
+        self._given: List[Set[int]] = [set() for _ in range(4)]
+        self._taken: List[Set[int]] = [set() for _ in range(4)]
+        self._current_player = None
+        await self._clear_hand_in_play()
+        self._positions.clear()
+        self._hand_in_play = base_hand
+        await self._start_round()
+        return
         super()._initiate_trading()
         for spot in range(4):
             await self._set_dot_color(spot, "red")
@@ -702,12 +721,6 @@ class EmittingGame(Game):
         await self._emit_to_players(
             "set_dot_color", {"spot": spot, "dot_color": dot_color}
         )
-
-    async def _set_vice_asshole(self, spot):
-        await self._emit_to_players(
-            "set_on_turn", {"on_turn": False, "spot": spot, "time": 0}
-        )
-        super()._set_vice_asshole(spot)
 
     # emitters
 

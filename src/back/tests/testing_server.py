@@ -6,7 +6,7 @@ import os
 import asyncio
 import logging
 
-# logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 
 
 @main

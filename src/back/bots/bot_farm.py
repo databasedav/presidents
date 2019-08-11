@@ -2,6 +2,7 @@ from socketio import AsyncClient, AsyncClientNamespace
 from typing import Dict
 import asyncio
 from uuid import uuid4
+import random
 
 import logging
 
@@ -27,7 +28,6 @@ class ClientBotFarm:
         self._client: AsyncClient = AsyncClient()
         self._server_browser_client: ServerBrowserClient = None
         self._bot_clients = [Client() for _ in range(4)]
-        
 
     async def connect_to_server_browser(
         self, host: str, port: int, server_browser_id: str
@@ -38,7 +38,12 @@ class ClientBotFarm:
         self._client.register_namespace(self._server_browser_client)
         # server browser namespace is taken from the event handlers
         await self._client.connect(f"http://{host}:{port}")
-        await asyncio.gather(*[client.connect(f'http://{host}:{port}') for client in self._bot_clients])
+        await asyncio.gather(
+            *[
+                client.connect(f"http://{host}:{port}", namespaces=[f'/server={server_id}' for server_id in range(1000)])
+                for client in self._bot_clients
+            ]
+        )
 
     async def add_server(self, name: str, server_id: str):
         if not self._server_browser_client:
@@ -52,7 +57,7 @@ class ClientBotFarm:
     async def bot_join_server(self, bot_id: str):
         bot: ClientBot = self._bot_dict[bot_id]
         client: Client = self._get_bot_client(bot_id)
-        client.connect_to_namespace(bot.namespace)
+        # client.connect_to_namespace(bot.namespace)
         client.register_namespace(bot)
         await self._server_browser_client.emit(
             "join_server_as_player",
@@ -189,15 +194,17 @@ class ClientBot(Bot, AsyncClientNamespace):
     the game instance.
 
     ClientBots require the server to be joined to be given at init.
+
+    TODO: smarter bot; consecutive alerts trigger some corrective action
     """
 
     def __init__(self, server_id: str):
         AsyncClientNamespace.__init__(self, f"/server={server_id}")
         Bot.__init__(self)
         self.server_id: str = server_id
+        self._consecutive_alerts = 0
 
     async def on_add_card(self, payload):
-        await self.emit('test')
         self._add_card(payload["card"])
 
     def on_remove_card(self, payload):
@@ -210,6 +217,7 @@ class ClientBot(Bot, AsyncClientNamespace):
         self._deselect_card(payload["card"])
 
     async def on_set_on_turn(self, payload):
+        self._consecutive_alerts = 0
         if payload["on_turn"]:
             await self._turn_up()
 
@@ -220,14 +228,27 @@ class ClientBot(Bot, AsyncClientNamespace):
         self._set_pass_unlocked(payload["pass_unlocked"])
 
     async def on_alert(self, payload):
+        self._consecutive_alerts += 1
+        if self._consecutive_alerts >= 2:
+            import sys
+            sys.exit
+            for card, is_selected in self._cards.items():
+                if is_selected:
+                    await self._click_card(card)
+            await self._turn_up()
+            return
         await self._panic_pass()
 
     async def _turn_up(self):
         # select lowest card if not already selected and attempt to
         # play, otherwise receival of alert will pass instead
-        min_card: int = min(self._cards)
-        if not self._cards[min_card]:
-            await self._click_card(min_card)
+        self._consecutive_alerts = 0
+        if 1 in self._cards:
+            card = 1
+        else:
+            card = random.choice(list(self._cards.keys()))
+        if not self._cards[card]:
+            await self._click_card(card)
         if not self._unlocked:
             await self._unlock()
         if self._unlocked:  # either already unlocked or the above unlocked

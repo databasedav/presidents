@@ -150,7 +150,7 @@ class Hand:
         """
         if not self.is_valid or not other.is_valid:
             raise AssertionError(
-                "attempting to compare 1 or more invalid hands."
+                f"attempting to compare 1 or more invalid hands: {self} and {other}"
             )
         # one-directional because non-bombs cannot be compared with
         # bombs

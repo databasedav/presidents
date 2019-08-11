@@ -84,10 +84,7 @@ class ServerBrowser(AsyncNamespace):
             await self.emit("server_full", room=bot_client_sid or sid)
         else:
             await server.add_player(sid, None, name)
-        await asyncio.sleep(1)
-        if server.game.is_full:
-            await server.game._start_round()
-
+        
 
     async def _join_server_as_spectator(self, sid, payload):
         ...
