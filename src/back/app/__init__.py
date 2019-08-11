@@ -32,7 +32,13 @@ def create_app(*, debug=False):
         # ping_interval=5,
     )
 
-    @
+    # TODO: socket connection should be opened right after login
+    #       actually eventually the home page will have a lot more shit
+    #       so the socket connection would be opened immediately
+    @sio.on('connect')
+    def on_connect(sid, payload) -> None:
+        ...
+
 
     server_browser = ServerBrowser("us-west")
     sio.register_namespace(server_browser)

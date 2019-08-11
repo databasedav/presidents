@@ -40,10 +40,7 @@ class Server(AsyncNamespace):
     def add_player(self):
         if not self.game:
             self._set_game(EmittingGame(self))
-        elif self.game.is_full:
-            await self.emit("server_full", namespace=server_browser_namespace, room=sid)
-            return
-        await self.game.add_player(sid, name)
+        await self.game.add_player(sid, user_id, name)
 
     def add_spectator(self):
         ...

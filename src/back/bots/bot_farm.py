@@ -28,8 +28,8 @@ class ClientBotFarm:
         client.register_namespace(ServerBrowserClient(f'/server_browser={server_browser_id}'))
         await client.connect(f'http://{host}:{port}')
 
-    def client_join_server(self, bot_id: str, server_id: str):
-        self.client.emit('join_server', {'server_id': server_id, })
+    def client_join_server_as_player(self, bot_id: str, server_id: str):
+        self.client.emit('join_server_as_player', {'server_id': server_id, })
         self._bot_dict[bot_id].join_server(server_id)
 
     def build_a_bot_workshop(self) -> Bot:
