@@ -30,14 +30,14 @@ class Server(AsyncNamespace):
         super().__init__(namespace=f"/server={server_id}")
         self.name: str = name
         self.game: Optional[EmittingGame] = game
-    
+
     def is_full(self) -> None:
         return self.game.is_full if self.game else False
 
     def _set_game(self, game: EmittingGame) -> None:
         self.game = game
-    
-    def add_player(self):
+
+    async def add_player(self, sid: str, user_id: str, name: str) -> None:
         if not self.game:
             self._set_game(EmittingGame(self))
         await self.game.add_player(sid, user_id, name)

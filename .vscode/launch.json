@@ -20,6 +20,13 @@
             "console": "externalTerminal"
         },
         {
+            "name": "same hand played demo",
+            "type": "python",
+            "request": "launch",
+            "module": "src.back.same_hand_played_demo",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "pytest server browser",
             "type": "python",
             "request": "launch",

@@ -163,7 +163,7 @@ class EmittingGame(Game):
     async def _player_finish(self, spot: int) -> None:
         await self._set_dot_color(spot, "purple")
         await self._player_finish_helper(spot)
-    
+
     async def _player_finish_helper(self, spot: int) -> None:
         assert self._chambers[
             spot
@@ -382,7 +382,7 @@ class EmittingGame(Game):
             await self._maybe_unlock_pass_turn_helper(spot)
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
-    
+
     async def _maybe_unlock_pass_turn_helper(self, spot: int) -> None:
         """
         Copy/paste from base game class with asynced methods.
@@ -406,7 +406,7 @@ class EmittingGame(Game):
         await self._emit(
             "set_pass_unlocked", {"pass_unlocked": True}, self._get_sid(spot)
         )
-    
+
     async def _unlock_pass_helper(self, spot: int) -> None:
         await self._lock_if_unlocked(spot)
         self._pass_unlocked[spot] = True
@@ -423,7 +423,7 @@ class EmittingGame(Game):
             await self._maybe_pass_turn_helper(spot)
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
-        
+
     async def _maybe_pass_turn_helper(self, spot: int) -> None:
         """
         Copy/paste from base game class with asynced methods.
@@ -448,8 +448,10 @@ class EmittingGame(Game):
         await self._pass_turn_helper(spot, handle_post=False)
         await self._set_dot_color(spot, "yellow")
         await self._post_pass_handler_helper()
-    
-    async def _pass_turn_helper(self, spot: int, handle_post: bool = True) -> None:
+
+    async def _pass_turn_helper(
+        self, spot: int, handle_post: bool = True
+    ) -> None:
         """
         Copy/paste from base game class with asynced methods.
         """
@@ -460,7 +462,7 @@ class EmittingGame(Game):
         await self._message(f"⏭️ {self._names[spot]} passed")
         if handle_post:
             await self._post_pass_handler_helper()
-    
+
     async def _post_pass_handler_helper(self) -> None:
         # all remaining players passed on a winning hand
         if self._finishing_last_played:
@@ -486,6 +488,7 @@ class EmittingGame(Game):
 
     async def _initiate_trading(self) -> None:
         import sys
+
         sys.exit()
         super()._initiate_trading()
         for spot in range(4):
@@ -624,7 +627,7 @@ class EmittingGame(Game):
                 "hand_in_play_desc": hand.id_desc,
             },
         )
-    
+
     async def _set_president(self, spot: int) -> None:
         """
         Copy/paste from base game class with asynced methods.
@@ -646,7 +649,7 @@ class EmittingGame(Game):
     async def _set_asshole(self, spot: int) -> None:
         """
         Copy/paste from base game class with asynced methods.
-        """        
+        """
         await self._set_giver(spot, True)
 
     async def _set_asker(
@@ -658,7 +661,9 @@ class EmittingGame(Game):
         await self._set_asker_helper(spot, asker, takes_and_gives)
         await self._emit("set_asker", {"asker": asker}, self._get_sid(spot))
 
-    async def _set_asker_helper(self, spot: int, asker: bool, takes_and_gives: int) -> None:
+    async def _set_asker_helper(
+        self, spot: int, asker: bool, takes_and_gives: int
+    ) -> None:
         await self._set_takes_remaining(spot, takes_and_gives)
         await self._set_gives_remaining(spot, takes_and_gives)
 

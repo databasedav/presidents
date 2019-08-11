@@ -7,43 +7,81 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# NOTE: bot client is the client that a ClientBot lives on
+
 
 class ClientBotFarm:
-    '''
+    """
     Orchestrates individual bots; i.e. what games they join, the model
     they are based on, etc.
 
     ClientBotFarms can only be connected to a single server browser.
 
     Adds servers for Clients to join.
-    '''
+    """
 
-    
     def __init__(self) -> None:
         self._num_bots: int = 0
-        self._bot_dict: Dict[str, Bot]  # bot_id to Bot
-        self.client: AsyncClient = AsyncClient()
+        self._bot_dict: Dict[str, ClientBot] = dict()  # bot_id to Bot
+        self._bot_client_dict: Dict[str, int] = dict()  # bot_id to client_id
+        self._client: AsyncClient = AsyncClient()
+        self._server_browser_client: ServerBrowserClient = None
+        self._bot_clients = [Client() for _ in range(4)]
+        
 
-    async def connect_to_server_browser(self, host: str, port: str, server_browser_id: str) -> None:
-        client.register_namespace(ServerBrowserClient(f'/server_browser={server_browser_id}'))
-        await client.connect(f'http://{host}:{port}')
+    async def connect_to_server_browser(
+        self, host: str, port: int, server_browser_id: str
+    ) -> None:
+        self._server_browser_client = ServerBrowserClient(
+            f"/server_browser={server_browser_id}"
+        )
+        self._client.register_namespace(self._server_browser_client)
+        # server browser namespace is taken from the event handlers
+        await self._client.connect(f"http://{host}:{port}")
+        await asyncio.gather(*[client.connect(f'http://{host}:{port}') for client in self._bot_clients])
 
-    def client_join_server_as_player(self, bot_id: str, server_id: str):
-        self.client.emit('join_server_as_player', {'server_id': server_id, })
-        self._bot_dict[bot_id].join_server(server_id)
+    async def add_server(self, name: str, server_id: str):
+        if not self._server_browser_client:
+            raise Exception(
+                "must connect to server browser before adding server"
+            )
+        await self._server_browser_client.emit(
+            "add_server", {"name": name, "server_id": server_id}
+        )
 
-    def build_a_bot_workshop(self) -> Bot:
-        ...
+    async def bot_join_server(self, bot_id: str):
+        bot: ClientBot = self._bot_dict[bot_id]
+        client: Client = self._get_bot_client(bot_id)
+        client.connect_to_namespace(bot.namespace)
+        client.register_namespace(bot)
+        await self._server_browser_client.emit(
+            "join_server_as_player",
+            {
+                "bot_client_sid": client.sid,
+                "server_id": bot.server_id,
+                "name": bot.id,
+            },
+        )
+
+    def build_a_bot_workshop(self, server_id: str, client: int) -> str:
+        bot: ClientBot = ClientBot(server_id)
+        bot_id = bot.id
+        self._bot_dict[bot_id] = bot
+        self._bot_client_dict[bot_id] = client
+        return bot_id
+
+    def _get_bot_client(self, bot_id: str):
+        return self._bot_clients[self._bot_client_dict[bot_id]]
+
 
 class ServerBrowserClient(AsyncClientNamespace):
-    '''
+    """
     Keeps a live view of the a server browser. Handles server fulls.
-    '''
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.servers: Dict[str, Server] = dict()  # server id to server
-
-
 
 
 # TODO: another thing that receives rounds that have just been completed
@@ -83,7 +121,7 @@ class Bot:
 
     def __init__(self):
         self._game = None
-        self.bot_id = str(uuid4())
+        self.id = str(uuid4())
         # whether or not card is selected
         self._cards: Dict[int, bool] = dict()
         self._unlocked: bool = False
@@ -93,25 +131,25 @@ class Bot:
         """
         against humanity
         """
-    
+
     def _add_card(self, card: int) -> None:
         self._cards[card] = False
-    
+
     def _remove_card(self, card: int) -> None:
-        del self._cards.[card]
-    
+        del self._cards[card]
+
     def _select_card(self, card: int) -> None:
         self._cards[card] = True
 
     def _deselect_card(self, card: int) -> None:
         self._cards[card] = False
-    
+
     def _set_unlocked(self, unlocked: bool) -> None:
         self._unlocked = unlocked
-    
+
     def _set_pass_unlocked(self, pass_unlocked: bool) -> None:
         self._pass_unlocked = pass_unlocked
-    
+
 
 class ServerBot(Bot):
     ...
@@ -126,19 +164,19 @@ class Client(AsyncClient):
     AsyncNamespaces); supports doing so from multiple servers, i.e.
     multiple games.
     """
-    def __init__(self, name: str):
-        ...
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.connection_namespaces = list()
 
     def connect_to_namespace(self, namespace: str) -> None:
-        '''
+        """
         Simply allows emitting to the given namespace.
-        '''
+        """
+        if not self.connection_namespaces:
+            self.connection_namespaces = list()
         self.connection_namespaces.append(namespace)
         self.namespaces.append(namespace)
-    
-    async def join_server(self, server_id: str) -> None:
-        await self.emit('join_server', {'server_id': server_id})
-    
 
 
 class ClientBot(Bot, AsyncClientNamespace):
@@ -150,27 +188,29 @@ class ClientBot(Bot, AsyncClientNamespace):
     Unlike a server bot, the client bot does not have direct access to
     the game instance.
 
-    
+    ClientBots require the server to be joined to be given at init.
     """
 
-    def __init__(self, *args, **kwargs):
-        AsyncClientNamespace.__init__(self, *args, **kwargs)
+    def __init__(self, server_id: str):
+        AsyncClientNamespace.__init__(self, f"/server={server_id}")
         Bot.__init__(self)
+        self.server_id: str = server_id
 
     async def on_add_card(self, payload):
+        await self.emit('test')
         self._add_card(payload["card"])
 
     def on_remove_card(self, payload):
         self._remove_card(payload["card"])
 
     def on_select_card(self, payload):
-        self._select_card(payload['card'])
-    
+        self._select_card(payload["card"])
+
     def on_deselect_card(self, payload):
-        self._deselect_card(payload['card'])
+        self._deselect_card(payload["card"])
 
     async def on_set_on_turn(self, payload):
-        if payload['on_turn']:
+        if payload["on_turn"]:
             await self._turn_up()
 
     def on_set_unlocked(self, payload):
@@ -207,7 +247,7 @@ class ClientBot(Bot, AsyncClientNamespace):
             await self.emit("unlock_pass")
         if self._pass_unlocked:
             await self.emit("pass_turn")
-    
+
     async def emit(self, *args, **kwargs):
         await super().emit(*args, **kwargs)
         await asyncio.sleep(0.05)

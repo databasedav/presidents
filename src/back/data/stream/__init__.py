@@ -11,7 +11,7 @@ def setup_presidents_faust_app(app: App):
     agents, and tables.
     """
     topics = register_presidents_topics(app)
-    tables = {'hand_player_sids': register_hand_player_sids_table(app)}
+    tables = {"hand_player_sids": register_hand_player_sids_table(app)}
     agents = register_presidents_agents(app, topics, tables)
     return topics, tables, agents
 

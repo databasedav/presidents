@@ -12,22 +12,22 @@ def create_app(*, debug=False):
 
     asgi_app = ASGIApp(socketio_server=None, other_asgi_app=fastapi_app)
 
-    uvicorn = Uvicorn(asgi_app, host="127.0.0.1", port=5000)#, loop='asyncio')
+    uvicorn = Uvicorn(
+        asgi_app, host="127.0.0.1", port=5000
+    )  # , loop='asyncio')
 
     faust_app = Faust(
-        "presidents-app",
-        broker="aiokafka://localhost:9092",
-        loop=uvicorn.loop,
+        "presidents-app", broker="aiokafka://localhost:9092", loop=uvicorn.loop
     )
 
-    @fastapi_app.on_event('startup')
+    @fastapi_app.on_event("startup")
     def start_faust_app():
         asyncio.ensure_future(faust_app.start(), loop=uvicorn.loop)
 
     sio = FaustfulAsyncServer(
         faust_app,
         async_mode="asgi",
-        # logger=True,
+        logger=True,
         # ping_timeout=1000,
         # ping_interval=5,
     )
@@ -35,10 +35,9 @@ def create_app(*, debug=False):
     # TODO: socket connection should be opened right after login
     #       actually eventually the home page will have a lot more shit
     #       so the socket connection would be opened immediately
-    @sio.on('connect')
+    @sio.on("connect")
     def on_connect(sid, payload) -> None:
         ...
-
 
     server_browser = ServerBrowser("us-west")
     sio.register_namespace(server_browser)

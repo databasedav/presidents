@@ -14,10 +14,9 @@ DateTime.truncate_microseconds = False
 
 
 class User(Model):
-    __table_name__ = 'user'
-    __keyspace__ = 'presidents'
+    __table_name__ = "user"
+    __keyspace__ = "presidents"
     user_id = UUID(primary_key=True, partition_key=True, required=True)
-    
 
 
 class GameClicks(Model):

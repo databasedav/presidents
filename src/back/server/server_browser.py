@@ -13,6 +13,7 @@ import datetime
 # from confluent_kafka import Producer
 import json
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -55,28 +56,41 @@ class ServerBrowser(AsyncNamespace):
         self.server.register_namespace(server)
 
     async def on_join_server_as_player(self, sid, payload):
-        '''
+        """
         sid will either be the sid of an actual human client or the sid
-        of a ClientBotFarm's client; in the latter case, the payload
-        will include the sid of the ClientBot that the ClientBotFarm
-        wants to join the game
-        '''
-        client_bot_sid: str = payload.get('client_bot_sid')
-        await self._join_server_as_player(client_bot_sid or sid, payload['server_id'], payload['name'], client_bot_farm_sid=)
-        await self._join_server(payload.get('client_bot_farm_sid') or sid, payload["server_id"], payload["name"])
+        of a ClientBotFarm's server browser client; in the latter case,
+        the payload will include the sid of the ClientBot that the
+        ClientBotFarm wants to join the game
+        """
+        bot_client_sid: str = payload.get("bot_client_sid")
+        await self._join_server_as_player(
+            sid=bot_client_sid or sid,
+            server_id=payload["server_id"],
+            name=payload["name"],
+            bot_client_sid=bot_client_sid,
+        )
 
-    async def _join_server_as_player(self, sid, payload):
-        ...
-    
+    async def _join_server_as_player(
+        self,
+        sid: str,
+        server_id: str,
+        name: str,
+        *,
+        bot_client_sid: str = None,
+    ):
+        # TODO timeout if server isn't joined in a few seconds; prompt user to retry
+        server: Server = self._server_dict[server_id]
+        if server.game and server.game.is_full:
+            await self.emit("server_full", room=bot_client_sid or sid)
+        else:
+            await server.add_player(sid, None, name)
+        await asyncio.sleep(1)
+        if server.game.is_full:
+            await server.game._start_round()
+
+
     async def _join_server_as_spectator(self, sid, payload):
         ...
-
-    async def _join_server_as_player(self, sid: str, server_id: str, name: str, *, client_bot_farm_sid: str = None):
-        # TODO timeout if server isn't joined in a few seconds; prompt user to retry
-        if self._server_dict[server_id].is_full:
-            await self.emit("server_full", room=client_bot_farm_sid or sid)
-        else:
-            await self._server_dict[server_id].add_player(self.namespace, sid, name)
 
     async def on_refresh(self, sid) -> None:
         await self._refresh()
@@ -88,7 +102,7 @@ class ServerBrowser(AsyncNamespace):
             callback=lambda: print("refreshed"),
         )
 
-    def _get_servers(name: str):
+    def _get_servers(self, name: str):
         return list(
             filter(
                 lambda server: server.name == name, self._server_dict.values()
