@@ -5,7 +5,7 @@ from ..data.stream.records import GameClick
 
 from socketio import AsyncNamespace
 
-from typing import Optional, Dict
+from typing import Optional, Dict, Callable, Union
 from itertools import cycle
 from datetime import datetime
 
@@ -21,15 +21,33 @@ class Server(AsyncNamespace):
 
     one game per server for now
 
-    server namespace is 'server_' + server_id
+    server namespace is f'/server={server_id}'
     """
 
     def __init__(
-        self, server_id: str, name: str, game: Optional[EmittingGame] = None
+        self,
+        server_id: str,
+        name: str,
+        *,
+        game: Optional[EmittingGame] = None,
+        timer: Callable = None,
+        turn_time: Union[int, float] = None,
+        reserve_time: Union[int, float] = None,
     ) -> None:
+        """
+        Provided timer, turn time, and reserve time overwrites game's if
+        given.
+        """
         super().__init__(namespace=f"/server={server_id}")
         self.name: str = name
         self.game: Optional[EmittingGame] = game
+        if game:
+            game._timer = timer
+            game._turn_time = turn_time
+            game._reserve_time = reserve_time
+        self._timer = timer
+        self._turn_time = turn_time
+        self._reserve_time = reserve_time
 
     def is_full(self) -> None:
         return self.game.is_full if self.game else False
@@ -39,60 +57,18 @@ class Server(AsyncNamespace):
 
     async def add_player(self, sid: str, user_id: str, name: str) -> None:
         if not self.game:
-            self._set_game(EmittingGame(self))
+            self._set_game(
+                EmittingGame(
+                    self,
+                    timer=self._timer,
+                    turn_time=self._turn_time,
+                    reserve_time=self._reserve_time,
+                )
+            )
         await self.game.add_player(sid, user_id, name)
 
     def add_spectator(self):
         ...
-
-    async def join(
-        self, server_browser_namespace: str, sid: str, name: str
-    ) -> None:
-        if not self.game:
-            self._set_game(EmittingGame(self))
-        elif self.game.is_full:
-            await self.emit(
-                "server_full", namespace=server_browser_namespace, room=sid
-            )
-            return
-        # await self.emit(
-        #     "send_to_server",
-        #     {"server_namespace": self.namespace},
-        #     namespace=server_browser_namespace,
-        #     room=sid,
-        # )
-        await self.game.add_player(sid, name)
-        # TODO: this shouldn't be here
-        if self.game.num_players == 4:
-            await self.game._start_round(
-                deck=[
-                    range(lower, upper)
-                    for lower, upper in zip(
-                        range(1, 53, 13), range(14, 54, 13)
-                    )
-                ]
-            )
-
-    # def on_connect(self, sid, payload):
-    #     self.test_join(
-    #         server_browser_namespace=self.namespace, sid=sid, name=next(names)
-    #     )
-
-    def test_join(
-        self, server_browser_namespace: str, sid: str, name: str
-    ) -> None:
-        if not self.game:
-            self._set_game(EmittingGame(self.server, self.namespace))
-        # elif self.game.is_full:
-        #     await self.emit('server_full', namespace=server_browser_namespace,
-        #               room=sid)
-        #     return
-        # await self.emit('send_to_server', {'server_namespace': self.namespace},
-        #           namespace=server_browser_namespace, room=sid)
-        assert self.game is not None
-        self.game.add_player(sid, name)
-        if self.game.num_players == 4:
-            self.game._start_round(testing=True)  # TODO
 
     async def on_card_click(self, sid: str, payload: Dict) -> None:
         timestamp: datetime.datetime = datetime.utcnow()

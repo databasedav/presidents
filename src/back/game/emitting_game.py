@@ -6,6 +6,7 @@ from socketio import AsyncServer
 import asyncio
 
 from ..game.hand import NotPlayableOnError
+from ..utils import AsyncTimer
 
 # from ..server.server import Server
 Server = None
@@ -24,6 +25,7 @@ from . import (
 from datetime import datetime
 
 from ..data.stream.records import HandPlay
+# from ..server.server import Server  # TODO: pls fix this omg
 
 # from ..data.stream.agents import hand_play_agent
 
@@ -126,14 +128,10 @@ class EmittingGame(Game):
             #      like is done in _emit_set_on_turn_handler
         except KeyError:  # self._current_player is None (round start)
             pass
-        assert self._turn_manager is not None
-        # TODO this mypy error
-        self._current_player = next(self._turn_manager)
+        self._current_player = next(self._turn_manager)  # TODO this mypy error
         await self._message(
             f"🎲 it's {self._names[self._current_player]}'s turn"
         )
-        assert self._current_player is not None
-        self._start_timer(self._current_player, self._turn_time)
         await self._emit_set_on_turn_handler()
 
     async def _emit_set_on_turn_handler(self):
@@ -143,7 +141,6 @@ class EmittingGame(Game):
 
         TODO: clean
         """
-        time: int = 2
         events = list()
         events.append(self._set_dot_color(self._current_player, "green"))
         events.append(
@@ -151,17 +148,85 @@ class EmittingGame(Game):
                 "set_on_turn",
                 {"on_turn": True, "spot": self._current_player},
                 room=self._current_player_sid,
-                callback=lambda: self._start_timer(self._current_player, time),
+                # timer only starts after client has updated state to
+                # notify player that it is their turn
+                callback=lambda: self._start_timer(
+                    self._current_player, self._turn_time
+                ),
             )
         )
         events.append(
             self._emit_to_players(
                 "set_time",
-                {"spot": self._current_player, "time": time * 1000},
+                {"spot": self._current_player, "time": self._turn_time * 1000},
                 skip_sid=self._current_player_sid,
             )
         )
         await asyncio.gather(*events)
+
+    # def _start_timer(
+    #         self, spot: int, seconds: Optional[Union[int, float]]
+    #     ) -> None:
+    #         assert self._timer is not None
+    #         self._timers[spot] = self._timer(seconds, self._handle_timeout, spot)
+
+    async def _handle_timeout(self, spot: int) -> None:
+        reserve_time_use_start: datetime = self._reserve_time_use_starts[spot]
+        reserve_time: Optional[Union[int, float]] = self._reserve_times[spot]
+        if not reserve_time_use_start and reserve_time:
+            self._reserve_time_use_starts[spot] = datetime.utcnow()
+            self._start_timer(spot, reserve_time)
+        # either was using reserve time or was not using reserve time
+        # and simply has no reserve time remaining, i.e.
+        # elif reserver_time_use_start or not reserve_time:
+        else:
+            if reserve_time_use_start:
+                self._reserve_time_use_starts[spot] = None
+            if reserve_time:
+                self._reserve_times[spot] = 0
+            self._timers[spot] = None
+            await self._auto_play_or_pass(spot)
+
+    async def _auto_play_or_pass(self, spot: int) -> None:
+        """
+        Copy/paste from base game class with asynced methods.
+
+        TODO: the client should not be able to see the server auto
+        #     auto playing for them; the only change they should see
+        #     is the state right after the auto play (e.g. not
+        #     seeing the server reselect selected cards)
+        """
+        assert (
+            self._current_player == spot
+        ), f"it is not {self._get_sid(spot)}/{self._names[spot]}'s' turn"
+        if self._hand_in_play not in [base_hand, None]:
+            await self._unlock_pass(spot)
+            await self._pass_turn(spot)  # locks pass
+            return
+        chamber: Chamber = self._chambers[spot]
+        currently_selected_cards: List[int] = chamber.hand.to_list()
+        if currently_selected_cards:  # not empty list
+            await chamber.deselect_selected()
+        min_card = None
+        if self._hand_in_play is base_hand:
+            await chamber.select_card(1)
+            await self._unlock(spot)
+            await self._play_current_hand(spot)
+        elif self._hand_in_play is None:
+            min_card: int = chamber._get_min_card()
+            await chamber.select_card(min_card)
+            await self._unlock(spot)
+            await self._play_current_hand(spot)
+
+        try:
+            for card in currently_selected_cards:  # could be empty list
+                if card != min_card:
+                    await chamber.select_card(card)
+        # this occurs when min card is played while auto play is running
+        # TODO block this type of behavior (i.e. make it impossible)
+        except (UnboundLocalError, CardNotInChamberError):
+            pass
+
 
     async def _player_finish(self, spot: int) -> None:
         await self._set_dot_color(spot, "purple")
@@ -340,7 +405,7 @@ class EmittingGame(Game):
         Copy/paste from base game class with asynced methods.
         """
         assert self._unlocked[spot], "play called without unlocking"
-        # self._stop_timer(spot)  # TODO: do async timer shit
+        self._stop_timer(spot)
         chamber = self._chambers[spot]
         assert chamber
         hand = Hand.copy(chamber.hand)
@@ -459,7 +524,7 @@ class EmittingGame(Game):
         Copy/paste from base game class with asynced methods.
         """
         assert self._pass_unlocked[spot], "pass called without unlocking"
-        # self._stop_timer(spot)  # TODO: do async timer shit
+        self._stop_timer(spot)
         await self._lock_pass(spot)
         self._num_consecutive_passes += 1
         await self._message(f"⏭️ {self._names[spot]} passed")
@@ -771,15 +836,4 @@ class EmittingGame(Game):
         await self._emit("alert", {"alert": alert}, room=sid)
 
 
-class AsyncTimer:
-    def __init__(self, timeout, callback, *args, **kwargs):
-        self._timeout = timeout
-        self._callback = callback
-        self._task = asyncio.ensure_future(self._job())
 
-    async def _job(self):
-        await asyncio.sleep(self._timeout)
-        await self._callback()
-
-    def cancel(self):
-        self._task.cancel()

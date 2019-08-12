@@ -1,10 +1,12 @@
 from socketio import AsyncClient, AsyncClientNamespace
-from typing import Dict
+from typing import Dict, Union
 import asyncio
 from uuid import uuid4
 import random
 
 import logging
+
+from ..utils import AsyncTimer
 
 logger = logging.getLogger(__name__)
 
@@ -40,18 +42,36 @@ class ClientBotFarm:
         await self._client.connect(f"http://{host}:{port}")
         await asyncio.gather(
             *[
-                client.connect(f"http://{host}:{port}", namespaces=[f'/server={server_id}' for server_id in range(1000)])
+                client.connect(
+                    f"http://{host}:{port}",
+                    namespaces=[
+                        f"/server={server_id}" for server_id in range(1000)
+                    ],
+                )
                 for client in self._bot_clients
             ]
         )
 
-    async def add_server(self, name: str, server_id: str):
+    async def add_server(
+        self,
+        name: str,
+        server_id: str,
+        *,
+        turn_time: Union[int, float] = None,
+        reserve_time: Union[int, float] = None,
+    ):
         if not self._server_browser_client:
             raise Exception(
                 "must connect to server browser before adding server"
             )
         await self._server_browser_client.emit(
-            "add_server", {"name": name, "server_id": server_id}
+            "add_server",
+            {
+                "name": name,
+                "server_id": server_id,
+                "turn_time": turn_time,
+                "reserve_time": reserve_time,
+            },
         )
 
     async def bot_join_server(self, bot_id: str):
@@ -129,6 +149,7 @@ class Bot:
         self.id = str(uuid4())
         # whether or not card is selected
         self._cards: Dict[int, bool] = dict()
+        self._selected_cards = list()
         self._unlocked: bool = False
         self._pass_unlocked: bool = False
 
@@ -142,12 +163,16 @@ class Bot:
 
     def _remove_card(self, card: int) -> None:
         del self._cards[card]
+        if card in self._selected_cards:
+            self._selected_cards.remove(card)
 
     def _select_card(self, card: int) -> None:
         self._cards[card] = True
+        self._selected_cards.append(card)
 
     def _deselect_card(self, card: int) -> None:
         self._cards[card] = False
+        self._selected_cards.remove(card)
 
     def _set_unlocked(self, unlocked: bool) -> None:
         self._unlocked = unlocked
@@ -202,6 +227,7 @@ class ClientBot(Bot, AsyncClientNamespace):
         AsyncClientNamespace.__init__(self, f"/server={server_id}")
         Bot.__init__(self)
         self.server_id: str = server_id
+        self._consecutive_alerts = 0
 
     async def on_add_card(self, payload):
         self._add_card(payload["card"])
@@ -217,8 +243,10 @@ class ClientBot(Bot, AsyncClientNamespace):
 
     async def on_set_on_turn(self, payload):
         self._consecutive_alerts = 0
+        # # the following is done because the timer on the server is
+        # started after receiving the on turn acknowledgement
         if payload["on_turn"]:
-            await self._turn_up()
+            AsyncTimer.spawn_after(0.5, self._turn_up)
 
     def on_set_unlocked(self, payload):
         self._set_unlocked(payload["unlocked"])
@@ -227,9 +255,14 @@ class ClientBot(Bot, AsyncClientNamespace):
         self._set_pass_unlocked(payload["pass_unlocked"])
 
     async def on_alert(self, payload):
-        await self._panic_pass()
+        self._consecutive_alerts += 1
+        if self._consecutive_alerts == 1:
+            await self._panic_pass()
+        # if stuck in alert loop simply does nothing
 
     async def _turn_up(self):
+        if self._selected_cards:
+            await asyncio.gather(*[self._click_card(card) for card in self._selected_cards])
         if 1 in self._cards:
             card = 1
         else:

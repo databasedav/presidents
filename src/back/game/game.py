@@ -45,8 +45,8 @@ class Game:
     def __init__(
         self,
         *,
-        timer: Optional[Callable] = None,
-        turn_time: Optional[Union[int, float]] = None,
+        timer: Callable = None,
+        turn_time: Union[int, float] = None,
         reserve_time: Union[int, float] = 0,
     ) -> None:
 
@@ -287,6 +287,12 @@ class Game:
         self, spot: int, seconds: Optional[Union[int, float]]
     ) -> None:
         assert self._timer is not None
+        # TODO: remove this after miguel adds calling the callback from
+        #       within the listener function
+        # {
+        if not self._is_current_player(spot):
+            return
+        # }
         self._timers[spot] = self._timer(seconds, self._handle_timeout, spot)
 
     def _handle_timeout(self, spot: int) -> None:
@@ -296,7 +302,8 @@ class Game:
             self._reserve_time_use_starts[spot] = datetime.utcnow()
             self._start_timer(spot, reserve_time)
         # either was using reserve time or was not using reserve time
-        # and simply has no reserve time remaining
+        # and simply has no reserve time remaining, i.e.
+        # elif reserver_time_use_start or not reserve_time:
         else:
             if reserve_time_use_start:
                 self._reserve_time_use_starts[spot] = None
@@ -331,9 +338,14 @@ class Game:
 
     def _stop_timer(self, spot: int) -> None:
         now: datetime = datetime.utcnow()
-        assert self._timers[spot] is not None, "timer is none for this spot"
-        self._timers[spot].cancel()
-        self._timers[spot] = None
+        # TODO: remove this after miguel adds calling the callback from
+        #       within the listener function
+        # {
+        if self._timers[spot]:
+            self._timers[spot].cancel()
+            self._timers[spot] = None
+        # }
+        # assert self._timers[spot] is not None, "timer is none for this spot"
         if self._reserve_time_use_starts[spot] is not None:
             seconds_used: float = (
                 now - self._reserve_time_use_starts[spot]

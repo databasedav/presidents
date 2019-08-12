@@ -6,10 +6,10 @@ import os
 import asyncio
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 
 
 @main
 def run():
-    uvicorn = create_app(debug=True)
+    uvicorn = create_app(debug=False)
     uvicorn.run()

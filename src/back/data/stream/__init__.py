@@ -17,6 +17,11 @@ def setup_presidents_faust_app(app: App):
 
 
 class FaustfulAsyncServer(AsyncServer):
-    def __init__(self, faust_app, **kwargs):
+    def __init__(self, loop, faust_app, **kwargs):
+        """
+        Saves event loop (for server access), sets up faust app, and
+        saves agents (for server access).
+        """
         super().__init__(**kwargs)
+        self.loop = loop
         self.agents = setup_presidents_faust_app(faust_app)[2]

@@ -1,5 +1,5 @@
 from .server import Server
-from typing import Dict, List
+from typing import Dict, List, Union, Callable
 
 # from flask import request
 # from ..data.stream import game_click_agent, GameClick
@@ -14,6 +14,8 @@ import datetime
 import json
 import logging
 import asyncio
+from functools import partial
+from ..game.emitting_game import AsyncTimer
 
 logger = logging.getLogger(__name__)
 
@@ -41,16 +43,35 @@ class ServerBrowser(AsyncNamespace):
         ]
 
     async def on_add_server(self, sid, payload):
-        self.add_server(**payload)
+        self.add_server(
+            payload.pop('name'),
+            timer=partial(AsyncTimer.spawn_after, loop=self.server.loop),
+            **payload,
+        )
         # try:
         #     await self._refresh()
         # except AttributeError:  # nobody has entered the server browser
         #     pass
 
     # allows multiple servers with the same name (will have different server ids)
-    def add_server(self, name: str, server_id: str = None):
-        server_id: str = server_id or str(uuid.uuid4())
-        server: Server = Server(server_id, name)
+    def add_server(
+        self,
+        name: str,
+        *,
+        server_id: str = None,
+        timer: Callable = None,
+        turn_time: Union[int, float] = None,
+        reserve_time: Union[int, float] = None,
+    ):
+        if not server_id:
+            server_id = str(uuid.uuid4())
+        server: Server = Server(
+            server_id,
+            name,
+            timer=timer,
+            turn_time=turn_time,
+            reserve_time=reserve_time,
+        )
         self._server_dict[server_id] = server
         # self.server is the socket.io server
         self.server.register_namespace(server)
@@ -84,7 +105,6 @@ class ServerBrowser(AsyncNamespace):
             await self.emit("server_full", room=bot_client_sid or sid)
         else:
             await server.add_player(sid, None, name)
-        
 
     async def _join_server_as_spectator(self, sid, payload):
         ...

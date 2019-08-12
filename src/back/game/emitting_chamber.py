@@ -54,9 +54,13 @@ class EmittingChamber(Chamber):
         )
 
     async def remove_card(
-        self, card: int, *, update_current_hand_str: bool = True, **kwargs
+        self,
+        card: int,
+        *,
+        check: bool = True,
+        update_current_hand_str: bool = True
     ) -> None:
-        super().remove_card(card, **kwargs)
+        super().remove_card(card, check=check)
         await self._emit("remove_card", {"card": int(card)})
         if update_current_hand_str:
             await self._emit_update_current_hand_str()
@@ -67,7 +71,7 @@ class EmittingChamber(Chamber):
         await asyncio.gather(
             *[
                 self.remove_card(
-                    card, update_current_hand_str=False, check=False
+                    card, check=False, update_current_hand_str=False
                 )
                 for card in cards
             ]
@@ -100,11 +104,34 @@ class EmittingChamber(Chamber):
         await self._emit("select_card", {"card": card})
         await self._emit_update_current_hand_str()
 
-    async def deselect_card(self, card: int, check: bool = True) -> None:
+    async def deselect_card(
+        self,
+        card: int,
+        check: bool = True,
+        *,
+        update_current_hand_str: bool = True,
+    ) -> None:
         super().deselect_card(card, check)
         await self._emit("deselect_card", {"card": int(card)})
         # TODO: current hand str shouldn't be lazy loaded
+        if update_current_hand_str:
+            await self._emit_update_current_hand_str()
+
+    async def deselect_cards(self, cards: Iterable[int]) -> None:
+        self._check_cards_in(cards)
+        await asyncio.gather(
+            *[
+                self.deselect_card(card, check=False, update_current_hand_str=False)
+                for card in cards
+            ]
+        )
         await self._emit_update_current_hand_str()
+
+    async def deselect_selected(self) -> None:
+        """
+        Copy/paste from base chamber class with asynced methods.
+        """
+        await self.deselect_cards(self.hand)
 
     async def _emit_update_current_hand_str(self) -> None:
         await self._emit("update_current_hand_str", {"str": str(self.hand)})

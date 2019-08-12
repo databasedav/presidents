@@ -2,6 +2,10 @@ from .bots.bot_farm import *
 import asyncio
 
 
+TURN_TIME = 1
+RESERVE_TIME = 0
+
+
 async def main():
     client_bot_farm = ClientBotFarm()
     await client_bot_farm.connect_to_server_browser(
@@ -11,7 +15,12 @@ async def main():
 
     async def add_server_and_populate(server_id):
         server_str = f"/server={server_id}"
-        await client_bot_farm.add_server(server_str, str(server_id))
+        await client_bot_farm.add_server(
+            server_str,
+            server_id=str(server_id),
+            turn_time=TURN_TIME,
+            reserve_time=RESERVE_TIME,
+        )
         await asyncio.sleep(1)
         await asyncio.gather(
             *[add_bot_to_server(str(server_id), client) for client in range(4)]
@@ -22,10 +31,10 @@ async def main():
         await client_bot_farm.bot_join_server(bot_id)
         await asyncio.sleep(1)
 
-    # await asyncio.gather(
-    #     *[add_server_and_populate(server_id) for server_id in range(10)]
-    # )
-    await add_server_and_populate(1)
+    await asyncio.gather(
+        *[add_server_and_populate(server_id) for server_id in range(100)]
+    )
+    # await add_server_and_populate(1)
     await asyncio.sleep(100000000)
 
 

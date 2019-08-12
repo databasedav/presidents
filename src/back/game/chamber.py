@@ -104,7 +104,7 @@ class Chamber:
         for card in cards:
             self.add_card(card, check=False)  # already checked
 
-    def remove_card(self, card: int, check: bool = True) -> None:
+    def remove_card(self, card: int, *, check: bool = True) -> None:
         """
         Here it is important to note that we do not need to deselect the
         card before we remove it because all the hand nodes that contain

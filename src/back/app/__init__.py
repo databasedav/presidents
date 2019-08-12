@@ -25,9 +25,10 @@ def create_app(*, debug=False):
         asyncio.ensure_future(faust_app.start(), loop=uvicorn.loop)
 
     sio = FaustfulAsyncServer(
+        uvicorn.loop,
         faust_app,
         async_mode="asgi",
-        logger=True,
+        logger=debug,
         # ping_timeout=1000,
         # ping_interval=5,
     )
