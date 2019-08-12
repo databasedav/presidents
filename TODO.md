@@ -63,3 +63,4 @@
 
 * tell miguel that users should be able to add namespaces after already connected and also access the callback function from anywhere in the event catching function
 
+* record whether a move was autoplayed

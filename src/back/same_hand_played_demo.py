@@ -32,7 +32,7 @@ async def main():
         await asyncio.sleep(1)
 
     await asyncio.gather(
-        *[add_server_and_populate(server_id) for server_id in range(100)]
+        *[add_server_and_populate(server_id) for server_id in range(1000)]
     )
     # await add_server_and_populate(1)
     await asyncio.sleep(100000000)

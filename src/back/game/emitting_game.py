@@ -196,35 +196,41 @@ class EmittingGame(Game):
         #     is the state right after the auto play (e.g. not
         #     seeing the server reselect selected cards)
         """
-        assert (
-            self._current_player == spot
-        ), f"it is not {self._get_sid(spot)}/{self._names[spot]}'s' turn"
-        if self._hand_in_play not in [base_hand, None]:
-            await self._unlock_pass(spot)
-            await self._pass_turn(spot)  # locks pass
-            return
-        chamber: Chamber = self._chambers[spot]
-        currently_selected_cards: List[int] = chamber.hand.to_list()
-        if currently_selected_cards:  # not empty list
-            await chamber.deselect_selected()
-        min_card = None
-        if self._hand_in_play is base_hand:
-            await chamber.select_card(1)
-            await self._unlock(spot)
-            await self._play_current_hand(spot)
-        elif self._hand_in_play is None:
-            min_card: int = chamber._get_min_card()
-            await chamber.select_card(min_card)
-            await self._unlock(spot)
-            await self._play_current_hand(spot)
-
+        sid: str = self._get_sid(spot)
+        # assert (
+        #     self._current_player == spot
+        # ), f"it is not {sid}/{self._names[spot]}'s' turn"
+        # TODO: tighter client bot integration; i'm thinking chamber
+        #       syncing...
+        while self._is_current_player(spot):
+            try:
+                if self._hand_in_play not in [base_hand, None]:
+                    await self.maybe_unlock_pass_turn(sid)
+                    await self.maybe_pass_turn(sid)  # locks pass
+                    return
+                chamber: Chamber = self._chambers[spot]
+                currently_selected_cards: List[int] = chamber.hand.to_list()
+                if currently_selected_cards:  # not empty list
+                    await chamber.deselect_selected()
+                min_card = None
+                if self._hand_in_play is base_hand:
+                    await chamber.select_card(1)
+                    await self.maybe_unlock_play(spot, sid)
+                    await self.maybe_play_current_hand(sid, datetime.utcnow())
+                elif self._hand_in_play is None:
+                    min_card: int = chamber._get_min_card()
+                    await chamber.select_card(min_card)
+                    await self.maybe_unlock_play(spot, sid)
+                    await self.maybe_play_current_hand(sid, datetime.utcnow())
+            except:
+                continue
         try:
             for card in currently_selected_cards:  # could be empty list
                 if card != min_card:
                     await chamber.select_card(card)
         # this occurs when min card is played while auto play is running
         # TODO block this type of behavior (i.e. make it impossible)
-        except (UnboundLocalError, CardNotInChamberError):
+        except (UnboundLocalError, CardNotInChamberError, DuplicateCardError):
             pass
 
 
@@ -314,7 +320,7 @@ class EmittingGame(Game):
             raise PresidentsError(
                 "you have already finished this round", permitted=False
             )
-        self._lock_if_pass_unlocked(spot)
+        await self._lock_if_pass_unlocked(spot)
         hand = self._get_current_hand(spot)
         if hand.is_empty:
             raise PresidentsError(
@@ -663,10 +669,17 @@ class EmittingGame(Game):
         self.lock(self._get_spot(sid))
 
     async def _unlock(self, spot: int) -> None:
-        super()._unlock(spot)
+        await self._unlock_helper(spot)
         await self._emit(
             "set_unlocked", {"unlocked": True}, self._get_sid(spot)
         )
+    
+    async def _unlock_helper(self, spot: int) -> None:
+        """
+        Copy/paste from base game class with asynced methods.
+        """
+        await self._lock_if_pass_unlocked(spot)
+        self._unlocked[spot] = True
 
     async def lock(self, spot: int) -> None:
         super().lock(spot)
@@ -681,8 +694,15 @@ class EmittingGame(Game):
         if self._unlocked[spot]:
             await self.lock(spot)
 
+    async def _lock_if_pass_unlocked(self, spot: int) -> None:
+        """
+        Copy/paste from base game class with asynced methods.
+        """
+        if self._pass_unlocked[spot]:
+            await self._lock_pass(spot)
+
     async def _message(self, message: str) -> None:
-        super()._message(message)
+        # super()._message(message)
         await self._emit_to_server("message", {"message": message})
 
     # getters
@@ -703,6 +723,8 @@ class EmittingGame(Game):
         await self._emit_to_players("set_names", {"names": self._names})
 
     async def _set_hand_in_play(self, hand: Hand) -> None:
+        if hand.is_empty or not hand.is_valid:
+            raise Exception('hand is empty or invalid wtf ???')  # TODO
         super()._set_hand_in_play(hand)
         await self._emit_to_players(
             "set_hand_in_play",
