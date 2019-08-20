@@ -51,9 +51,9 @@ class Hand:
 
     def __init__(
         self,
-        cards: Optional[np.ndarray[np.uint8]] = None,
-        identity: Optional[int] = None,
-        head: Optional[int] = None,
+        cards: np.ndarray[np.uint8] = None,
+        identity: int = None,
+        head: int = None,
     ) -> None:
         if cards is None:  # default constructor; empty hand
             self._cards: np.ndarray[np.uint8] = np.zeros(

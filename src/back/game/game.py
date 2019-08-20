@@ -283,16 +283,7 @@ class Game:
         assert self._current_player is not None
         self._start_timer(self._current_player, self._turn_time)
 
-    def _start_timer(
-        self, spot: int, seconds: Optional[Union[int, float]]
-    ) -> None:
-        assert self._timer is not None
-        # TODO: remove this after miguel adds calling the callback from
-        #       within the listener function
-        # {
-        if not self._is_current_player(spot):
-            return
-        # }
+    def _start_timer(self, spot: int, seconds: Union[int, float]) -> None:
         self._timers[spot] = self._timer(seconds, self._handle_timeout, spot)
 
     def _handle_timeout(self, spot: int) -> None:

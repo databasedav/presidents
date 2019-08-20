@@ -2,7 +2,7 @@ from .bots.bot_farm import *
 import asyncio
 
 
-TURN_TIME = 1
+TURN_TIME = 2
 RESERVE_TIME = 0
 
 
@@ -36,6 +36,8 @@ async def main():
     )
     # await add_server_and_populate(1)
     await asyncio.sleep(100000000)
+
+    # todo 4 clients isn't enough lol; let a single client handle 
 
 
 if __name__ == "__main__":

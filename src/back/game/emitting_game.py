@@ -130,38 +130,33 @@ class EmittingGame(Game):
             #      like is done in _emit_set_on_turn_handler
         except KeyError:  # self._current_player is None (round start)
             pass
-        self._current_player = next(self._turn_manager)  # TODO this mypy error
+        self._current_player = spot = next(self._turn_manager)  # TODO this mypy error
         await self._message(
-            f"🎲 it's {self._names[self._current_player]}'s turn"
+            f"🎲 it's {self._names[spot]}'s turn"
         )
-        await self._emit_set_on_turn_handler()
+        self._start_timer(spot, self._turn_time)
+        await self._emit_set_on_turn_handler(spot)
 
-    async def _emit_set_on_turn_handler(self):
+    async def _emit_set_on_turn_handler(self, spot: int) -> None:
         """
         handles callback timer for player whose turn it is and updates
         other players' views of that timer as well
 
         TODO: clean
         """
+        sid = self._get_sid(spot)
         events = list()
-        events.append(self._set_dot_color(self._current_player, "green"))
+        events.append(self._set_dot_color(spot, "green"))
         events.append(
-            self._emit(
-                "set_on_turn",
-                {"on_turn": True, "spot": self._current_player},
-                room=self._current_player_sid,
-                # timer only starts after client has updated state to
-                # notify player that it is their turn
-                callback=lambda: self._start_timer(
-                    self._current_player, self._turn_time
-                ),
+            self._emit("set_on_turn", {"on_turn": True, "spot": spot}, room=sid,
+                # callback=  # record on turn acknowledge delay in db
             )
         )
         events.append(
             self._emit_to_players(
                 "set_time",
-                {"spot": self._current_player, "time": self._turn_time * 1000},
-                skip_sid=self._current_player_sid,
+                {"spot": spot, "time": self._turn_time * 1000},
+                skip_sid=sid,
             )
         )
         await asyncio.gather(*events)
@@ -214,41 +209,30 @@ class EmittingGame(Game):
         # also the fact that they should get a better internet connection
         """
         sid: str = self._get_sid(spot)
-        # assert (
-        #     self._current_player == spot
-        # ), f"it is not {sid}/{self._names[spot]}'s' turn"
+        assert (
+            self._current_player == spot
+        ), f"it is not {sid}/{self._names[spot]}'s' turn"
         # TODO: tighter client bot integration; i'm thinking chamber
         #       syncing...
-        while self._is_current_player(spot):
-            try:
-                if self._hand_in_play not in [base_hand, None]:
-                    await self.maybe_unlock_pass_turn(sid)
-                    await self.maybe_pass_turn(sid)  # locks pass
-                    return
-                chamber: Chamber = self._chambers[spot]
-                currently_selected_cards: List[int] = chamber.hand.to_list()
-                if currently_selected_cards:  # not empty list
-                    await chamber.deselect_selected()
-                min_card = None
-                if self._hand_in_play is base_hand:
-                    await chamber.select_card(1)
-                    await self.maybe_unlock_play(spot, sid)
-                    await self.maybe_play_current_hand(sid, datetime.utcnow())
-                elif self._hand_in_play is None:
-                    min_card: int = chamber._get_min_card()
-                    await chamber.select_card(min_card)
-                    await self.maybe_unlock_play(spot, sid)
-                    await self.maybe_play_current_hand(sid, datetime.utcnow())
-            except:
-                continue
-        try:
-            for card in currently_selected_cards:  # could be empty list
-                if card != min_card:
-                    await chamber.select_card(card)
-        # this occurs when min card is played while auto play is running
-        # TODO block this type of behavior (i.e. make it impossible)
-        except (UnboundLocalError, CardNotInChamberError, DuplicateCardError):
-            pass
+        if self._hand_in_play not in [base_hand, None]:  # pass if needn't play
+            await self.maybe_unlock_pass_turn(sid)
+            await self.maybe_pass_turn(sid)  # locks pass
+            return
+
+        chamber: Chamber = self._chambers[spot]
+        currently_selected_cards: List[int] = chamber.hand.to_list()
+        if currently_selected_cards:  # not empty list
+            await chamber.deselect_selected()
+        
+        # min card will be 1 if playing on base hand
+        min_card: int = chamber._get_min_card()
+        await chamber.select_card(min_card)
+        await self.maybe_unlock_play(spot, sid)
+        await self.maybe_play_current_hand(sid, datetime.utcnow())
+        
+        for card in currently_selected_cards:  # could be empty list
+            if card != min_card:
+                await chamber.select_card(card)
 
 
     async def _player_finish(self, spot: int) -> None:
@@ -279,6 +263,15 @@ class EmittingGame(Game):
                 f"🏆 {self._names[spot]} is vice asshole 🥉 and {self._names[self._current_player]} is asshole 💩"
             )
             await self._initiate_trading()
+    
+    async def emit_correct_state(self, sid: str):
+        spot: int = self._get_spot(sid)
+        await self._emit('correct_state', {
+            'cards': list(self._chambers[spot]),
+            'selected_cards': self._get_current_hand(spot).to_list(),
+            'unlocked': self._unlocked[spot],
+            'pass_unlocked': self._pass_unlocked[spot]
+        }, room=sid)
 
     # card management related methods
 

@@ -84,34 +84,29 @@ class Server(AsyncNamespace):
         # )
 
     async def on_unlock(self, sid) -> None:
-        assert self.game is not None
         await self.game.unlock_handler(sid)
 
     def on_lock(self, sid) -> None:
-        assert self.game is not None
         self.game.lock_handler(sid)
 
     async def on_play(self, sid) -> None:
         timestamp: datetime.datetime = datetime.utcnow()
-        assert self.game is not None
         await self.game.maybe_play_current_hand(sid, timestamp)
 
     async def on_unlock_pass(self, sid) -> None:
-        assert self.game is not None
         await self.game.maybe_unlock_pass_turn(sid)
 
     async def on_pass_turn(self, sid) -> None:
-        assert self.game is not None
         await self.game.maybe_pass_turn(sid)
 
     async def on_select_asking_option(self, sid, payload) -> None:
-        assert self.game is not None
         await self.game.set_selected_asking_option(sid, payload["value"])
 
     async def on_ask(self, sid) -> None:
-        assert self.game is not None
         await self.game.ask_for_card(sid)
 
     async def on_give(self, sid) -> None:
-        assert self.game is not None
         await self.game.give_card(sid)
+    
+    async def on_request_correct_state(self, sid) -> None:
+        await self.game.emit_correct_state(sid)

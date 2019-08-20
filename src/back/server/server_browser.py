@@ -75,6 +75,7 @@ class ServerBrowser(AsyncNamespace):
         self._server_dict[server_id] = server
         # self.server is the socket.io server
         self.server.register_namespace(server)
+        print(f'number of servers: {len(self._server_dict)}')
 
     async def on_join_server_as_player(self, sid, payload):
         """
@@ -105,6 +106,7 @@ class ServerBrowser(AsyncNamespace):
             await self.emit("server_full", room=bot_client_sid or sid)
         else:
             await server.add_player(sid, None, name)
+        print(f'number of players: {sum(server.game.num_players for server in self._server_dict.values() if server.game)}')
 
     async def _join_server_as_spectator(self, sid, payload):
         ...

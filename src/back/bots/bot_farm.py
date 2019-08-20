@@ -245,8 +245,9 @@ class ClientBot(Bot, AsyncClientNamespace):
         self._consecutive_alerts = 0
         # # the following is done because the timer on the server is
         # started after receiving the on turn acknowledgement
-        if payload["on_turn"]:
-            AsyncTimer.spawn_after(0.5, self._turn_up)
+        # if payload["on_turn"]:
+            # AsyncTimer.spawn_after(0.5, self._turn_up)
+        await self._turn_up()
 
     def on_set_unlocked(self, payload):
         self._set_unlocked(payload["unlocked"])
@@ -258,7 +259,17 @@ class ClientBot(Bot, AsyncClientNamespace):
         self._consecutive_alerts += 1
         if self._consecutive_alerts == 1:
             await self._panic_pass()
+        elif self._consecutive_alerts == 2:
+            await self._request_correct_state()
         # if stuck in alert loop simply does nothing
+    
+    async def on_correct_state(self, payload):
+        self._cards = {card: False for card in payload['cards']}
+        self._selected_cards.clear()
+        for card in payload['selected_cards']:
+            self._select_card(card)
+        self._set_unlocked(payload['unlocked'])
+        self._set_pass_unlocked(payload['pass_unlocked'])
 
     async def _turn_up(self):
         if self._selected_cards:
@@ -275,23 +286,26 @@ class ClientBot(Bot, AsyncClientNamespace):
             await self._play()
 
     async def _click_card(self, card: int) -> None:
-        await self.emit("card_click", {"card": card})
+        await self._emit("card_click", {"card": card})
 
     async def _unlock(self) -> None:
-        await self.emit("unlock")
+        await self._emit("unlock")
 
     async def _play(self) -> None:
-        await self.emit("play")
+        await self._emit("play")
 
     async def _panic_pass(self) -> None:
         if not self._pass_unlocked:
-            await self.emit("unlock_pass")
+            await self._emit("unlock_pass")
         if self._pass_unlocked:
-            await self.emit("pass_turn")
+            await self._emit("pass_turn")
+    
+    async def _request_correct_state(self) -> None:
+        await self._emit('request_correct_state')
 
-    async def emit(self, *args, **kwargs):
+    async def _emit(self, *args, **kwargs):
         await super().emit(*args, **kwargs)
-        await asyncio.sleep(0.05)
+        await asyncio.sleep(0.2)
 
 
 # TODO: orchestrator for client bots that auto rejoins them to reset
