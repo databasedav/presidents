@@ -33,7 +33,8 @@ from ..data.stream.records import HandPlay
 # TODO: spectators should get a completely hidden view of the game being
 #       played and maybe if you are friends with another player, you can
 #       see that player's cards and stuff like that
-
+# TODO: block receiving user events during autoplay, block autoplaying
+#       while user event is being processed
 
 class EmittingGame(Game):
     def __init__(self, server: Server, **kwargs):
@@ -47,6 +48,7 @@ class EmittingGame(Game):
         self._sid_user_id_dict: Dict[str, str] = dict()
         self.hand_play_agent = server.server.agents["hand_play_agent"]
         self.num_spectators: int = 0  # TODO
+        
 
     # properties
 
@@ -195,6 +197,21 @@ class EmittingGame(Game):
         #     auto playing for them; the only change they should see
         #     is the state right after the auto play (e.g. not
         #     seeing the server reselect selected cards)
+
+        # this is the solution bois:
+        # right after the client updates the state such that the player
+        # is notified that it is their turn, send an event with ...; shit
+        # but this is bad cuz then the server side timer depends on the 
+        # client's sending the time the player sees that its their turn
+        # which is hackerboi prone
+
+        # ok here is what is gna happen: timer will start server side
+        # w 0 delay and then the on_turn acks will be stored in the db
+        # for analysis, the timer start time will be send to the front
+        # end so it can determine how much time the player actually has
+        # the fact that the player will actually have less time to play
+        # will be handled by the fact that they have reserve time and
+        # also the fact that they should get a better internet connection
         """
         sid: str = self._get_sid(spot)
         # assert (
