@@ -8,6 +8,7 @@ from socketio import AsyncNamespace
 from typing import Optional, Dict, Callable, Union
 from itertools import cycle
 from datetime import datetime
+import asyncio
 
 
 import logging
@@ -29,7 +30,7 @@ class Server(AsyncNamespace):
         server_id: str,
         name: str,
         *,
-        game: Optional[EmittingGame] = None,
+        game: EmittingGame = None,
         timer: Callable = None,
         turn_time: Union[int, float] = None,
         reserve_time: Union[int, float] = None,
@@ -91,6 +92,7 @@ class Server(AsyncNamespace):
 
     async def on_play(self, sid) -> None:
         timestamp: datetime.datetime = datetime.utcnow()
+        # await asyncio.wait([self.game.maybe_play_current_hand(sid, timestamp)])
         await self.game.maybe_play_current_hand(sid, timestamp)
 
     async def on_unlock_pass(self, sid) -> None:

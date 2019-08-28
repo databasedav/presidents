@@ -30,19 +30,20 @@ function server_browser_plugin (rbnsp) {
 function server_plugin (rnsp) {
   return store => {
     store.registerModule(rnsp, create_server_module(rnsp))
-    Vue.use(new VueSocketIO({
-      connection: io(rnsp, { forceNew: true }),
-      options: {
-        useConnectionNamespace: true,
-        namespaceName: rnsp
-      },
-      debug: false,
-      vuex: {
-        store,
-        mutationPrefix: 'SOCKET_',
-        actionPrefix: 'socket_'
-      }
-    }))
+    
+    // Vue.use(new VueSocketIO({
+    //   connection: io(rnsp, { forceNew: true }),
+    //   options: {
+    //     useConnectionNamespace: true,
+    //     namespaceName: rnsp
+    //   },
+    //   debug: false,
+    //   vuex: {
+    //     store,
+    //     mutationPrefix: 'SOCKET_',
+    //     actionPrefix: 'socket_'
+    //   }
+    // }))
   }
 }
 

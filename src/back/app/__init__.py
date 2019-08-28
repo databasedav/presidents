@@ -1,19 +1,21 @@
 from fastapi import FastAPI
-from socketio import AsyncServer, ASGIApp
+from socketio import AsyncServer, ASGIApp, AsyncRedisManager
 from uvicorn import Uvicorn
 from faust import App as Faust
 from ..data.stream import FaustfulAsyncServer
 from ..server import ServerBrowser
+from ..utils import AsyncTimer
 import asyncio
+from functools import partial
 
 
-def create_app(*, debug=False):
+def create_app(*, debug=False, **kwargs):
     fastapi_app = FastAPI(debug=debug)
 
     asgi_app = ASGIApp(socketio_server=None, other_asgi_app=fastapi_app)
 
     uvicorn = Uvicorn(
-        asgi_app, host="127.0.0.1", port=5000
+        asgi_app, host="127.0.0.1", port=5000, reload=debug
     )  # , loop='asyncio')
 
     faust_app = Faust(
@@ -29,8 +31,7 @@ def create_app(*, debug=False):
         faust_app,
         async_mode="asgi",
         logger=debug,
-        # ping_timeout=1000,
-        # ping_interval=5,
+        client_manager=AsyncRedisManager('redis://')
     )
 
     # TODO: socket connection should be opened right after login
@@ -42,6 +43,7 @@ def create_app(*, debug=False):
 
     server_browser = ServerBrowser("us-west")
     sio.register_namespace(server_browser)
+    server_browser.add_server('test', timer=partial(AsyncTimer.spawn_after, loop=uvicorn.loop), turn_time=kwargs.get('turn_time'), reserve_time=kwargs.get('reserve_time'))
     asgi_app.engineio_server = sio
 
     return uvicorn

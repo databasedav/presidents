@@ -45,7 +45,7 @@ class ClientBotFarm:
                 client.connect(
                     f"http://{host}:{port}",
                     namespaces=[
-                        f"/server={server_id}" for server_id in range(1000)
+                        f"/server={server_id}" for server_id in range(2000)
                     ],
                 )
                 for client in self._bot_clients

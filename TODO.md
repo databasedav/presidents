@@ -64,3 +64,5 @@
 * tell miguel that users should be able to add namespaces after already connected and also access the callback function from anywhere in the event catching function
 
 * record whether a move was autoplayed
+
+* some sort of hot reloadable testing setup where I have access to all 4 players and the game automatically gets to some point that I can define as part of the setup

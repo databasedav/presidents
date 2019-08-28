@@ -20,7 +20,7 @@ async def game_click_processor(game_clicks) -> None:
 
 
 # emits same hand played increment events to appropriate sids
-external_sio = AsyncRedisManager("redis://", write_only=True)
+# external_sio = AsyncRedisManager("redis://", write_only=True)
 
 
 def get_hand_play_processor(hand_player_sids_table):
@@ -33,7 +33,7 @@ def get_hand_play_processor(hand_player_sids_table):
             # print(hand_play)
             hand_player_sids = hand_player_sids_table[hand_play.hand_hash].value()
             hand_player_sids.append(hand_play.sid)
-            # print(f'{hand_play.hand_hash}: {len(hand_player_sids)}')
+            print(f'{hand_play.hand_hash}: {len(hand_player_sids)}')
             # # await asyncio.gather(
             # #     *[
             # #         external_sio.emit(

@@ -20,6 +20,7 @@ def register_agent(app: App, topic, processor):
 def register_presidents_agents(app: App, topics, tables):
     agents = dict()
     for agent, config in PRESIDENTS_AGENTS.items():
+        # hand play agent requires access to a table
         if agent == "hand_play_agent":
             config["processor"] = get_hand_play_processor(
                 tables["hand_player_sids"]
