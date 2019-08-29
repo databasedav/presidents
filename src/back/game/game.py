@@ -42,6 +42,12 @@ logger = logging.getLogger(__name__)
 
 
 class Game:
+    """
+    Represents a 'game' of presidents. Operates on 'spots' attempting
+    confirmation/allowal of certain moves (e.g. unlocking play,
+    unlocking pass, etc.), and then actually carrying out those moves
+    and changing the game state as necessary.
+    """
     def __init__(
         self,
         *,
@@ -50,12 +56,7 @@ class Game:
         reserve_time: Union[int, float] = 0,
     ) -> None:
 
-        """
-        Represents a 'game' of presidents. Operates on 'spots'
-        attempting confirmation/allowal of certain moves (e.g. unlocking
-        play, unlocking pass, etc.), and then actually carrying out
-        those moves and changing the game state as necessary.
-        """
+        
         range_4 = range(4)  # software engineering
 
         # instance related attributes
@@ -70,30 +71,30 @@ class Game:
         # waiting, *args, and **kwargs for said function; this timer
         # must also have a cancel method which suspends the timer; see
         # eventlet.greenthread.spawn_after for an example of this
-        self._timer: Optional[Callable] = timer or NoopTimer.timer
-        self._timers: List[Optional[Union[NoopTimer, GreenThread]]] = [
+        self._timer: Callable = timer or NoopTimer.timer
+        self._timers: List[Union[NoopTimer, GreenThread]] = [
             None for _ in range_4
         ]
-        self._turn_time: Optional[Union[int, float]] = turn_time
-        self._reserve_time: Optional[Union[int, float]] = reserve_time
-        self._reserve_times: List[Optional[Union[int, float]]] = [
+        self._turn_time: Union[int, float] = turn_time
+        self._reserve_time: Union[int, float] = reserve_time
+        self._reserve_times: List[Union[int, float]] = [
             reserve_time for _ in range_4
         ]
-        self._reserve_time_use_starts: List[Optional[datetime]] = [
+        self._reserve_time_use_starts: List[datetime] = [
             None for _ in range_4
         ]
 
         # setup and ID related attributes
         self._open_spots: Set[int] = {i for i in range_4}
-        self._names: List[Optional[str]] = [None for _ in range_4]
+        self._names: List[str] = [None for _ in range_4]
 
         # game related attributes
-        self._turn_manager: Optional[TurnManager] = None
-        self._current_player: Optional[int] = None
+        self._turn_manager: TurnManager = None
+        self._current_player: int = None
         self._chambers: List[Chamber] = [Chamber() for _ in range_4]
         # when hand in play is base_hand, only the 3 of clubs can be
         # played on it; when it is None, anyhand can be played on it
-        self._hand_in_play: Optional[Union[BaseHand, Hand]] = base_hand
+        self._hand_in_play: Union[BaseHand, Hand] = base_hand
         self._num_consecutive_passes: int = 0
         self._finishing_last_played: bool = False
         self._positions: List[int] = list()

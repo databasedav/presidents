@@ -121,13 +121,10 @@ class EmittingGame(Game):
 
     async def _next_player(self) -> None:
         try:  # current player is no longer on turn
-            await self._emit(
-                "set_on_turn",
-                {"on_turn": False, "spot": self._current_player},
-                room=self._current_player_sid,
-            )
-            # TODO handle time setting with a concurrent call to set_time
-            #      like is done in _emit_set_on_turn_handler
+            events = list()
+            events.append(self._emit("set_on_turn", {"on_turn": False},  room=self._current_player_sid))
+            events.append(self._emit_to_players("set_time", {"spot": self._current_player, "time": 0}))
+            await asyncio.gather(*events)
         except KeyError:  # self._current_player is None (round start)
             pass
         self._current_player = spot = next(self._turn_manager)  # TODO this mypy error
@@ -138,34 +135,12 @@ class EmittingGame(Game):
         await self._emit_set_on_turn_handler(spot)
 
     async def _emit_set_on_turn_handler(self, spot: int) -> None:
-        """
-        handles callback timer for player whose turn it is and updates
-        other players' views of that timer as well
-
-        TODO: clean
-        """
-        sid = self._get_sid(spot)
         events = list()
+        events.append(self._emit_to_players("set_time", {"spot": spot, "time": self._turn_time * 1000}))
+        events.append(self._emit("set_on_turn", {"on_turn": True}, room=self._get_sid(spot)))
         events.append(self._set_dot_color(spot, "green"))
-        events.append(
-            self._emit("set_on_turn", {"on_turn": True, "spot": spot}, room=sid,
-                # callback=  # record on turn acknowledge delay in db
-            )
-        )
-        events.append(
-            self._emit_to_players(
-                "set_time",
-                {"spot": spot, "time": self._turn_time * 1000},
-                skip_sid=sid,
-            )
-        )
+        
         await asyncio.gather(*events)
-
-    # def _start_timer(
-    #         self, spot: int, seconds: Optional[Union[int, float]]
-    #     ) -> None:
-    #         assert self._timer is not None
-    #         self._timers[spot] = self._timer(seconds, self._handle_timeout, spot)
 
     async def _handle_timeout(self, spot: int) -> None:
         reserve_time_use_start: datetime = self._reserve_time_use_starts[spot]
@@ -202,11 +177,11 @@ class EmittingGame(Game):
 
         # ok here is what is gna happen: timer will start server side
         # w 0 delay and then the on_turn acks will be stored in the db
-        # for analysis, the timer start time will be send to the front
+        # for analysis, the timer start time will be sent to the front
         # end so it can determine how much time the player actually has
         # the fact that the player will actually have less time to play
         # will be handled by the fact that they have reserve time and
-        # also the fact that they should get a better internet connection
+        # also the fact that they should get a better internet connection, bitch
         """
         sid: str = self._get_sid(spot)
         assert (

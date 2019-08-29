@@ -100,11 +100,8 @@ export default {
     state.names = payload.names
   },
 
-  set_on_turn (state, payload, callback) {
+  set_on_turn (state, payload) {
     state.on_turn = payload.on_turn
-    if (callback) {
-      callback()
-    }
   },
 
   set_pass_unlocked(state, payload) {

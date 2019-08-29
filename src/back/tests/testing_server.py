@@ -11,8 +11,8 @@ from ..server import ServerBrowser
 import logging
 # logging.basicConfig(level=logging.DEBUG)
 
-TURN_TIME = 30
-RESERVE_TIME = 60
+TURN_TIME = 10
+RESERVE_TIME = 0
 
 @main
 def run():
