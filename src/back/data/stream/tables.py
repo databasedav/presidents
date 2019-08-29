@@ -10,3 +10,4 @@ def register_hand_player_sids_table(app: App):
         .hopping(size=2, step=1, expires=timedelta(minutes=5))
         # .relative_to_field(HandPlay.timestamp)
     )
+

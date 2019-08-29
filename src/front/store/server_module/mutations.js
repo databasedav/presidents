@@ -1,88 +1,133 @@
 export default {
-  SOCKET_alert (state, payload) {
-    state.alert = payload.alert
-    state.snackbar = true
-    setTimeout(() => state.snackbar = false, 1000)
-  },
-
-  SOCKET_set_on_turn (state, payload, callback) {
-    state.on_turn = payload.on_turn
-    if (callback) {
-      callback()
-    }
-  },
-
-  SOCKET_set_pass_unlocked(state, payload) {
-    state.pass_unlocked = payload.pass_unlocked
-  },
-
-  SOCKET_set_unlocked (state, payload) {
-    state.unlocked = payload.unlocked
-  },
-
-  SOCKET_clear_cards (state, payload) {
-    state.cards.clear()
-    state.cards_arr = new Array()
-    state.cards_selected_arr.fill(false)
-  },
-
-  SOCKET_select_card (state, payload) {
-    state.cards.set(payload.card, true)
-    // remove after Vue supports maps
-    state.cards_selected_arr.splice(payload.card, 1, true)
-  },
-
-  SOCKET_deselect_card (state, payload) {
-    state.cards.set(payload.card, false)
-    // remove after Vue supports maps
-    state.cards_selected_arr.splice(payload.card, 1, false)
-  },
-
-  SOCKET_add_card (state, payload) {
+  add_card (state, payload) {
     state.cards.set(payload.card, false)
     // remove after Vue supports maps
     // also ew
     state.cards_arr = Array.from(state.cards.keys())
   },
 
-  SOCKET_update_current_hand_str (state, payload) {
-    state.current_hand_str = payload.str  
+  alert (state, payload) {
+    state.alert = payload.alert
+    state.snackbar = true
+    setTimeout(() => state.snackbar = false, 1000)
   },
 
-  SOCKET_remove_card (state, payload) {
+  clear_cards (state, payload) {
+    state.cards.clear()
+    state.cards_arr = new Array()
+    state.cards_selected_arr.fill(false)
+  },
+
+  clear_hand_in_play (state, payload) {
+    state.hand_in_play = []
+    state.hand_in_play_desc = ''
+  },
+
+  deselect_asking_option (state, payload) {
+    state.asking_options.set(payload.value, false)
+    // remove after Vue supports maps
+    state.asking_options_selected_arr.splice(payload.value, 1, false)
+  },
+
+  deselect_card (state, payload) {
+    state.cards.set(payload.card, false)
+    // remove after Vue supports maps
+    state.cards_selected_arr.splice(payload.card, 1, false)
+  },
+
+  message (state, payload) {
+    state.message += `\n${payload.message}`
+  },
+
+  remove_asking_option (state, payload) {
+    state.asking_options.delete(payload.value)
+    // TODO: this is gross
+    state.asking_options_arr = Array.from(state.asking_options.keys())
+    state.asking_options_selected_arr.splice(payload.value, 1, false)
+  },
+
+  remove_card (state, payload) {
     state.cards.delete(payload.card)
     // TODO: this is gross
     state.cards_arr = Array.from(state.cards.keys())
     state.cards_selected_arr.splice(payload.card, 1, false)
   },
 
-  SOCKET_set_spot (state, payload) {
-    state.spot = payload.spot
+  select_asking_option (state, payload) {
+    state.asking_options.set(payload.value, true)
+    // remove after Vue supports maps
+    state.asking_options_selected_arr.splice(payload.value, 1, true)
   },
 
-  SOCKET_set_hand_in_play (state, payload) {
+  select_card (state, payload) {
+    state.cards.set(payload.card, true)
+    // remove after Vue supports maps
+    state.cards_selected_arr.splice(payload.card, 1, true)
+  },
+
+  set_asker (state, payload) {
+    state.asker = true
+  },
+
+  set_cards_remaining (state, payload) {
+    state.cards_remaining.splice(payload.spot, 1, payload.cards_remaining)
+  },
+
+  set_dot_color (state, payload) {
+    state.dot_colors.splice(payload.spot, 1, payload.dot_color)
+  },
+
+  set_giver (state, payload) {
+    state.giver = true
+  },
+
+  set_gives_remaining (state, payload) {
+    state.gives_remaining = payload.gives_remaining
+  },
+
+  set_giving_options (state, payload) {
+    for (var i in payload.options) {
+      state.giving_options_arr.splice(payload.options[i], 1, payload.highlight)
+    }
+  },
+
+  set_hand_in_play (state, payload) {
     state.hand_in_play = payload.hand_in_play
     state.hand_in_play_desc = payload.hand_in_play_desc
   },
 
-  SOCKET_clear_hand_in_play (state, payload) {
-    state.hand_in_play = []
-    state.hand_in_play_desc = ''
+  set_names(state, payload) {
+    state.names = payload.names
   },
 
-  SOCKET_add_trading_options (state, payload) {
-    state.asking = true
+  set_on_turn (state, payload, callback) {
+    state.on_turn = payload.on_turn
+    if (callback) {
+      callback()
+    }
   },
 
-  SOCKET_set_asker (state, payload) {
-    state.asker = true
+  set_pass_unlocked(state, payload) {
+    state.pass_unlocked = payload.pass_unlocked
   },
 
-  SOCKET_set_giver (state, payload) {
-    state.giver = true
+  set_socket(state, payload) {
+    state.socket = payload.socket
   },
 
-  SOCKET_set_trading (state, payload) {
+  set_spot (state, payload) {
+    state.spot = payload.spot
+  },
+
+  set_takes_remaining (state, payload) {
+    state.takes_remaining = payload.takes_remaining
+  },
+
+  set_time(state, payload) {
+    state.times.splice(payload.spot, 1, payload.time)
+  },
+
+  set_trading (state, payload) {
     state.trading = payload.trading
     if (!state.trading) {
       state.asker = false
@@ -90,60 +135,11 @@ export default {
     }
   },
 
-  SOCKET_select_asking_option (state, payload) {
-    state.asking_options.set(payload.value, true)
-    // remove after Vue supports maps
-    state.asking_options_selected_arr.splice(payload.value, 1, true)
+  set_unlocked (state, payload) {
+    state.unlocked = payload.unlocked
   },
 
-  SOCKET_deselect_asking_option (state, payload) {
-    state.asking_options.set(payload.value, false)
-    // remove after Vue supports maps
-    state.asking_options_selected_arr.splice(payload.value, 1, false)
-  },
-
-  SOCKET_remove_asking_option (state, payload) {
-    state.asking_options.delete(payload.value)
-    // TODO: this is gross
-    state.asking_options_arr = Array.from(state.asking_options.keys())
-    state.asking_options_selected_arr.splice(payload.value, 1, false)
-  },
-
-  SOCKET_set_giving_options (state, payload) {
-    for (var i in payload.options) {
-      state.giving_options_arr.splice(payload.options[i], 1, payload.highlight)
-    }
-  },
-
-  SOCKET_set_takes_remaining (state, payload) {
-    state.takes_remaining = payload.takes_remaining
-  },
-
-  SOCKET_set_gives_remaining (state, payload) {
-    state.gives_remaining = payload.gives_remaining
-  },
-
-  SOCKET_set_message (state, payload) {
-    state.message = payload.message
-  },
-
-  SOCKET_set_cards_remaining (state, payload) {
-    state.cards_remaining.splice(payload.spot, 1, payload.cards_remaining)
-  },
-
-  SOCKET_message (state, payload) {
-    state.message += `\n${payload.message}`
-  },
-
-  SOCKET_set_names(state, payload) {
-    state.names = payload.names
-  },
-
-  SOCKET_set_time(state, payload) {
-    state.times.splice(payload.spot, 1, payload.time)
-  },
-
-  SOCKET_set_dot_color (state, payload) {
-    state.dot_colors.splice(payload.spot, 1, payload.dot_color)
+  update_current_hand_str (state, payload) {
+    state.current_hand_str = payload.str  
   }
 }

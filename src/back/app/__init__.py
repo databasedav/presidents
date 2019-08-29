@@ -22,16 +22,17 @@ def create_app(*, debug=False, **kwargs):
         "presidents-app", broker="aiokafka://localhost:9092", loop=uvicorn.loop
     )
 
-    @fastapi_app.on_event("startup")
-    def start_faust_app():
-        asyncio.ensure_future(faust_app.start(), loop=uvicorn.loop)
+    # @fastapi_app.on_event("startup")
+    # def start_faust_app():
+    #     asyncio.ensure_future(faust_app.start(), loop=uvicorn.loop)
 
     sio = FaustfulAsyncServer(
         uvicorn.loop,
         faust_app,
         async_mode="asgi",
         logger=debug,
-        client_manager=AsyncRedisManager('redis://')
+        client_manager=AsyncRedisManager('redis://'),
+        cors_allowed_origins=['http://127.0.0.1:8080']
     )
 
     # TODO: socket connection should be opened right after login
@@ -43,7 +44,8 @@ def create_app(*, debug=False, **kwargs):
 
     server_browser = ServerBrowser("us-west")
     sio.register_namespace(server_browser)
-    server_browser.add_server('test', timer=partial(AsyncTimer.spawn_after, loop=uvicorn.loop), turn_time=kwargs.get('turn_time'), reserve_time=kwargs.get('reserve_time'))
+    for server_id, server_name in kwargs.get('servers').items():
+        server_browser.add_server(server_name, server_id=server_id, timer=partial(AsyncTimer.spawn_after, loop=uvicorn.loop), turn_time=kwargs.get('turn_time'), reserve_time=kwargs.get('reserve_time'))
     asgi_app.engineio_server = sio
 
     return uvicorn

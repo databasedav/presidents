@@ -9,5 +9,5 @@ RESERVE_TIME = 60
 
 @main
 def run():
-    uvicorn = create_app(debug=True, **{'turn_time': TURN_TIME, 'reserve_time': RESERVE_TIME})
+    uvicorn = create_app(debug=True, **{'servers': {123: 'dev'}, 'turn_time': TURN_TIME, 'reserve_time': RESERVE_TIME})
     uvicorn.run()

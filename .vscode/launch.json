@@ -35,6 +35,14 @@
             ],
             "module": "pytest", //"src.back.tests.test_server_browser",
             "console": "integratedTerminal"
+        },
+        {
+            "type": "firefox",
+            "request": "launch",
+            "name": "vuejs: firefox",
+            "url": "http://127.0.0.1:8080",
+            "webRoot": "${workspaceFolder}/src",
+            "pathMappings": [{ "url": "webpack:///src/", "path": "${webRoot}/" }]
         }
     ],
     "compounds": [
@@ -43,6 +51,13 @@
             "configurations": [
                 "presidents test server",
                 "pytest server browser"
+            ]
+        },
+        {
+            "name": "server client",
+            "configurations": [
+                "presidents test server",
+                "vuejs: firefox"
             ]
         }
     ]

@@ -22,7 +22,7 @@ export default new Vuex.Store({
     },
 
     plugin_server (context, payload) {
-      server_plugin(payload.rnsp)(this)
+      server_plugin(payload)(this)
     },
   }
 })

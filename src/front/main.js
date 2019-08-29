@@ -14,7 +14,7 @@ Vue.config.productionTip = false
 Vue.use(Vuetify);
 Vue.component(VueCountdown.name, VueCountdown)
 
-new Vue({
+export default new Vue({
   router,
   store,
   render: h => h(App)

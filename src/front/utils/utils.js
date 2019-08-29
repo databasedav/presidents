@@ -2,8 +2,9 @@ import store from '../store/store'
 import create_state from '../store/server_module/state'
 import mutations from '../store/server_module/mutations'
 import getters from '../store/server_module/getters'
-import actions from '../store/server_module/actions'
+import create_actions from '../store/server_module/actions'
 import router from '../router'
+import vm from '../main'
 
 
 // import { create_namespaced_player_socket_plugin } from "../store/plugins"
@@ -12,16 +13,7 @@ function namespaced_getter (namespace, getter) {
     return store.getters[`${namespace}/${getter}`]
 }
 
-function create_server_module (rnsp) {
-  return {
-    strict: process.env.NODE_ENV !== 'production',
-    namespaced: true,
-    state: create_state(rnsp),
-    getters,
-    mutations,
-    actions
-  }
-}
+
 
 function create_server_browser_module (rbnsp) {
   return {
@@ -67,11 +59,10 @@ function create_server_browser_module (rbnsp) {
 }
 
 
-
-function register_namespaced_module (namespace, module) {
-  store.registerModule(namespace, module)
+function emit(event, payload, namespace) {
+  vm.$socket.client.of(namespace).emit(event, payload)
 }
 
 
 
-export { create_server_module, create_server_browser_module, namespaced_getter, register_namespaced_module }
+export { create_server_browser_module, namespaced_getter }

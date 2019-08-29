@@ -1,18 +1,18 @@
 <template>
-  <Player
+  <Game
     :rnsp='this.rnsp'
-  ></Player>
+  ></Game>
 </template>
 
 <script>
-import Player from '../components/Player.vue'
+import Game from '../components/Game.vue'
 
 export default {
 
   name: 'Presidents',
 
   components: {
-    Player,
+    Game,
   },
 
   props: {
