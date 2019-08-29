@@ -42,10 +42,6 @@ def create_app(*, debug=False, **kwargs):
     def on_connect(sid, payload) -> None:
         ...
 
-    server_browser = ServerBrowser("us-west")
-    sio.register_namespace(server_browser)
-    for server_id, server_name in kwargs.get('servers').items():
-        server_browser.add_server(server_name, server_id=server_id, timer=partial(AsyncTimer.spawn_after, loop=uvicorn.loop), turn_time=kwargs.get('turn_time'), reserve_time=kwargs.get('reserve_time'))
     asgi_app.engineio_server = sio
 
-    return uvicorn
+    return uvicorn, sio

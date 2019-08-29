@@ -425,13 +425,13 @@ class EmittingGame(Game):
         chamber = self._chambers[spot]
         assert chamber
         hand = Hand.copy(chamber.hand)
-        await self.hand_play_agent.cast(
-            HandPlay(
-                hand_hash=hash(hand),
-                sid=kwargs.get("sid"),
-                timestamp=kwargs.get("timestamp"),
-            )
-        )
+        # await self.hand_play_agent.cast(
+        #     HandPlay(
+        #         hand_hash=hash(hand),
+        #         sid=kwargs.get("sid"),
+        #         timestamp=kwargs.get("timestamp"),
+        #     )
+        # )
         await chamber.remove_cards(hand)
         self._num_consecutive_passes = 0
         await self._set_hand_in_play(hand)

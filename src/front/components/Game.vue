@@ -74,6 +74,10 @@ import MessageBox from './MessageBox.vue'
 import PlayerStrip from './PlayerStrip.vue'
 import OtherPlayerBox from './OtherPlayerBox.vue'
 
+import { create_server_module, EVENTS } from '../utils/utils'
+
+import io from 'socket.io-client'
+
 export default {
   name: 'Game',
   
@@ -88,7 +92,7 @@ export default {
   },
 
   props: {
-    // server namespace
+    // server namespace; also vuex module namespace when not testing
     server: String,
     // when true, plugs in testing socket and vuex module whose namespaces
     // are the id of the socket instead of the server namespace
@@ -100,14 +104,34 @@ export default {
 
   data () {
     return {
-      socket: undefined
+      sid: null
     }
   },
 
   created () {
-    this.socket = this.$store.dispatch('plugin_server', {
-      namespace: this.namespace,
-      testing: this.testing
+    // this.$store.dispatch('plugin_server', {
+    //   namespace: this.namespace,
+    //   testing: this.testing
+    // })
+
+    const socket = io(`http://127.0.0.1:5000${this.server}`, { forceNew: true })
+    
+    socket.once('connect', _ => {
+      // if testing (i.e. four player vue), use socket's engine id (client's sid)
+      // as namespace; otherwise uses the server namespace as individual
+      // players (sockets) can be in a single game at most once; this is
+      // here because need to wait till socket connects to get its id (sid)
+      const namespace = this.testing ? socket.io.engine.id : this.server
+      this.$store.registerModule(namespace, create_server_module())
+      // register presidents event listeners
+      EVENTS.forEach(event => {
+        socket.on(event, payload => {
+          this.$store.commit(`${namespace}/${event}`, payload)
+        })
+      })
+      // gives store access to namespaced socket
+      this.$store.commit(`${namespace}/set_socket`, { 'socket': socket })
+      this.sid = namespace
     })
   },
 
@@ -155,7 +179,7 @@ export default {
 
   computed: {
     namespace () {
-      return this.socket ? this.socket.io.engine.id : null
+      return this.testing && this.sid || this.server
     },
 
     on_turn () {

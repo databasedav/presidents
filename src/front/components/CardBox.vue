@@ -17,13 +17,13 @@
     <br>
     
     <Card
-      v-for='card in this.cards'
+      v-for='card in cards'
       :key='card'
       :card='card'
-      :is_selected='this.cards_selected_arr[card]'
-      :is_giving_option='this.giving_options_arr[card]'
+      :is_selected='cards_selected_arr[card]'
+      :is_giving_option='giving_options_arr[card]'
       @card_click='$emit("card_click", $event)'
-      :namespace='this.namespace'
+      :namespace='namespace'
     ></Card>
   </div>
 </template>

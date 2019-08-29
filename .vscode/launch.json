@@ -42,7 +42,8 @@
             "name": "vuejs: firefox",
             "url": "http://127.0.0.1:8080",
             "webRoot": "${workspaceFolder}/src",
-            "pathMappings": [{ "url": "webpack:///src/", "path": "${webRoot}/" }]
+            "pathMappings": [{ "url": "webpack:///src/", "path": "${webRoot}/" }],
+            "reAttach": true
         }
     ],
     "compounds": [

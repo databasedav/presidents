@@ -1,8 +1,8 @@
 import store from '../store/store'
-import create_state from '../store/server_module/state'
+import state from '../store/server_module/state'
 import mutations from '../store/server_module/mutations'
 import getters from '../store/server_module/getters'
-import create_actions from '../store/server_module/actions'
+import actions from '../store/server_module/actions'
 import router from '../router'
 import vm from '../main'
 
@@ -12,6 +12,48 @@ import vm from '../main'
 function namespaced_getter (namespace, getter) {
     return store.getters[`${namespace}/${getter}`]
 }
+
+function create_server_module () {
+  return {
+    strict: process.env.NODE_ENV !== 'production',
+    namespaced: true,
+    state: state(),
+    getters,
+    mutations,
+    actions
+  }
+}
+
+const EVENTS = [
+  'add_card',
+  'alert',
+  'clear_cards',
+  'clear_hand_in_play',
+  'deselect_asking_option',
+  'deselect_card',
+  'message',
+  'remove_asking_option',
+  'remove_card',
+  'select_asking_option',
+  'select_card',
+  'set_asker',
+  'set_cards_remaining',
+  'set_dot_color',
+  'set_giver',
+  'set_gives_remaining',
+  'set_giving_options',
+  'set_hand_in_play',
+  'set_names',
+  'set_on_turn',
+  'set_pass_unlocked',
+  'set_spot',
+  'set_takes_remaining',
+  'set_time',
+  'set_trading',
+  'set_unlocked',
+  'update_alert_str',
+  'update_current_hand_str'
+]
 
 
 
@@ -65,4 +107,4 @@ function emit(event, payload, namespace) {
 
 
 
-export { create_server_browser_module, namespaced_getter }
+export { create_server_module, EVENTS, create_server_browser_module, namespaced_getter }
