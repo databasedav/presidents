@@ -330,13 +330,8 @@ class Game:
 
     def _stop_timer(self, spot: int) -> None:
         now: datetime = datetime.utcnow()
-        # TODO: remove this after miguel adds calling the callback from
-        #       within the listener function
-        # {
-        if self._timers[spot]:
-            self._timers[spot].cancel()
-            self._timers[spot] = None
-        # }
+        self._timers[spot].cancel()
+        self._timers[spot] = None
         # assert self._timers[spot] is not None, "timer is none for this spot"
         if self._reserve_time_use_starts[spot] is not None:
             seconds_used: float = (
