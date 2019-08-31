@@ -38,7 +38,6 @@ async def main():
     await asyncio.sleep(100000000)
 
 
-
 if __name__ == "__main__":
     asyncio.run(main())
 
@@ -60,4 +59,3 @@ if __name__ == "__main__":
 #   File "/home/avi/presidents/src/back/game/emitting_game.py", line 737, in _set_hand_in_play
 #     raise Exception('hand is empty or invalid wtf ???')  # TODO
 # Exception: hand is empty or invalid wtf ???
-

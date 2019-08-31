@@ -58,7 +58,7 @@ class EmittingChamber(Chamber):
         card: int,
         *,
         check: bool = True,
-        update_current_hand_str: bool = True
+        update_current_hand_str: bool = True,
     ) -> None:
         super().remove_card(card, check=check)
         await self._emit("remove_card", {"card": int(card)})
@@ -121,7 +121,9 @@ class EmittingChamber(Chamber):
         self._check_cards_in(cards)
         await asyncio.gather(
             *[
-                self.deselect_card(card, check=False, update_current_hand_str=False)
+                self.deselect_card(
+                    card, check=False, update_current_hand_str=False
+                )
                 for card in cards
             ]
         )

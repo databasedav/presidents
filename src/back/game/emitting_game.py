@@ -27,6 +27,7 @@ from . import (
 from datetime import datetime
 
 from ..data.stream.records import HandPlay
+
 # from ..server.server import Server  # TODO: pls fix this omg
 
 # from ..data.stream.agents import hand_play_agent
@@ -49,7 +50,6 @@ from ..data.stream.records import HandPlay
 #       also the fact that they should get a better internet connection, bitch
 
 
-
 # go through the list of methods that need to be asynced copy pasted
 # for all instances of f'self.{method}(' where method is overwritten
 # with additional async logic in EmittingGame, prepend 'await' to the
@@ -57,24 +57,22 @@ from ..data.stream.records import HandPlay
 # all such methods before registering all of them to EmittingGame
 
 ASYNCED_COPY_PASTE_METHODS = [
-    'add_or_remove_card',
-    'maybe_unlock_play',
-    'maybe_play_current_hand',
-    '_handle_timeout',
-    '_auto_play_or_pass',
-    '_start_round',
-    'add_player'
+    "add_or_remove_card",
+    "maybe_unlock_play",
+    "maybe_play_current_hand",
+    "_handle_timeout",
+    "_auto_play_or_pass",
+    "_start_round",
+    "add_player",
 ]
 
-class EmittingGame(Game):
 
+class EmittingGame(Game):
     def __init__(self, server: Server, **kwargs):
         super().__init__(**kwargs)
         # TODO: server stuff (including emitting should be entirely handled by the Server, which is an AsyncNamespace)
         self._server: Server = server
-        self._chambers: List[Optional[EmittingChamber]] = [
-            EmittingChamber(self._server) for _ in range(4)
-        ]
+        self._chambers: List[EmittingChamber] = [EmittingChamber(self._server) for _ in range(4)]
         self._spot_sid_bidict: bidict = bidict()
         self._sid_user_id_dict: Dict[str, str] = dict()
         self.hand_play_agent = server.server.agents["hand_play_agent"]
@@ -91,7 +89,9 @@ class EmittingGame(Game):
     def set_server(self, server: str) -> None:
         self._server = server
 
-    async def _add_player_to_spot(self, sid: str, user_id: str, name: str, spot: int) -> None:
+    async def _add_player_to_spot(
+        self, sid: str, user_id: str, name: str, spot: int
+    ) -> None:
         super()._add_player_to_spot(name, spot)
         self._chambers[spot].set_sid(sid)
         self._spot_sid_bidict.inv[sid] = spot
@@ -131,51 +131,76 @@ class EmittingGame(Game):
         chamber = self._chambers[spot]
         await chamber.reset()
         chamber.set_sid(sid)
-        await chamber.add_cards(cards)
-        await self._emit("set_spot", {"spot": spot}, sid)
+        await asyncio.gather(chamber.add_cards(cards), self._emit("set_spot", {"spot": spot}, sid))
 
     # game flow related methods
 
     async def _next_player(self) -> None:
         try:  # current player is no longer on turn
-            await self._emit("set_on_turn", {"on_turn": False},  room=self._current_player_sid)
+            await self._emit(
+                "set_on_turn",
+                {"on_turn": False},
+                room=self._current_player_sid,
+            )
         except KeyError:  # self._current_player is None on round start
             pass
-        self._current_player = spot = next(self._turn_manager)  # TODO this mypy error
+        self._current_player = spot = next(
+            self._turn_manager
+        )  # TODO this mypy error
         events = list()
-        events.append(await self._set_timer(spot, 'turn', self._turn_time, True))
-        events.append(await self._message(f"🎲 it's {self._names[spot]}'s turn"))
+        events.append(
+            await self._set_timer(spot, "turn", self._turn_time, True)
+        )
+        events.append(
+            await self._message(f"🎲 it's {self._names[spot]}'s turn")
+        )
         events.append(await self._emit_set_on_turn_handler(spot))
         await asyncio.gather(*events)
 
     async def _emit_set_on_turn_handler(self, spot: int) -> None:
         events = list()
-        events.append(self._emit("set_on_turn", {"on_turn": True}, room=self._get_sid(spot)))
+        events.append(
+            self._emit(
+                "set_on_turn", {"on_turn": True}, room=self._get_sid(spot)
+            )
+        )
         events.append(self._set_dot_color(spot, "green"))
         await asyncio.gather(*events)
 
-    async def _set_timer(self, spot: int, which: str, seconds: Union[int, float], start: bool) -> None:
-        await self._emit_to_players(f"set_{which}_time", {"spot": spot, "time": seconds * 1000, 'start': start})
+    async def _set_timer(
+        self, spot: int, which: str, seconds: Union[int, float], start: bool
+    ) -> None:
+        await self._emit_to_players(
+            f"set_{which}_time",
+            {"spot": spot, "time": seconds * 1000, "start": start},
+        )
         if start:
             super()._start_timer(spot, seconds)
 
     async def _start_timer(self, which: str, spot: int) -> None:
-        await self._emit_to_players(f"start_{which}_timer", {"spot": kwargs.get('spot')})
+        await self._emit_to_players(
+            f"start_{which}_timer", {"spot": kwargs.get("spot")}
+        )
         super()._start_timer(**kwargs)
 
     async def _stop_timer(self, which: str, spot: int) -> None:
-        await self._emit_to_players(f"set_{which}_time", {"spot": kwargs.get('spot'), "time": kwargs.get('seconds') * 1000, 'start': True})
-
-
+        await self._emit_to_players(
+            f"set_{which}_time",
+            {
+                "spot": kwargs.get("spot"),
+                "time": kwargs.get("seconds") * 1000,
+                "start": True,
+            },
+        )
 
     async def _player_finish(self, spot: int) -> None:
         await self._set_dot_color(spot, "purple")
         await self._player_finish_helper(spot)
 
     async def _player_finish_helper(self, spot: int) -> None:
-        assert self._chambers[spot].is_empty, (
-            "only players with no cards remaining can finish"
-        )
+        assert self._chambers[
+            spot
+        ].is_empty, "only players with no cards remaining can finish"
         self._positions.append(self._current_player)
         self._turn_manager.remove(self._current_player)
         num_unfinished_players = self._num_unfinished_players
@@ -196,15 +221,19 @@ class EmittingGame(Game):
                 f"🏆 {self._names[spot]} is vice asshole 🥉 and {self._names[self._current_player]} is asshole 💩"
             )
             await self._initiate_trading()
-    
+
     async def emit_correct_state(self, sid: str):
         spot: int = self._get_spot(sid)
-        await self._emit('correct_state', {
-            'cards': list(self._chambers[spot]),
-            'selected_cards': self._get_current_hand(spot).to_list(),
-            'unlocked': self._unlocked[spot],
-            'pass_unlocked': self._pass_unlocked[spot]
-        }, room=sid)
+        await self._emit(
+            "correct_state",
+            {
+                "cards": list(self._chambers[spot]),
+                "selected_cards": self._get_current_hand(spot).to_list(),
+                "unlocked": self._unlocked[spot],
+                "pass_unlocked": self._pass_unlocked[spot],
+            },
+            room=sid,
+        )
 
     # card management related methods
 
@@ -254,15 +283,22 @@ class EmittingGame(Game):
         # ))
         events.append(chamber.remove_cards(hand))
         events.append(self._set_hand_in_play(hand))
-        events.append(self._message(f"▶️ {self._names[spot]} played {str(hand)}"))
+        events.append(
+            self._message(f"▶️ {self._names[spot]} played {str(hand)}")
+        )
         events.append(self.lock(spot))
         events.append(self._set_dot_color(spot, "blue"))
         for other_spot in self._get_other_spots(spot, exclude_finished=True):
             events.append(self._set_dot_color(other_spot, "red"))
-        events.append(self._emit_to_players(
-            "set_cards_remaining",
-            {"spot": spot, "cards_remaining": self._chambers[spot].num_cards},
-        ))
+        events.append(
+            self._emit_to_players(
+                "set_cards_remaining",
+                {
+                    "spot": spot,
+                    "cards_remaining": self._chambers[spot].num_cards,
+                },
+            )
+        )
         await asyncio.gather(*events)
         self._num_consecutive_passes = 0
         # lock others if their currently unlocked hand should no longer be unlocked
@@ -512,7 +548,7 @@ class EmittingGame(Game):
         await self._emit(
             "set_unlocked", {"unlocked": True}, self._get_sid(spot)
         )
-    
+
     async def _unlock_helper(self, spot: int) -> None:
         """
         Copy/paste from base game class with asynced methods.
@@ -564,7 +600,7 @@ class EmittingGame(Game):
 
     async def _set_hand_in_play(self, hand: Hand) -> None:
         if hand.is_empty or not hand.is_valid:
-            raise Exception('hand is empty or invalid wtf ???')  # TODO
+            raise Exception("hand is empty or invalid wtf ???")  # TODO
         super()._set_hand_in_play(hand)
         await self._emit_to_players(
             "set_hand_in_play",
@@ -703,15 +739,27 @@ class EmittingGame(Game):
 # with additional async logic in EmittingGame, prepend 'await' to the
 # method call and dynamically add the method to EmittingGame
 
-get_async_method_names = lambda _class: [method_tuple[0] for method_tuple in filter(lambda method_tuple: inspect.iscoroutinefunction(method_tuple[1]), dict(_class.__dict__).items())]
-patterns = [re.compile(rf'self.{method}(') for method in get_async_method_names(EmittingGame)] + [re.compile(rf'chamber.{method}(') for method in get_async_method_names(EmittingChamber)]
+get_async_method_names = lambda _class: [
+    method_tuple[0]
+    for method_tuple in filter(
+        lambda method_tuple: inspect.iscoroutinefunction(method_tuple[1]),
+        dict(_class.__dict__).items(),
+    )
+]
+patterns = [
+    re.compile(rf"self.{method}(")
+    for method in get_async_method_names(EmittingGame)
+] + [
+    re.compile(rf"chamber.{method}(")
+    for method in get_async_method_names(EmittingChamber)
+]
 
 for method in ASYNCED_COPY_PASTE_METHODS:
-    method_str = inspect.getsource(eval(f'Game.{method}')).lstrip()
-    method_str = 'async ' + method_str
+    method_str = inspect.getsource(eval(f"Game.{method}")).lstrip()
+    method_str = "async " + method_str
     # prepend await to all async overwritten methods
-    for pattern in patterns: 
-        if pattern.pattern in method_str: 
-            method_str = pattern.sub(f'await {pattern.pattern}', method_str)
+    for pattern in patterns:
+        if pattern.pattern in method_str:
+            method_str = pattern.sub(f"await {pattern.pattern}", method_str)
     exec(method_str)
     setattr(EmittingGame, method, eval(method))

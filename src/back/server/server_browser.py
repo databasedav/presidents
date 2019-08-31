@@ -44,7 +44,7 @@ class ServerBrowser(AsyncNamespace):
 
     async def on_add_server(self, sid, payload):
         self.add_server(
-            payload.pop('name'),
+            payload.pop("name"),
             timer=partial(AsyncTimer.spawn_after, loop=self.server.loop),
             **payload,
         )

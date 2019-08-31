@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 # TODO: asserts should not be meaningless; if a funtion is only called
 #       from one place it doesn't make sense to check a bunch of things
 #       that must have been true in the first place; or is it?
-
+# TODO: drop support for eventlet timer
 
 class Game:
     """
@@ -48,15 +48,21 @@ class Game:
     unlocking pass, etc.), and then actually carrying out those moves
     and changing the game state as necessary.
     """
+    TURN_TIME = 30
+    RESERVE_TIME = 60
+    TRADING_TIME = 60
+    GIVING_TIME = 10
+
     def __init__(
         self,
         *,
-        timer: Callable = None,
-        turn_time: Union[int, float] = None,
-        reserve_time: Union[int, float] = 0,
+        timer: Callable = NoopTimer.timer,
+        turn_time: Union[int, float] = Game.TURN_TIME,
+        reserve_time: Union[int, float] = Game.RESERVE_TIME,
+        trading_time: Union[int, float] = Game.TRADING_TIME,
+        giving_time: Union[int, float] = Game.GIVING_TIME
     ) -> None:
 
-        
         range_4 = range(4)  # software engineering
 
         # instance related attributes
@@ -71,20 +77,21 @@ class Game:
         # waiting, *args, and **kwargs for said function; this timer
         # must also have a cancel method which suspends the timer; see
         # eventlet.greenthread.spawn_after for an example of this
-        self._timer: Callable = timer or NoopTimer.timer
+        self._timer: Callable = timer
         self._timers: List[Union[NoopTimer, GreenThread]] = [
             None for _ in range_4
         ]
         self._turn_time: Union[int, float] = turn_time
+        # NOTE: these turn time lists are used for giving timers as well
         self._turn_times: List[Union[int, float]] = [None for _ in range_4]
         self._turn_time_use_starts: List[datetime] = [None for _ in range_4]
         self._reserve_time: Union[int, float] = reserve_time
         self._reserve_times: List[Union[int, float]] = [
             reserve_time for _ in range_4
         ]
-        self._reserve_time_use_starts: List[datetime] = [
-            None for _ in range_4
-        ]
+        self._reserve_time_use_starts: List[datetime] = [None for _ in range_4]
+        self._trading_timer = None
+        self._trading_timer_start: datetime = None
 
         # setup and ID related attributes
         self._open_spots: Set[int] = {i for i in range_4}
@@ -183,9 +190,7 @@ class Game:
 
     @property
     def _no_takes_or_gives_remaining(self) -> bool:
-        return not any(self._takes_remaining) and not any(
-            self._gives_remaining
-        )
+        return bool(sum(self._takes_remaining) + sum(self._gives_remaining))
 
     def _set_up_testing_base(
         self, *, deck: List[Iterable[int]] = None
@@ -241,9 +246,11 @@ class Game:
         self._open_spots.remove(spot)
         self._set_name(spot=spot, name=name)
         self.num_players += 1
-    
+
     def add_player(self, name: str, **kwargs) -> None:
-        self._add_player_to_spot(name=name, spot=self._rand_open_spot(), **kwargs)
+        self._add_player_to_spot(
+            name=name, spot=self._rand_open_spot(), **kwargs
+        )
 
     def remove_player(self, spot: int) -> None:
         self._set_name(spot, None)
@@ -253,9 +260,7 @@ class Game:
     def _make_shuffled_deck(self) -> np.ndarray:
         return np.sort(np.random.permutation(range(1, 53)).reshape(4, 13))
 
-    def _deal_cards(
-        self, *, deck: List[Iterable[int]] = None
-    ) -> None:
+    def _deal_cards(self, *, deck: List[Iterable[int]] = None) -> None:
         for spot, cards in enumerate(deck or self._make_shuffled_deck()):
             chamber: Chamber = self._chambers[spot]
             chamber.reset()
@@ -269,9 +274,7 @@ class Game:
 
     # game flow related methods
 
-    def _start_round(
-        self, *, deck: List[Iterable[int]] = None
-    ) -> None:
+    def _start_round(self, *, deck: List[Iterable[int]] = None) -> None:
         assert self.num_players == 4, "four players required to start round"
         self._deal_cards(deck=deck)
         self._make_and_set_turn_manager()
@@ -285,16 +288,76 @@ class Game:
         self._message(f"🎲 it's {self._names[self._current_player]}'s turn")
 
     def _start_timer(self, spot: int, seconds: Union[int, float]) -> None:
-        self._turn_time_use_starts[spot] = utcnow()
-        self._timers[spot] = self._timer(seconds, self._handle_timeout, spot)
+        '''
+        Used for playing turns and giving turns (i.e. after a card that
+        the giver has has been asked for).
+        '''
+        if self._turn_times[spot]:
+            self._turn_time_use_starts[spot] = utcnow()
+        else:
+            self._reserve_time_use_starts[spot] = utcnow()
+        self._timers[spot] = self._timer(seconds, self._handle_playing_timeout if not self.trading else self._handle_giving_timeout, spot)
+        
+    def _stop_timer(self, spot: int) -> None:
+        '''
+        Used for playing turns and giving turns.
+        '''
+        now: datetime = utcnow()
+        self._timers[spot].cancel()
+        self._timers[spot] = None
+        if self._turn_time_use_starts[spot] is not None:
+            seconds_used: float = (
+                now - self._reserve_time_use_starts[spot]
+            ).total_seconds()
+            self._
+        elif self._reserve_time_use_starts[spot] is not None:
+            seconds_used = (
+                now - self._reserve_time_use_starts[spot]
+            ).total_seconds()
+            self._reserve_times[spot] -= seconds_used
+            self._reserve_time_use_starts[spot] = None
 
-    def _handle_timeout(self, spot: int) -> None:
+    def _start_trading_timer(self) -> None:
+        self._trading_timer_start = utcnow()
+        self._trading_timer = self._timer(seconds, self._handle_trading_timeout)
+
+    def _stop_trading_timer(self) -> None:
+        self._trading_timer.cancel()
+
+    def _pause_timers(self) -> None:
+        """
+        Pausing all timers is different from stopping them; pausing only 
+        occurs when there is some issue that requires the game to be
+        paused, a player leaving in the middle of the game, say. Pausing
+        will store the remaining time for all active timers in their
+        appropriate attributes.
+        """
+        if not trading:
+            spot: int = self._current_player
+            assert self._timers[spot]
+            self._timers[spot].cancel()
+            if self._turn_time_use_starts[spot] is not None:
+                time_used: float = (
+                    now - self._turn_time_use_starts[spot]
+                ).total_seconds()
+                self._turn_times[spot] -= time_used
+                self._paused_timers.append(lambda: self._start_timer(spot, self._turn_times[spot]))
+            elif self._reserve_time_use_starts[spot] is not None:
+                time_used = (
+                    now - self._reserve_time_use_starts[spot]
+                ).total_seconds()
+                self._reserve_times[spot] -= time_used
+                self._paused_timers.append(lambda: self._start_timer(spot, self._reserve_times[spot]))
+                self._reserve_time_use_starts[spot] = None
+            self._timers[spot] = None
+
+    def _handle_playing_timeout(self, spot: int) -> None:
         reserve_time_use_start: datetime = self._reserve_time_use_starts[spot]
         reserve_time: Optional[Union[int, float]] = self._reserve_times[spot]
         if not reserve_time_use_start and reserve_time:
             self._reserve_time_use_starts[spot] = utcnow()
             try:  # for EmittingGame
-                self._set_timer('reserve', reserve_time, True)
+                self._set_timer("reserve", reserve_time, True)
             except AttributeError:
                 self._start_timer(spot, reserve_time)
         # either was using reserve time or was not using reserve time
@@ -332,22 +395,41 @@ class Game:
         Chamber.select_card(chamber, min_card)
         Game.maybe_unlock_play(self, spot)
         self.maybe_play_current_hand(spot, timestamp=utcnow())
-        
+
         for card in currently_selected_cards:  # could be empty list
             if card != min_card:
                 chamber.select_card(card)
+    
+    def _handle_trading_timeout(self) -> None:
+        # account for the number of cards the askers have remaining to
+        # give and then silently do all the operations that snatch and
+        # exchange the appropriate cards from the appropriate players
+        self._set_trading(False)
+        for spot in self._get_president_and_vice_president():
+            if not self._has_gives_remaining(spot) and not self._has_takes_remaining:
+                continue
+            
+            chamber: Chamber = self._chambers[spot]
+            currently_selected_cards: List[int] = chamber.hand.to_list()
+            if currently_selected_cards:  # not empty list
+                Chamber.deselect_selected(chamber)
+            
+            for _ in range(self._gives_remaining[spot]):  # give before u take
+                for card in chamber:
+                    if as
+                Game.mayb
+                
+            for _ in range(self._takes_remaining[spot]):
+                if not no_selected:
+                    chamber: Chamber = self._chambers[spot]
+                    currently_selected_cards: List[int] = chamber.hand.to_list()
+                    if currently_selected_cards:  # not empty list
+                        Chamber.deselect_selected(chamber)
+                    no_selected = True
+                # 
+    
+    def _hand_giving_timeout(self, spot) -> None:
 
-    def _stop_timer(self, spot: int) -> None:
-        now: datetime = utcnow()
-        self._timers[spot].cancel()
-        self._timers[spot] = None
-        if self._turn_time_use_starts[spot] is not None:
-            seconds_used: float = (now - self._reserve_time_use_starts[spot]).total_seconds()
-
-        elif self._reserve_time_use_starts[spot] is not None:
-            seconds_used = (now - self._reserve_time_use_starts[spot]).total_seconds()
-            self._reserve_times[spot] -= seconds_used
-            self._reserve_time_use_starts[spot] = None
 
     def _player_finish(self, spot: int) -> None:
         assert self._chambers[
@@ -705,6 +787,7 @@ class Game:
         self._deselect_asking_option(spot, self._selected_asking_option[spot])
 
     def _wait_for_reply(self, spot: int) -> None:
+        self.
         self._deselect_selected_asking_option(spot)
         self._waiting[spot] = True
 
@@ -1000,7 +1083,7 @@ class TurnManager:
 
 class NoopTimer:
     """
-    For games with no timer.
+    For games with no time limits.
     """
 
     @classmethod

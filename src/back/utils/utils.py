@@ -1,6 +1,7 @@
-import inspect
+ import inspect
 import sys
 import asyncio
+
 
 class AsyncTimer:
     @classmethod
@@ -8,11 +9,15 @@ class AsyncTimer:
         """
         Calls callback with args and kwargs after seconds.
         """
+
         async def task():
             await asyncio.sleep(seconds)
             await callback(*args, **kwargs)
+        
+        task = asyncio.ensure_future(task(), loop=loop)
+        task.callback = lambda: callback(*args, **kwargs)
+        return task
 
-        return asyncio.ensure_future(task(), loop=loop)
 
 def main(fn):
     """

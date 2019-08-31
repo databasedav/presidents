@@ -108,6 +108,6 @@ class Server(AsyncNamespace):
 
     async def on_give(self, sid) -> None:
         await self.game.give_card(sid)
-    
+
     async def on_request_correct_state(self, sid) -> None:
         await self.game.emit_correct_state(sid)

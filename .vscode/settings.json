@@ -1,0 +1,11 @@
+{
+    "python.pythonPath": "/home/avi/.local/share/virtualenvs/presidents-VuqWQA8n/bin/python",
+    "python.testing.pytestArgs": [
+        "src"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.nosetestsEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.testing.autoTestDiscoverOnSaveEnabled": false
+
+}

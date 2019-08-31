@@ -31,8 +31,8 @@ def create_app(*, debug=False, **kwargs):
         faust_app,
         async_mode="asgi",
         logger=debug,
-        client_manager=AsyncRedisManager('redis://'),
-        cors_allowed_origins=['http://127.0.0.1:8080']
+        client_manager=AsyncRedisManager("redis://"),
+        cors_allowed_origins=["http://127.0.0.1:8080"],
     )
 
     # TODO: socket connection should be opened right after login
