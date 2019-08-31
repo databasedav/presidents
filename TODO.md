@@ -66,3 +66,5 @@
 * record whether a move was autoplayed
 
 * some sort of hot reloadable testing setup where I have access to all 4 players and the game automatically gets to some point that I can define as part of the setup
+
+* add separate hud element for reserve time

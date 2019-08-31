@@ -235,10 +235,10 @@ class Game:
     def _add_player_to_spot(self, name: str, spot: int) -> None:
         assert self._names[spot] is None, f"player already in spot {spot}"
         self._open_spots.remove(spot)
-        self._set_name(spot, name)
+        self._set_name(spot=spot, name=name)
         self.num_players += 1
     
-     def add_player(self, name: str, **kwargs) -> None:
+    def add_player(self, name: str, **kwargs) -> None:
         self._add_player_to_spot(name=name, spot=self._rand_open_spot(), **kwargs)
 
     def remove_player(self, spot: int) -> None:
@@ -333,7 +333,6 @@ class Game:
         now: datetime = datetime.utcnow()
         self._timers[spot].cancel()
         self._timers[spot] = None
-        # assert self._timers[spot] is not None, "timer is none for this spot"
         if self._reserve_time_use_starts[spot] is not None:
             seconds_used: float = (
                 now - self._reserve_time_use_starts[spot]

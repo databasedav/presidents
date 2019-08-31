@@ -79,7 +79,6 @@ class EmittingGame(Game):
         self._sid_user_id_dict: Dict[str, str] = dict()
         self.hand_play_agent = server.server.agents["hand_play_agent"]
         self.num_spectators: int = 0  # TODO
-        
 
     # properties
 
@@ -93,19 +92,18 @@ class EmittingGame(Game):
         self._server = server
 
     async def _add_player_to_spot(self, sid: str, user_id: str, name: str, spot: int) -> None:
+        super()._add_player_to_spot(name, spot)
         self._chambers[spot].set_sid(sid)
         self._spot_sid_bidict.inv[sid] = spot
         self._sid_user_id_dict[sid] = user_id
-        await self._set_name(spot=spot, name=name)
-        self.num_players += 1
         # TODO: THIS SHOULD NOT BE HERE.
         if self.num_players == 4:
             await self._start_round()
 
     def remove_player(self, sid: str) -> None:
+        super().remove_player(self._get_spot(sid))
         self._spot_sid_bidict.inv.pop(sid)
         self._sid_user_id_dict.pop(sid)
-        super().remove_player(self._get_spot(sid))
 
     async def _deal_cards(
         self, *, deck: Optional[List[Iterable[int]]] = None
@@ -145,7 +143,7 @@ class EmittingGame(Game):
             pass
         self._current_player = spot = next(self._turn_manager)  # TODO this mypy error
         events = list()
-        events.append(await self._start_timer(spot=spot, seconds=self._turn_time))
+        events.append(await self._start_timer('turn', spot=spot, seconds=self._turn_time))
         events.append(await self._message(f"🎲 it's {self._names[spot]}'s turn"))
         events.append(await self._emit_set_on_turn_handler(spot))
         await asyncio.gather(*events)
@@ -156,11 +154,12 @@ class EmittingGame(Game):
         events.append(self._set_dot_color(spot, "green"))
         await asyncio.gather(*events)
 
-    async def _start_timer(self, **kwargs) -> None:
-        await self._emit_to_players("set_time", {"spot": kwargs.get('spot'), "time": kwargs.get('seconds') * 1000})
+    async def _start_timer(self, which, **kwargs) -> None:
+        assert which in ['turn', 'reserve']
+        await self._emit_to_players(f"set_{which}_time", {"spot": kwargs.get('spot'), "time": kwargs.get('seconds') * 1000})
         super()._start_timer(**kwargs)
 
-    async def _stop_timer(self, **kwargs) -> None:
+    async def _stop_timer(self, which, **kwargs) -> None:
         
 
     async def _player_finish(self, spot: int) -> None:
@@ -168,9 +167,9 @@ class EmittingGame(Game):
         await self._player_finish_helper(spot)
 
     async def _player_finish_helper(self, spot: int) -> None:
-        assert self._chambers[
-            spot
-        ].is_empty, "only players with no cards remaining can finish"
+        assert self._chambers[spot].is_empty, (
+            "only players with no cards remaining can finish"
+        )
         self._positions.append(self._current_player)
         self._turn_manager.remove(self._current_player)
         num_unfinished_players = self._num_unfinished_players

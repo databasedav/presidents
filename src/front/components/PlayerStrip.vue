@@ -19,8 +19,20 @@
 
     <v-icon class='ma-1' size='10px'>fa-clock</v-icon>
     <countdown
+      ref='turn'
       :time='this.time'
       :transform='transform'
+      :auto-start='true'
+    >
+      <template slot-scope="props">{{ props.seconds }}</template>
+    </countdown>
+
+    <v-icon class='ma-1' size='10px'>fa-clock</v-icon>
+    <countdown
+      ref='reserve'
+      :time='this.time'
+      :transform='transform'
+      :auto-start='false'
     >
       <template slot-scope="props">{{ props.seconds }}</template>
     </countdown>
@@ -46,6 +58,8 @@ export default {
     }
   },
 
+  // TODO: add watcher for starting and stopping reserve time 
+
   computed: {
     name () {
       return this.$store.state[this.namespace].names[this.spot]
@@ -56,8 +70,12 @@ export default {
       return cards_remaining < 10 ? `0${cards_remaining}` : cards_remaining
     },
 
-    time () {
-      return this.$store.state[this.namespace].times[this.spot]
+    turn_time () {
+      return this.$store.state[this.namespace].turn_times[this.spot]
+    },
+
+    reserve_time () {
+      return this.$store.state[this.namespace].reserve_times[this.spot]
     },
 
     dot_color () {
