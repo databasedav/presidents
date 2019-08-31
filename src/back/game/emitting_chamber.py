@@ -3,7 +3,7 @@ from __future__ import annotations
 from . import Hand, Chamber, HandNode, HandPointerNode
 
 from socketio import AsyncServer
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Iterable
 import numpy as np
 
 import asyncio
@@ -126,12 +126,6 @@ class EmittingChamber(Chamber):
             ]
         )
         await self._emit_update_current_hand_str()
-
-    async def deselect_selected(self) -> None:
-        """
-        Copy/paste from base chamber class with asynced methods.
-        """
-        await self.deselect_cards(self.hand)
 
     async def _emit_update_current_hand_str(self) -> None:
         await self._emit("update_current_hand_str", {"str": str(self.hand)})

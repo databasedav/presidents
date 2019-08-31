@@ -232,18 +232,17 @@ class Game:
             self._open_spots.remove(spot)
         return spot
 
-    def add_player(self, name: str) -> None:
-        self._names[self._rand_open_spot()] = name
-        self.num_players += 1
-
-    def add_player_to_spot(self, name: str, spot: int) -> None:
+    def _add_player_to_spot(self, name: str, spot: int) -> None:
         assert self._names[spot] is None, f"player already in spot {spot}"
         self._open_spots.remove(spot)
-        self._names[spot] = name
+        self._set_name(spot, name)
         self.num_players += 1
+    
+     def add_player(self, name: str, **kwargs) -> None:
+        self._add_player_to_spot(name=name, spot=self._rand_open_spot(), **kwargs)
 
     def remove_player(self, spot: int) -> None:
-        self._names[spot] = None
+        self._set_name(spot, None)
         self._open_spots.add(spot)
         self.num_players -= 1
 
@@ -251,7 +250,7 @@ class Game:
         return np.sort(np.random.permutation(range(1, 53)).reshape(4, 13))
 
     def _deal_cards(
-        self, *, deck: Optional[List[Iterable[int]]] = None
+        self, *, deck: List[Iterable[int]] = None
     ) -> None:
         for spot, cards in enumerate(deck or self._make_shuffled_deck()):
             chamber: Chamber = self._chambers[spot]
@@ -267,7 +266,7 @@ class Game:
     # game flow related methods
 
     def _start_round(
-        self, *, deck: Optional[List[Iterable[int]]] = None
+        self, *, deck: List[Iterable[int]] = None
     ) -> None:
         assert self.num_players == 4, "four players required to start round"
         self._deal_cards(deck=deck)
@@ -277,14 +276,11 @@ class Game:
         self._next_player()
 
     def _next_player(self) -> None:
-        assert self._turn_manager is not None
-        # TODO this mypy error
-        self._current_player = next(self._turn_manager)
-        self._message(f"🎲 it's {self._names[self._current_player]}'s turn")
-        assert self._current_player is not None
+        self._current_player = next(self._turn_manager)  # TODO this mypy error
         self._start_timer(self._current_player, self._turn_time)
+        self._message(f"🎲 it's {self._names[self._current_player]}'s turn")
 
-    def _start_timer(self, *, spot: int, seconds: Union[int, float]) -> None:
+    def _start_timer(self, spot: int, seconds: Union[int, float]) -> None:
         self._timers[spot] = self._timer(seconds, self._handle_timeout, spot)
 
     def _handle_timeout(self, spot: int) -> None:
@@ -305,25 +301,30 @@ class Game:
             self._auto_play_or_pass(spot)
 
     def _auto_play_or_pass(self, spot: int) -> None:
+        """
+        For EmittingGame, client cannot see the server auto playing for
+        them, besides any non-played currently selected cards being
+        individually reselected at the end. Accomplishes this by
+        explicitly calling base class methods.
+        """
         assert self._current_player == spot, f"it is not spot {spot}'s turn"
+
         if self._hand_in_play not in [base_hand, None]:
-            self._unlock_pass(spot)
-            self._pass_turn(spot)  # locks pass
+            Game.maybe_unlock_pass_turn(self, spot)
+            self.maybe_pass_turn(spot)  # locks pass
             return
+
         chamber: Chamber = self._chambers[spot]
         currently_selected_cards: List[int] = chamber.hand.to_list()
         if currently_selected_cards:  # not empty list
-            chamber.deselect_selected()
-        if self._hand_in_play is base_hand:
-            chamber.select_card(1)
-            self._unlock(spot)
-            self._play_current_hand(spot)
-        elif self._hand_in_play is None:
-            min_card: int = chamber._get_min_card()
-            chamber.select_card(min_card)
-            self._unlock(spot)
-            self._play_current_hand(spot)
+            Chamber.deselect_selected(chamber)
 
+        # min card will be 1 if playing on base hand
+        min_card: int = chamber._get_min_card()
+        Chamber.select_card(chamber, min_card)
+        Game.maybe_unlock_play(self, spot)
+        self.maybe_play_current_hand(spot, timestamp=datetime.utcnow())
+        
         for card in currently_selected_cards:  # could be empty list
             if card != min_card:
                 chamber.select_card(card)
@@ -477,7 +478,7 @@ class Game:
         finishing a player (this is taken care of by the post play
         handler.)
 
-        NOTE: this method is almost copy/pasted in EmittingGame and must
+        NOTE: this method is kinda copy/pasted in EmittingGame and must
               be manually updated there if any changes are made here.
         """
         assert self._unlocked[spot], "play called without unlocking"
@@ -485,10 +486,10 @@ class Game:
         chamber = self._chambers[spot]
         hand = Hand.copy(chamber.hand)
         chamber.remove_cards(hand)
-        self._num_consecutive_passes = 0
         self._set_hand_in_play(hand)
         self._message(f"▶️ {self._names[spot]} played {str(hand)}")
         self.lock(spot)
+        self._num_consecutive_passes = 0
         # lock others if their currently unlocked hand should no longer be unlocked
         for other_spot in self._get_other_spots(spot, exclude_finished=True):
             if self._unlocked[other_spot]:
@@ -847,6 +848,9 @@ class Game:
                 yield maybe_other_spot
 
     # setters
+
+    def _set_name(self, spot: int, name: str) -> None:
+        self._names[spot] = name
 
     def _set_hand_in_play(self, hand: Hand) -> None:
         self._hand_in_play = hand

@@ -66,7 +66,7 @@ class Server(AsyncNamespace):
                     reserve_time=self._reserve_time,
                 )
             )
-        await self.game.add_player(sid, user_id, name)
+        await self.game.add_player(sid=sid, user_id=user_id, name=name)
 
     def add_spectator(self):
         ...

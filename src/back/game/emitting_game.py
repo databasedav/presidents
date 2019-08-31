@@ -40,6 +40,15 @@ from ..data.stream.records import HandPlay
 # TODO: in general, make sure certain state has actually changed before
 #       notifying client
 
+# TODO: ok here is what is gna happen: timer will start server side
+#       w 0 delay and then the on_turn acks will be stored in the db
+#       for analysis, the timer start time will be sent to the front
+#       end so it can determine how much time the player actually has
+#       the fact that the player will actually have less time to play
+#       will be handled by the fact that they have reserve time and
+#       also the fact that they should get a better internet connection, bitch
+
+
 
 # go through the list of methods that need to be asynced copy pasted
 # for all instances of f'self.{method}(' where method is overwritten
@@ -51,7 +60,10 @@ ASYNCED_COPY_PASTE_METHODS = [
     'add_or_remove_card',
     'maybe_unlock_play',
     'maybe_play_current_hand',
-    '_handle_timeout'
+    '_handle_timeout',
+    '_auto_play_or_pass',
+    '_start_round',
+    'add_player'
 ]
 
 class EmittingGame(Game):
@@ -80,12 +92,11 @@ class EmittingGame(Game):
     def set_server(self, server: str) -> None:
         self._server = server
 
-    async def add_player(self, sid: str, user_id: str, name: str) -> None:
-        rand_open_spot: int = self._rand_open_spot()
-        self._chambers[rand_open_spot].set_sid(sid)
-        self._spot_sid_bidict.inv[sid] = rand_open_spot
+    async def _add_player_to_spot(self, sid: str, user_id: str, name: str, spot: int) -> None:
+        self._chambers[spot].set_sid(sid)
+        self._spot_sid_bidict.inv[sid] = spot
         self._sid_user_id_dict[sid] = user_id
-        await self._set_name(rand_open_spot, name)
+        await self._set_name(spot=spot, name=name)
         self.num_players += 1
         # TODO: THIS SHOULD NOT BE HERE.
         if self.num_players == 4:
@@ -93,6 +104,7 @@ class EmittingGame(Game):
 
     def remove_player(self, sid: str) -> None:
         self._spot_sid_bidict.inv.pop(sid)
+        self._sid_user_id_dict.pop(sid)
         super().remove_player(self._get_spot(sid))
 
     async def _deal_cards(
@@ -115,8 +127,8 @@ class EmittingGame(Game):
         self, spot: int, sid: str, cards: Iterable[int]
     ):
         """
-        Deals cards to a single player; for utilizing concurrency with
-        asyncio.gather.
+        Deals cards to an individual player; for utilizing concurrency
+        with asyncio.gather.
         """
         chamber = self._chambers[spot]
         await chamber.reset()
@@ -126,29 +138,17 @@ class EmittingGame(Game):
 
     # game flow related methods
 
-    async def _start_round(
-        self, *, deck: Optional[List[Iterable[int]]] = None
-    ) -> None:
-        assert self.num_players == 4, "four players required to start round"
-        await self._deal_cards(deck=deck)
-        self._make_and_set_turn_manager()
-        self._num_consecutive_rounds += 1
-        await self._message(
-            f"🏁 round {self._num_consecutive_rounds} has begun"
-        )
-        await self._next_player()
-
     async def _next_player(self) -> None:
         try:  # current player is no longer on turn
             await self._emit("set_on_turn", {"on_turn": False},  room=self._current_player_sid))
-        except KeyError:  # self._current_player is None (round start)
+        except KeyError:  # self._current_player is None on round start
             pass
         self._current_player = spot = next(self._turn_manager)  # TODO this mypy error
-        await self._message(
-            f"🎲 it's {self._names[spot]}'s turn"
-        )
-        self._start_timer(spot=spot, seconds=self._turn_time)
-        await self._emit_set_on_turn_handler(spot)
+        events = list()
+        events.append(await self._start_timer(spot=spot, seconds=self._turn_time))
+        events.append(await self._message(f"🎲 it's {self._names[spot]}'s turn"))
+        events.append(await self._emit_set_on_turn_handler(spot))
+        await asyncio.gather(*events)
 
     async def _emit_set_on_turn_handler(self, spot: int) -> None:
         events = list()
@@ -160,59 +160,8 @@ class EmittingGame(Game):
         await self._emit_to_players("set_time", {"spot": kwargs.get('spot'), "time": kwargs.get('seconds') * 1000})
         super()._start_timer(**kwargs)
 
-    async def _auto_play_or_pass(self, spot: int) -> None:
-        """
-        Copy/paste from base game class with asynced methods.
-
-        TODO: the client should not be able to see the server auto
-        #     auto playing for them; the only change they should see
-        #     is the state right after the auto play (e.g. not
-        #     seeing the server reselect selected cards)
-
-        # this is the solution bois:
-        # right after the client updates the state such that the player
-        # is notified that it is their turn, send an event with ...; shit
-        # but this is bad cuz then the server side timer depends on the 
-        # client's sending the time the player sees that its their turn
-        # which is hackerboi prone
-
-        # ok here is what is gna happen: timer will start server side
-        # w 0 delay and then the on_turn acks will be stored in the db
-        # for analysis, the timer start time will be sent to the front
-        # end so it can determine how much time the player actually has
-        # the fact that the player will actually have less time to play
-        # will be handled by the fact that they have reserve time and
-        # also the fact that they should get a better internet connection, bitch
-
-        # TODO: this isn't actually simply copy pasted plus need to make
-        #       autoplaying actions invisible to the player
-        """
-        sid: str = self._get_sid(spot)
-        assert (
-            self._current_player == spot
-        ), f"it is not {sid}/{self._names[spot]}'s' turn"
-        # TODO: tighter client bot integration; i'm thinking chamber
-        #       syncing...
-        if self._hand_in_play not in [base_hand, None]:  # pass if needn't play
-            await self.maybe_unlock_pass_turn(sid)
-            await self.maybe_pass_turn(sid)  # locks pass
-            return
-
-        chamber: Chamber = self._chambers[spot]
-        currently_selected_cards: List[int] = chamber.hand.to_list()
-        if currently_selected_cards:  # not empty list
-            await chamber.deselect_selected()
+    async def _stop_timer(self, **kwargs) -> None:
         
-        # min card will be 1 if playing on base hand
-        min_card: int = chamber._get_min_card()
-        await chamber.select_card(min_card)
-        await self.maybe_unlock_play(spot, sid)
-        await self.maybe_play_current_hand(sid, datetime.utcnow())
-        
-        for card in currently_selected_cards:  # could be empty list
-            if card != min_card:
-                await chamber.select_card(card)
-
 
     async def _player_finish(self, spot: int) -> None:
         await self._set_dot_color(spot, "purple")
@@ -283,11 +232,6 @@ class EmittingGame(Game):
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
 
-    async def _play_current_hand(self, spot, **kwargs):
-        await self._play_current_hand(spot, handle_post=False, **kwargs)
-        
-        await self._post_play_handler(spot)
-
     async def _play_current_hand(
         self, spot: int, *, handle_post: bool = True, **kwargs
     ) -> Hand:
@@ -299,7 +243,7 @@ class EmittingGame(Game):
         # events.append(self.hand_play_agent.cast(
         #     HandPlay(
         #         hand_hash=hash(hand),
-        #         sid=kwargs.get("sid"),
+        #         sid=kwargs.get("sid", self._get_sid(spot)),
         #         timestamp=kwargs.get("timestamp"),
         #     )
         # ))
@@ -608,8 +552,9 @@ class EmittingGame(Game):
 
     # setters
 
-    async def _set_name(self, spot: int, name: str) -> None:
-        self._names[spot] = name
+    async def _set_name(self, **kwargs) -> None:
+        super()._set_name(**kwargs)
+        # TODO: make this emit single name plus the spot
         await self._emit_to_players("set_names", {"names": self._names})
 
     async def _set_hand_in_play(self, hand: Hand) -> None:
@@ -753,8 +698,8 @@ class EmittingGame(Game):
 # with additional async logic in EmittingGame, prepend 'await' to the
 # method call and dynamically add the method to EmittingGame
 
-async_overwritten_methods = [method_tuple[0] for method_tuple in filter(lambda method_tuple: inspect.iscoroutinefunction(method_tuple[1]), dict(EmittingGame.__dict__).items())]
-patterns = [re.compile(rf'self.{method}(') for method in async_overwritten_methods]
+get_async_method_names = lambda _class: [method_tuple[0] for method_tuple in filter(lambda method_tuple: inspect.iscoroutinefunction(method_tuple[1]), dict(_class.__dict__).items())]
+patterns = [re.compile(rf'self.{method}(') for method in get_async_method_names(EmittingGame)] + [re.compile(rf'chamber.{method}(') for method in get_async_method_names(EmittingChamber)]
 
 for method in ASYNCED_COPY_PASTE_METHODS:
     method_str = inspect.getsource(eval(f'Game.{method}')).lstrip()
