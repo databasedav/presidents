@@ -143,7 +143,7 @@ class EmittingGame(Game):
             pass
         self._current_player = spot = next(self._turn_manager)  # TODO this mypy error
         events = list()
-        events.append(await self._start_timer('turn', spot=spot, seconds=self._turn_time))
+        events.append(await self._set_timer('turn', spot=spot, seconds=self._turn_time, start=True))
         events.append(await self._message(f"🎲 it's {self._names[spot]}'s turn"))
         events.append(await self._emit_set_on_turn_handler(spot))
         await asyncio.gather(*events)
@@ -154,13 +154,19 @@ class EmittingGame(Game):
         events.append(self._set_dot_color(spot, "green"))
         await asyncio.gather(*events)
 
-    async def _start_timer(self, which, **kwargs) -> None:
-        assert which in ['turn', 'reserve']
-        await self._emit_to_players(f"set_{which}_time", {"spot": kwargs.get('spot'), "time": kwargs.get('seconds') * 1000})
+    async def _set_timer(self, which: str, seconds: Union[int, float], start: bool) -> None:
+        await self._emit_to_players(f"set_{which}_time", {"spot": spot, "time": seconds * 1000, 'start': start})
+        if start:
+            super()._start_timer(spot, seconds)
+
+    async def _start_timer(self, which: str, spot: int) -> None:
+        await self._emit_to_players(f"start_{which}_timer", {"spot": kwargs.get('spot'))
         super()._start_timer(**kwargs)
 
-    async def _stop_timer(self, which, **kwargs) -> None:
-        
+    async def _stop_timer(self, which: str, spot: int) -> None:
+        await self._emit_to_players(f"set_{which}_time", {"spot": kwargs.get('spot'), "time": kwargs.get('seconds') * 1000, 'start': True})
+
+
 
     async def _player_finish(self, spot: int) -> None:
         await self._set_dot_color(spot, "purple")

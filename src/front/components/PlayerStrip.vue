@@ -22,7 +22,8 @@
       ref='turn'
       :time='this.time'
       :transform='transform'
-      :auto-start='true'
+      :auto-start='false'
+      :emit-events='false'
     >
       <template slot-scope="props">{{ props.seconds }}</template>
     </countdown>
@@ -33,6 +34,7 @@
       :time='this.time'
       :transform='transform'
       :auto-start='false'
+      :emit-events='false'
     >
       <template slot-scope="props">{{ props.seconds }}</template>
     </countdown>

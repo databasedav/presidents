@@ -11,7 +11,7 @@ from typing import (
     Set,
     Union,
 )
-from datetime import datetime
+from datetime import datetime, utcnow
 
 import numpy as np
 
@@ -76,6 +76,8 @@ class Game:
             None for _ in range_4
         ]
         self._turn_time: Union[int, float] = turn_time
+        self._turn_times: List[Union[int, float]] = [None for _ in range_4]
+        self._turn_time_use_starts: List[datetime] = [None for _ in range_4]
         self._reserve_time: Union[int, float] = reserve_time
         self._reserve_times: List[Union[int, float]] = [
             reserve_time for _ in range_4
@@ -133,6 +135,8 @@ class Game:
         self._timer = timer or self._timer
         self._timers = [None for _ in range_4]
         self._turn_time = turn_time or self._turn_time
+        self._turn_times = [None for _ in range_4]
+        self._turn_time_use_starts = [None for _ in range_4]
         self._reserve_time = reserve_time or self._reserve_time
         self._reserve_times = [self._reserve_time for _ in range_4]
         self._reserve_time_use_starts = [None for _ in range_4]
@@ -281,14 +285,18 @@ class Game:
         self._message(f"🎲 it's {self._names[self._current_player]}'s turn")
 
     def _start_timer(self, spot: int, seconds: Union[int, float]) -> None:
+        self._turn_time_use_starts[spot] = utcnow()
         self._timers[spot] = self._timer(seconds, self._handle_timeout, spot)
 
     def _handle_timeout(self, spot: int) -> None:
         reserve_time_use_start: datetime = self._reserve_time_use_starts[spot]
         reserve_time: Optional[Union[int, float]] = self._reserve_times[spot]
         if not reserve_time_use_start and reserve_time:
-            self._reserve_time_use_starts[spot] = datetime.utcnow()
-            self._start_timer(spot, reserve_time)
+            self._reserve_time_use_starts[spot] = utcnow()
+            try:  # for EmittingGame
+                self._set_timer('reserve', reserve_time, True)
+            except AttributeError:
+                self._start_timer(spot, reserve_time)
         # either was using reserve time or was not using reserve time
         # and simply has no reserve time remaining, i.e.
         # elif reserver_time_use_start or not reserve_time:
@@ -323,20 +331,21 @@ class Game:
         min_card: int = chamber._get_min_card()
         Chamber.select_card(chamber, min_card)
         Game.maybe_unlock_play(self, spot)
-        self.maybe_play_current_hand(spot, timestamp=datetime.utcnow())
+        self.maybe_play_current_hand(spot, timestamp=utcnow())
         
         for card in currently_selected_cards:  # could be empty list
             if card != min_card:
                 chamber.select_card(card)
 
     def _stop_timer(self, spot: int) -> None:
-        now: datetime = datetime.utcnow()
+        now: datetime = utcnow()
         self._timers[spot].cancel()
         self._timers[spot] = None
-        if self._reserve_time_use_starts[spot] is not None:
-            seconds_used: float = (
-                now - self._reserve_time_use_starts[spot]
-            ).total_seconds()
+        if self._turn_time_use_starts[spot] is not None:
+            seconds_used: float = (now - self._reserve_time_use_starts[spot]).total_seconds()
+
+        elif self._reserve_time_use_starts[spot] is not None:
+            seconds_used = (now - self._reserve_time_use_starts[spot]).total_seconds()
             self._reserve_times[spot] -= seconds_used
             self._reserve_time_use_starts[spot] = None
 
