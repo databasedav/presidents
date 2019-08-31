@@ -92,8 +92,7 @@ class Server(AsyncNamespace):
 
     async def on_play(self, sid) -> None:
         timestamp: datetime.datetime = datetime.utcnow()
-        # await asyncio.wait([self.game.maybe_play_current_hand(sid, timestamp)])
-        await self.game.maybe_play_current_hand(sid, timestamp)
+        await self.game.maybe_play_current_hand_handler(sid, timestamp)
 
     async def on_unlock_pass(self, sid) -> None:
         await self.game.maybe_unlock_pass_turn(sid)

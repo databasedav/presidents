@@ -23,8 +23,6 @@ uvloop = "*"
 pytest-asyncio = "*"
 uvicorn = {editable = true,path = "./../uvicorn"}
 fastapi = "*"
-requests = "*"
-pytest-xdist = "*"
 faust = {extras = ["debug", "fast", "uvloop"],version = "*"}
 robinhood-aiokafka = "*"
 eventlet = "*"

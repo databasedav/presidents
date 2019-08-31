@@ -261,8 +261,8 @@ class Game:
     def _make_and_set_turn_manager(self) -> None:
         decks = self._get_decks_from_chambers()
         # get which deck has the 3 of clubs
-        c3_index = np.where(decks == 1)[0][0]
-        self._turn_manager = TurnManager(c3_index)
+        toc_index = np.where(decks == 1)[0][0]
+        self._turn_manager = TurnManager(toc_index)
 
     # game flow related methods
 
@@ -284,7 +284,7 @@ class Game:
         assert self._current_player is not None
         self._start_timer(self._current_player, self._turn_time)
 
-    def _start_timer(self, spot: int, seconds: Union[int, float]) -> None:
+    def _start_timer(self, *, spot: int, seconds: Union[int, float]) -> None:
         self._timers[spot] = self._timer(seconds, self._handle_timeout, spot)
 
     def _handle_timeout(self, spot: int) -> None:
@@ -476,6 +476,9 @@ class Game:
         flow related things like moving on to the next player or
         finishing a player (this is taken care of by the post play
         handler.)
+
+        NOTE: this method is almost copy/pasted in EmittingGame and must
+              be manually updated there if any changes are made here.
         """
         assert self._unlocked[spot], "play called without unlocking"
         self._stop_timer(spot)
