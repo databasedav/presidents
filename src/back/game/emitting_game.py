@@ -138,12 +138,12 @@ class EmittingGame(Game):
 
     async def _next_player(self) -> None:
         try:  # current player is no longer on turn
-            await self._emit("set_on_turn", {"on_turn": False},  room=self._current_player_sid))
+            await self._emit("set_on_turn", {"on_turn": False},  room=self._current_player_sid)
         except KeyError:  # self._current_player is None on round start
             pass
         self._current_player = spot = next(self._turn_manager)  # TODO this mypy error
         events = list()
-        events.append(await self._set_timer('turn', spot=spot, seconds=self._turn_time, start=True))
+        events.append(await self._set_timer(spot, 'turn', self._turn_time, True))
         events.append(await self._message(f"🎲 it's {self._names[spot]}'s turn"))
         events.append(await self._emit_set_on_turn_handler(spot))
         await asyncio.gather(*events)
@@ -154,13 +154,13 @@ class EmittingGame(Game):
         events.append(self._set_dot_color(spot, "green"))
         await asyncio.gather(*events)
 
-    async def _set_timer(self, which: str, seconds: Union[int, float], start: bool) -> None:
+    async def _set_timer(self, spot: int, which: str, seconds: Union[int, float], start: bool) -> None:
         await self._emit_to_players(f"set_{which}_time", {"spot": spot, "time": seconds * 1000, 'start': start})
         if start:
             super()._start_timer(spot, seconds)
 
     async def _start_timer(self, which: str, spot: int) -> None:
-        await self._emit_to_players(f"start_{which}_timer", {"spot": kwargs.get('spot'))
+        await self._emit_to_players(f"start_{which}_timer", {"spot": kwargs.get('spot')})
         super()._start_timer(**kwargs)
 
     async def _stop_timer(self, which: str, spot: int) -> None:
