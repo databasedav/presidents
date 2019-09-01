@@ -167,15 +167,12 @@ class EmittingGame(Game):
         events.append(self._set_dot_color(spot, "green"))
         await asyncio.gather(*events)
 
-    async def _set_timer(
-        self, spot: int, which: str, seconds: Union[int, float], start: bool
-    ) -> None:
+    async def _set_timer(self, **kwargs) -> None:
         await self._emit_to_players(
-            f"set_{which}_time",
-            {"spot": spot, "time": seconds * 1000, "start": start},
+            f"set_{kwargs.get('which')}_time",
+            {"spot": kwargs.get('spot'), "time": kwargs.get('seconds') * 1000, "start": kwargs.get('start')},
         )
-        if start:
-            super()._start_timer(spot, seconds)
+        super()._set_timer(**kwargs)
 
     async def _start_timer(self, which: str, spot: int) -> None:
         await self._emit_to_players(
