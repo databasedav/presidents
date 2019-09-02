@@ -30,7 +30,7 @@ def run():
 
     @sio.event
     async def connect(sid, environ):
-        print(environ)
+        # print(environ)
         partial(AsyncTimer.spawn_after, loop=uvicorn.loop)(
             1,
             server_browser._join_server_as_player,

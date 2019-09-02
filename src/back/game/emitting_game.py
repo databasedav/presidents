@@ -641,6 +641,8 @@ class EmittingGame(Game):
 
         TODO: to should work instead of room
         """
+        await self._emit(*args, **kwargs)
+        return
         maybe_skip_sid = kwargs.get("skip_sid")
         if not maybe_skip_sid:
             await asyncio.gather(
