@@ -40,15 +40,16 @@ const EVENTS = [
   'set_cards_remaining',
   'set_dot_color',
   'set_giver',
-  'set_gives_remaining',
+  'set_gives',
   'set_giving_options',
   'set_hand_in_play',
   'set_names',
   'set_on_turn',
   'set_pass_unlocked',
   'set_spot',
-  'set_takes_remaining',
+  'set_takes',
   'set_time',
+  'set_timer_state',
   'set_trading',
   'set_unlocked',
   'update_alert_str',
@@ -99,12 +100,5 @@ function create_server_browser_module (rbnsp) {
     }
   }
 }
-
-
-function emit(event, payload, namespace) {
-  vm.$socket.client.of(namespace).emit(event, payload)
-}
-
-
 
 export { create_server_module, EVENTS, create_server_browser_module, namespaced_getter }

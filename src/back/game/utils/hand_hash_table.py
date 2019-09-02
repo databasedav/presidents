@@ -16,6 +16,7 @@ hand_table: Dict[int, int] = {}
 
 
 def _save_hand_table() -> None:
+    # TODO: use abs path for this
     with open(
         f"{os.getcwd()}/src/back/game/utils/hand_table.pkl", "wb"
     ) as file:

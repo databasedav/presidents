@@ -267,10 +267,10 @@ class Hand:
 
     def add(self, card: int) -> None:
         assert 1 <= card <= 52, "attempting to add invalid card."
-        if self.is_full:
-            raise FullHandError("cannot add any more cards to this hand.")
         if card in self:
             raise DuplicateCardError(f"{card} already in hand.")
+        if self.is_full:
+            raise FullHandError("cannot add any more cards to this hand.")
         ii: int = self._insertion_index(card)
         # left shift lower cards if there's a card at the ii
         if self[ii]:

@@ -20,20 +20,22 @@
     <v-icon class='ma-1' size='10px'>fa-clock</v-icon>
     <countdown
       ref='turn'
-      :time='this.time'
+      :time='this.turn_time'
       :transform='transform'
-      :auto-start='false'
+      :auto-start='true'
       :emit-events='false'
     >
       <template slot-scope="props">{{ props.seconds }}</template>
     </countdown>
 
+    <v-spacer></v-spacer>
+
     <v-icon class='ma-1' size='10px'>fa-clock</v-icon>
     <countdown
       ref='reserve'
-      :time='this.time'
+      :time='this.reserve_time'
       :transform='transform'
-      :auto-start='false'
+      :auto-start='true'
       :emit-events='false'
     >
       <template slot-scope="props">{{ props.seconds }}</template>
@@ -82,9 +84,36 @@ export default {
 
     dot_color () {
       return this.$store.state[this.namespace].dot_colors[this.spot]
+    },
+
+    turn_time_state () {
+      return this.$store.state[this.namespace].turn_time_states[this.spot]
+    },
+
+    reserve_time_state () {
+      return this.$store.state[this.namespace].reserve_time_states[this.spot]
+    },
+  },
+
+  watch: {
+    turn_time_state (new_val, old_val) {
+      if (new_val) {
+        console.log(this.$refs.turn)
+        this.$refs.turn.start()
+      } else {
+        this.$refs.turn.abort()
+      }
+    },
+    reserve_time_state (new_val, old_val) {
+      if (new_val) {
+        this.$refs.reserve.start()
+      } else {
+        this.$refs.reserve.abort()
+      }
     }
   }
 }
+
 </script>
 
 <style>

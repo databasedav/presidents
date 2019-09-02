@@ -47,7 +47,7 @@ if __name__ == "__main__":
 #   File "/home/avi/presidents/src/back/game/emitting_game.py", line 185, in _handle_timeout
 #     await self._auto_play_or_pass(spot)
 #   File "/home/avi/presidents/src/back/game/emitting_game.py", line 231, in _auto_play_or_pass
-#     await self.maybe_play_current_hand(sid, datetime.utcnow())
+#     await self.maybe_play_current_hand(sid, datetime.datetime.utcnow())
 #   File "/home/avi/presidents/src/back/game/emitting_game.py", line 379, in maybe_play_current_hand
 #     spot, sid=sid, timestamp=timestamp
 #   File "/home/avi/presidents/src/back/game/emitting_game.py", line 404, in _maybe_play_current_hand_helper

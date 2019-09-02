@@ -52,8 +52,8 @@ def test_constructor():
     assert all(option is None for option in game._selected_asking_option)
     assert all(aa == set() for aa in game._already_asked)
     assert all(waiting == False for waiting in game._waiting)
-    assert all(takes == 0 for takes in game._takes_remaining)
-    assert all(gives == 0 for gives in game._gives_remaining)
+    assert all(takes == 0 for takes in game._takes)
+    assert all(gives == 0 for gives in game._gives)
     assert all(given == set() for given in game._given)
     assert all(taken == set() for taken in game._taken)
 
@@ -100,8 +100,8 @@ def test_reset():
     assert all(option is None for option in game._selected_asking_option)
     assert all(aa == set() for aa in game._already_asked)
     assert all(waiting == False for waiting in game._waiting)
-    assert all(takes == 0 for takes in game._takes_remaining)
-    assert all(gives == 0 for gives in game._gives_remaining)
+    assert all(takes == 0 for takes in game._takes)
+    assert all(gives == 0 for gives in game._gives)
     assert all(given == set() for given in game._given)
     assert all(taken == set() for taken in game._taken)
 
@@ -148,8 +148,8 @@ def test_reset():
     assert all(option is None for option in game._selected_asking_option)
     assert all(aa == set() for aa in game._already_asked)
     assert all(waiting == False for waiting in game._waiting)
-    assert all(takes == 0 for takes in game._takes_remaining)
-    assert all(gives == 0 for gives in game._gives_remaining)
+    assert all(takes == 0 for takes in game._takes)
+    assert all(gives == 0 for gives in game._gives)
     assert all(given == set() for given in game._given)
     assert all(taken == set() for taken in game._taken)
 
@@ -194,12 +194,12 @@ def test_num_unfinished_players():
     assert game._num_unfinished_players == 1
 
 
-def test_no_takes_or_gives_remaining():
+def test_no_takes_or_gives():
     game: Game = Game()
-    assert game._no_takes_or_gives_remaining
+    assert game._no_takes_or_gives
     game._set_up_testing_base()
     game._get_game_to_trading()
-    assert not game._no_takes_or_gives_remaining
+    assert not game._no_takes_or_gives
 
 
 def test_set_up_testing_base():
@@ -570,8 +570,8 @@ def test_player_finish():
     assert game._is_president(start_spot)
     assert game._turn_manager[start_spot] == False
     assert game._num_unfinished_players == 3
-    assert game._takes_remaining[start_spot] == 2
-    assert game._gives_remaining[start_spot] == 2
+    assert game._takes[start_spot] == 2
+    assert game._gives[start_spot] == 2
     assert not game._is_current_player(start_spot)
 
     for _ in range(3):
@@ -591,8 +591,8 @@ def test_player_finish():
     assert game._is_vice_president(start_spot)
     assert game._turn_manager[start_spot] == False
     assert game._num_unfinished_players == 2
-    assert game._takes_remaining[start_spot] == 1
-    assert game._gives_remaining[start_spot] == 1
+    assert game._takes[start_spot] == 1
+    assert game._gives[start_spot] == 1
     assert not game._is_current_player(start_spot)
 
     for _ in range(2):
@@ -612,8 +612,8 @@ def test_player_finish():
     assert game._is_vice_asshole(start_spot)
     assert game._turn_manager[start_spot] == False
     assert game._num_unfinished_players == 1
-    assert game._takes_remaining[start_spot] == 0
-    assert game._gives_remaining[start_spot] == 0
+    assert game._takes[start_spot] == 0
+    assert game._gives[start_spot] == 0
     assert not game._is_current_player(start_spot)
     assert game._is_asshole(spots[0])
     assert game.trading

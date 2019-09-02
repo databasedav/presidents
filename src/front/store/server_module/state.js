@@ -30,11 +30,14 @@ export default _ => {
     giver: false,
     alt_play_button_str: String,
     giving_options_arr: Array(53).fill(false),
-    takes_remaining: Number,
-    gives_remaining: Number,
+    takes: Number,
+    gives: Number,
     cards_remaining: Array(4).fill(13),
-    times: Array(4).fill(0),
     names: Array(4).fill(''),
-    dot_colors: Array(4).fill('red')
+    dot_colors: Array(4).fill('red'),
+    turn_times: Array(4).fill(0),
+    reserve_times: Array(4).fill(0),
+    turn_time_states: Array(4).fill(false),
+    reserve_time_states: Array(4).fill(false)
   }
 }

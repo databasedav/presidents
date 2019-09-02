@@ -1,6 +1,20 @@
- import inspect
+import inspect
 import sys
 import asyncio
+from typing import Callable
+
+
+class NoopTimer:
+    """
+    For games with no time limits.
+    """
+
+    @classmethod
+    def timer(cls, time: int, func: Callable, *args, **kwargs):
+        return cls()
+
+    def cancel(self):
+        pass
 
 
 class AsyncTimer:
@@ -13,10 +27,8 @@ class AsyncTimer:
         async def task():
             await asyncio.sleep(seconds)
             await callback(*args, **kwargs)
-        
-        task = asyncio.ensure_future(task(), loop=loop)
-        task.callback = lambda: callback(*args, **kwargs)
-        return task
+
+        return asyncio.ensure_future(task(), loop=loop)
 
 
 def main(fn):

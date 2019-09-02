@@ -10,7 +10,7 @@ import logging
 
 # logging.basicConfig(level=logging.DEBUG)
 
-TURN_TIME = 10
+TURN_TIME = 2
 RESERVE_TIME = 0
 
 

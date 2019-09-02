@@ -81,8 +81,8 @@ export default {
     state.giver = true
   },
 
-  set_gives_remaining (state, payload) {
-    state.gives_remaining = payload.gives_remaining
+  set_gives (state, payload) {
+    state.gives = payload.gives
   },
 
   set_giving_options (state, payload) {
@@ -116,12 +116,24 @@ export default {
     state.spot = payload.spot
   },
 
-  set_takes_remaining (state, payload) {
-    state.takes_remaining = payload.takes_remaining
+  set_takes (state, payload) {
+    state.takes = payload.takes
   },
 
   set_time(state, payload) {
-    state.times.splice(payload.spot, 1, payload.time)
+    switch (payload.which) {
+      case 'turn':
+        state.turn_times.splice(payload.spot, 1 , payload.time)
+        state.turn_time_states.splice(payload.spot, 1, payload.start)
+        break
+      case 'reserve':
+        state.turn_times.splice(payload.spot, 1 , payload.time)
+        state.turn_time_states.splice(payload.spot, 1, payload.start)
+        break
+      case 'trading':
+        // TODO
+        break
+    }
   },
 
   set_trading (state, payload) {
@@ -134,6 +146,20 @@ export default {
 
   set_unlocked (state, payload) {
     state.unlocked = payload.unlocked
+  },
+
+  set_timer_state (state, payload) {
+    switch (payload.which) {
+      case 'turn':
+        state.turn_time_states.splice(payload.spot, 1, payload.state)
+        break
+      case 'reserve':
+        state.reserve_time_states.splice(payload.spot, 1, payload.state)  
+        break
+      case 'trading':
+        // TODO
+        break
+    }
   },
 
   update_current_hand_str (state, payload) {

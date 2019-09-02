@@ -49,30 +49,16 @@ from ..data.stream.records import HandPlay
 #       will be handled by the fact that they have reserve time and
 #       also the fact that they should get a better internet connection, bitch
 
-
-# go through the list of methods that need to be asynced copy pasted
-# for all instances of f'self.{method}(' where method is overwritten
-# with additional async logic in EmittingGame, prepend 'await' to the
-# method call and store the completely transformed method; transform
-# all such methods before registering all of them to EmittingGame
-
-ASYNCED_COPY_PASTE_METHODS = [
-    "add_or_remove_card",
-    "maybe_unlock_play",
-    "maybe_play_current_hand",
-    "_handle_timeout",
-    "_auto_play_or_pass",
-    "_start_round",
-    "add_player",
-]
-
+# TODO: kwargs strat has failed...
 
 class EmittingGame(Game):
     def __init__(self, server: Server, **kwargs):
         super().__init__(**kwargs)
         # TODO: server stuff (including emitting should be entirely handled by the Server, which is an AsyncNamespace)
         self._server: Server = server
-        self._chambers: List[EmittingChamber] = [EmittingChamber(self._server) for _ in range(4)]
+        self._chambers: List[EmittingChamber] = [
+            EmittingChamber(self._server) for _ in range(4)
+        ]
         self._spot_sid_bidict: bidict = bidict()
         self._sid_user_id_dict: Dict[str, str] = dict()
         self.hand_play_agent = server.server.agents["hand_play_agent"]
@@ -92,10 +78,17 @@ class EmittingGame(Game):
     async def _add_player_to_spot(
         self, sid: str, user_id: str, name: str, spot: int
     ) -> None:
-        super()._add_player_to_spot(name, spot)
+        """
+        NOTE: logic copy/pasted from base; must update manually
+        """
+        assert self._names[spot] is None, f"player already in spot {spot}"
+        self._open_spots.remove(spot)
+        await self._set_name(spot=spot, name=name)
+        self.num_players += 1
         self._chambers[spot].set_sid(sid)
         self._spot_sid_bidict.inv[sid] = spot
         self._sid_user_id_dict[sid] = user_id
+
         # TODO: THIS SHOULD NOT BE HERE.
         if self.num_players == 4:
             await self._start_round()
@@ -131,84 +124,130 @@ class EmittingGame(Game):
         chamber = self._chambers[spot]
         await chamber.reset()
         chamber.set_sid(sid)
-        await asyncio.gather(chamber.add_cards(cards), self._emit("set_spot", {"spot": spot}, sid))
+        await asyncio.gather(
+            chamber.add_cards(cards),
+            self._emit("set_spot", {"spot": spot}, sid),
+        )
 
     # game flow related methods
 
     async def _next_player(self) -> None:
         try:  # current player is no longer on turn
             await self._emit(
-                "set_on_turn",
-                {"on_turn": False},
-                room=self._current_player_sid,
+                "set_on_turn", {"on_turn": False}, self._current_player_sid
             )
         except KeyError:  # self._current_player is None on round start
             pass
-        self._current_player = spot = next(
-            self._turn_manager
-        )  # TODO this mypy error
-        events = list()
-        events.append(
-            await self._set_timer(spot, "turn", self._turn_time, True)
+        # TODO this mypy error
+        self._current_player = spot = next(self._turn_manager)
+        await asyncio.gather(
+            self._set_time(
+                which="turn", seconds=self._turn_time, spot=spot, start=True
+            ),
+            self._message(f"🎲 it's {self._names[spot]}'s turn"),
+            self._emit_set_on_turn_handler(spot),
         )
-        events.append(
-            await self._message(f"🎲 it's {self._names[spot]}'s turn")
-        )
-        events.append(await self._emit_set_on_turn_handler(spot))
-        await asyncio.gather(*events)
 
     async def _emit_set_on_turn_handler(self, spot: int) -> None:
-        events = list()
-        events.append(
-            self._emit(
-                "set_on_turn", {"on_turn": True}, room=self._get_sid(spot)
-            )
+        await asyncio.gather(
+            self._emit("set_on_turn", {"on_turn": True}, self._get_sid(spot)),
+            self._set_dot_color(spot, "green"),
         )
-        events.append(self._set_dot_color(spot, "green"))
-        await asyncio.gather(*events)
 
-    async def _set_timer(self, **kwargs) -> None:
+    async def _set_time(self, which: str, seconds: Union[int, float], spot: int = None, start: bool = False) -> None:
         await self._emit_to_players(
-            f"set_{kwargs.get('which')}_time",
-            {"spot": kwargs.get('spot'), "time": kwargs.get('seconds') * 1000, "start": kwargs.get('start')},
-        )
-        super()._set_timer(**kwargs)
-
-    async def _start_timer(self, which: str, spot: int) -> None:
-        await self._emit_to_players(
-            f"start_{which}_timer", {"spot": kwargs.get("spot")}
-        )
-        super()._start_timer(**kwargs)
-
-    async def _stop_timer(self, which: str, spot: int) -> None:
-        await self._emit_to_players(
-            f"set_{which}_time",
+            "set_time",
             {
-                "spot": kwargs.get("spot"),
-                "time": kwargs.get("seconds") * 1000,
-                "start": True,
+                "which": which,
+                "spot": spot,
+                "time": seconds * 1000,
+                "start": start,
             },
         )
+        super()._set_time(which, seconds, spot, False)
+        if start:
+            super()._start_timer(which, spot)
+
+    async def _start_timer(self, which: str, spot: int = None) -> None:
+        await self._emit_to_players(
+            "set_timer_state",
+            {
+                "which": which,
+                "spot": spot,
+                "state": True,
+            },
+        )
+        super()._start_timer(which, spot)
+
+    async def _stop_timer(self, which: str, spot: int = None) -> None:
+        """
+        NOTE: logic copy/pasted from base; must update manually
+        """
+        now: datetime = datetime.utcnow()
+        assert which in ["turn", "reserve" "trading"]
+        await self._emit_to_players(
+            "set_timer_state",
+            {
+                "which": which,
+                "spot": spot,
+                "state": False,
+            },
+        )
+        if which == "turn":
+            assert spot is not None
+            self._timers[spot].cancel()
+            self._timers[spot] = None
+            await self._set_time("turn", 0, spot)
+            self._turn_time_use_starts[spot] = None
+        elif which == "reserve":
+            assert spot is not None
+            self._timers[spot].cancel()
+            self._timers[spot] = None
+            time_used = (
+                now - self._reserve_time_use_starts[spot]
+            ).total_seconds()
+            # need the max statement since this function is used during
+            # reserve time timeouts
+            await self._set_time(
+                "reserve", max(0, self._reserve_times[spot] - time_used), spot
+            )
+            self._reserve_time_use_starts[spot] = None
+        elif which == "trading":
+            self._trading_timer.cancel()
+            self._trading_timer = None
+            await self._set_time("trading", self._trading_time)
+            self._trading_time_start = None
+
+    async def _pause(self) -> None:
+        await self._emit_to_players(
+            "set_paused", {"paused": True}
+        )  # game has been paused...
+        self._pause_timers()
+
+    async def _unpause(self) -> None:
+        await self._emit_to_players("set_paused", {"paused": False})
+        self._unpause_timers()
 
     async def _player_finish(self, spot: int) -> None:
-        await self._set_dot_color(spot, "purple")
-        await self._player_finish_helper(spot)
-
-    async def _player_finish_helper(self, spot: int) -> None:
         assert self._chambers[
             spot
         ].is_empty, "only players with no cards remaining can finish"
+        await self._set_dot_color(spot, "purple")
         self._positions.append(self._current_player)
         self._turn_manager.remove(self._current_player)
         num_unfinished_players = self._num_unfinished_players
         if num_unfinished_players == 3:
-            await self._set_president(spot)
-            await self._message(f"🏆 {self._names[spot]} is president 🥇")
-            await self._next_player()
+            await asyncio.gather(
+                self._set_president(spot),
+                self._message(f"🏆 {self._names[spot]} is president 🥇"),
+                self._next_player(),
+            )
         elif num_unfinished_players == 2:
-            await self._set_vice_president(spot)
-            await self._message(f"🏆 {self._names[spot]} is vice president 🥈")
-            await self._next_player()
+            await asyncio.gather(
+                self._set_vice_president(spot),
+                self._message(f"🏆 {self._names[spot]} is vice president 🥈"),
+                self._next_player(),
+            )
         else:  # num_unfinished
             await self._set_vice_asshole(spot)
             self._current_player = next(self._turn_manager)
@@ -217,8 +256,9 @@ class EmittingGame(Game):
             await self._message(
                 f"🏆 {self._names[spot]} is vice asshole 🥉 and {self._names[self._current_player]} is asshole 💩"
             )
-            await self._initiate_trading()
+            await self._set_trading(True)
 
+    # TODO
     async def emit_correct_state(self, sid: str):
         spot: int = self._get_spot(sid)
         await self._emit(
@@ -229,7 +269,7 @@ class EmittingGame(Game):
                 "unlocked": self._unlocked[spot],
                 "pass_unlocked": self._pass_unlocked[spot],
             },
-            room=sid,
+            sid,
         )
 
     # card management related methods
@@ -267,36 +307,38 @@ class EmittingGame(Game):
         self, spot: int, *, handle_post: bool = True, **kwargs
     ) -> Hand:
         assert self._unlocked[spot], "play called without unlocking"
-        self._stop_timer(spot)
+        await self._stop_timer(
+            which="turn" if self._turn_times[spot] else "reserve", spot=spot
+        )
         chamber = self._chambers[spot]
         hand = Hand.copy(chamber.hand)
-        events = list()
-        # events.append(self.hand_play_agent.cast(
-        #     HandPlay(
-        #         hand_hash=hash(hand),
-        #         sid=kwargs.get("sid", self._get_sid(spot)),
-        #         timestamp=kwargs.get("timestamp"),
-        #     )
-        # ))
-        events.append(chamber.remove_cards(hand))
-        events.append(self._set_hand_in_play(hand))
-        events.append(
-            self._message(f"▶️ {self._names[spot]} played {str(hand)}")
-        )
-        events.append(self.lock(spot))
-        events.append(self._set_dot_color(spot, "blue"))
-        for other_spot in self._get_other_spots(spot, exclude_finished=True):
-            events.append(self._set_dot_color(other_spot, "red"))
-        events.append(
+        await asyncio.gather(
+            self.hand_play_agent.cast(
+                HandPlay(
+                    hand_hash=hash(hand),
+                    sid=kwargs.get("sid", self._get_sid(spot)),
+                    timestamp=kwargs.get("timestamp"),
+                )
+            ),
+            chamber.remove_cards(hand),
+            self._set_hand_in_play(hand),
+            self._message(f"▶️ {self._names[spot]} played {str(hand)}"),
+            self.lock(spot),
+            self._set_dot_color(spot, "blue"),
+            *[
+                self._set_dot_color(other_spot, "red")
+                for other_spot in self._get_other_spots(
+                    spot, exclude_finished=True
+                )
+            ],
             self._emit_to_players(
                 "set_cards_remaining",
                 {
                     "spot": spot,
                     "cards_remaining": self._chambers[spot].num_cards,
                 },
-            )
+            ),
         )
-        await asyncio.gather(*events)
         self._num_consecutive_passes = 0
         # lock others if their currently unlocked hand should no longer be unlocked
         for other_spot in self._get_other_spots(spot, exclude_finished=True):
@@ -312,49 +354,19 @@ class EmittingGame(Game):
         if handle_post:
             await self._post_play_handler(spot)
 
-    async def _post_play_handler(self, spot: int) -> None:
-        if self._chambers[spot].is_empty:
-            # player_finish takes care of going to the next player
-            self._finishing_last_played = True
-            await self._player_finish(spot)
-        else:
-            self._finishing_last_played = False
-            await self._next_player()
-
-    async def maybe_unlock_pass_turn(self, sid: str) -> None:
+    async def maybe_unlock_pass_turn_handler(self, sid: str) -> None:
         spot: int = self._get_spot(sid)
         try:
-            await self._maybe_unlock_pass_turn_helper(spot)
+            await self.maybe_unlock_pass_turn(spot)
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
 
-    async def _maybe_unlock_pass_turn_helper(self, spot: int) -> None:
-        """
-        Copy/paste from base game class with asynced methods.
-        """
-        if self._is_finished(spot):
-            raise PresidentsError(
-                "you have already finished this round", permitted=False
-            )
-        if self._is_current_player(spot):
-            if self._hand_in_play is base_hand:
-                raise PresidentsError(
-                    "you cannot pass when you have the 3 of clubs",
-                    permitted=True,
-                )
-            if self._hand_in_play is None:
-                raise PresidentsError("you can play anyhand", permitted=True)
-        await self._unlock_pass(spot)
-
     async def _unlock_pass(self, spot: int) -> None:
-        await self._unlock_pass_helper(spot)
+        await self._lock_if_unlocked(spot)
+        self._pass_unlocked[spot] = True
         await self._emit(
             "set_pass_unlocked", {"pass_unlocked": True}, self._get_sid(spot)
         )
-
-    async def _unlock_pass_helper(self, spot: int) -> None:
-        await self._lock_if_unlocked(spot)
-        self._pass_unlocked[spot] = True
 
     async def _lock_pass(self, spot: int) -> None:
         super()._lock_pass(spot)
@@ -362,68 +374,29 @@ class EmittingGame(Game):
             "set_pass_unlocked", {"pass_unlocked": False}, self._get_sid(spot)
         )
 
-    async def maybe_pass_turn(self, sid: str) -> None:
+    async def maybe_pass_turn_handler(self, sid: str) -> None:
         spot: int = self._get_spot(sid)
         try:
-            await self._maybe_pass_turn_helper(spot)
+            await self.maybe_pass_turn(spot)
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
 
-    async def _maybe_pass_turn_helper(self, spot: int) -> None:
+    async def _pass_turn(self, spot: int) -> None:
         """
-        Copy/paste from base game class with asynced methods.
-        """
-        if self._is_finished(spot):
-            raise PresidentsError(
-                "you have already finished this round", permitted=False
-            )
-        if not self._pass_unlocked[spot]:
-            # self._lock_pass(spot)  # TODO doing this should be part of resetting the DOM, say
-            raise PresidentsError(
-                "you must unlock pass before passing", permitted=False
-            )
-        if not self._is_current_player(spot):
-            raise PresidentsError(
-                "you can only pass on your turn", permitted=True
-            )
-        else:
-            await self._pass_turn(spot)
-
-    async def _pass_turn(self, spot):
-        await self._pass_turn_helper(spot, handle_post=False)
-        await self._set_dot_color(spot, "yellow")
-        await self._post_pass_handler_helper()
-
-    async def _pass_turn_helper(
-        self, spot: int, handle_post: bool = True
-    ) -> None:
-        """
-        Copy/paste from base game class with asynced methods.
+        NOTE: logic copy/pasted from base; must update manually
         """
         assert self._pass_unlocked[spot], "pass called without unlocking"
-        self._stop_timer(spot)
-        await self._lock_pass(spot)
+        await asyncio.gather(
+            self._stop_timer(
+                "turn" if not self._is_using_reserve_time(spot) else "reserve",
+                spot,
+            ),
+            self._lock_pass(spot),
+        )
         self._num_consecutive_passes += 1
         await self._message(f"⏭️ {self._names[spot]} passed")
-        if handle_post:
-            await self._post_pass_handler_helper()
-
-    async def _post_pass_handler_helper(self) -> None:
-        # all remaining players passed on a winning hand
-        if self._finishing_last_played:
-            if self._num_consecutive_passes == self._num_unfinished_players:
-                await self._clear_hand_in_play()
-                self._finishing_last_played = False
-                await self._next_player()
-            else:
-                await self._next_player()
-        # all other players passed on a hand
-        elif self._num_consecutive_passes == self._num_unfinished_players - 1:
-            await self._clear_hand_in_play()
-            self._finishing_last_played = False
-            await self._next_player()
-        else:
-            await self._next_player()
+        await self._set_dot_color(spot, "yellow")
+        await self._post_pass_handler()
 
     async def _clear_hand_in_play(self) -> None:
         super()._clear_hand_in_play()
@@ -431,74 +404,93 @@ class EmittingGame(Game):
 
     # trading related methods
 
-    async def _initiate_trading(self) -> None:
-        # TODO: THIS SHOULD NOT BE HERE.
-        self._num_consecutive_passes: int = 0
-        self._finishing_last_played: bool = False
-        self._timers = [None for _ in range(4)]
-        self._selected_asking_option: List[Optional[int]] = [
-            None for _ in range(4)
-        ]
-        self._already_asked: List[Set[int]] = [set() for _ in range(4)]
-        self._giving_options: List[Optional[Set[int]]] = [
-            set() for _ in range(4)
-        ]
-        self._given: List[Set[int]] = [set() for _ in range(4)]
-        self._taken: List[Set[int]] = [set() for _ in range(4)]
-        self._current_player = None
-        await self._clear_hand_in_play()
-        self._positions.clear()
-        self._hand_in_play = base_hand
-        await self._start_round()
-        return
-        # ---- below should be here
-        super()._initiate_trading()
-        for spot in range(4):
-            await self._set_dot_color(spot, "red")
-        await self._emit_to_players("set_on_turn", {"on_turn": False})
+    async def _set_trading(self, trading: bool) -> None:
+        """
+        NOTE: logic copy/pasted from base; must update manually
+        """
+        self.trading = trading
+        await self._emit_to_server("set_trading", {"trading": trading})
+        # TODO: the below don't set all the required attributes
+        if trading:
+            await asyncio.gather(
+                self._start_timer("trading"),
+                *[await self._set_dot_color(spot, "red") for spot in range(4)],
+                self._emit(
+                    "set_on_turn", {"on_turn": False}, self._current_player_sid
+                ),
+                self._clear_hand_in_play(),
+                self._deal_cards(),
+                self._message("💱 trading has begun"),
+            )
 
-    async def set_selected_asking_option(self, sid: str, value: int) -> None:
+            self._num_consecutive_passes: int = 0
+            self._finishing_last_played: bool = False
+            self._timers = [None for _ in range(4)]
+            self._selected_asking_options: List[Optional[int]] = [
+                None for _ in range(4)
+            ]
+            self._already_asked: List[Set[int]] = [set() for _ in range(4)]
+            self._giving_options: List[Optional[Set[int]]] = [
+                set() for _ in range(4)
+            ]
+            self._given: List[Set[int]] = [set() for _ in range(4)]
+            self._taken: List[Set[int]] = [set() for _ in range(4)]
+            self._current_player = None
+
+        else:
+            self._stop_timer("trading")
+            self._positions.clear()
+            self._hand_in_play = base_hand
+            # TODO: should be able to do a simple start_round here
+            #       need to define and use setup_round method
+            self._num_consecutive_rounds += 1
+            self._message(f"🏁 round {self._num_consecutive_rounds} has begun")
+            self._make_and_set_turn_manager()
+            self._next_player()
+
+    async def maybe_set_selected_asking_option_handler(
+        self, sid: str, value: int
+    ) -> None:
         spot: int = self._get_spot(sid)
         try:
-            super().set_selected_asking_option(spot, value)
+            await self.maybe_set_selected_asking_option(spot, value)
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
 
-    async def maybe_unlock_ask(self, spot: int, sid: str) -> None:
+    async def maybe_unlock_ask_handler(self, spot: int, sid: str) -> None:
         try:
-            super().maybe_unlock_ask(spot)
+            await self.maybe_unlock_ask(spot)
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
 
-    async def ask_for_card(self, sid: str) -> None:
+    async def ask_for_card_handler(self, sid: str) -> None:
         spot: int = self._get_spot(sid)
         try:
-            super().ask_for_card(spot)
+            await self.ask_for_card(spot)
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
 
-    async def _select_asking_option(self, spot: int, value: int) -> None:
-        super()._select_asking_option(spot, value)
+    async def _set_selected_asking_option(self, spot: int, value: int) -> None:
+        """
+        NOTE: logic copy/pasted from base; must update manually
+        """
+        self._selected_asking_options[spot] = value
+        if value:  # selecting asking option
+            await self._chambers[spot].deselect_selected()
         await self._emit(
-            "select_asking_option", {"value": value}, self._get_sid(spot)
+            "set_asking_option", {"value": value or False}, self._get_sid(spot)
         )
 
-    async def _deselect_asking_option(self, spot: int, value: int) -> None:
-        super()._deselect_asking_option(spot, value)
-        await self._emit(
-            "deselect_asking_option", {"value": value}, self._get_sid(spot)
-        )
-
-    async def maybe_unlock_give(self, spot: int, sid: str) -> None:
+    async def maybe_unlock_give_handler(self, spot: int, sid: str) -> None:
         try:
-            super().maybe_unlock_give(spot)
+            await self.maybe_unlock_give(spot)
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
 
-    async def give_card(self, sid: str) -> None:
+    async def give_card_handler(self, sid: str) -> None:
         spot: int = self._get_spot(sid)
         try:
-            super().give_card(spot)
+            await self.give_card(spot)
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
 
@@ -526,9 +518,9 @@ class EmittingGame(Game):
         spot: int = self._get_spot(sid)
         if self.trading:
             if self._is_asking(spot):
-                await self.maybe_unlock_ask(spot, sid)
+                await self.maybe_unlock_ask_handler(spot, sid)
             elif self._is_giving(spot):
-                await self.maybe_unlock_give(spot, sid)
+                await self.maybe_unlock_give_handler(spot, sid)
             else:
                 await self._emit_alert(
                     "you must select something before attempting to unlock",
@@ -607,71 +599,23 @@ class EmittingGame(Game):
             },
         )
 
-    async def _set_president(self, spot: int) -> None:
-        """
-        Copy/paste from base game class with asynced methods.
-        """
-        await self._set_asker(spot, True, 2)
-
-    async def _set_vice_president(self, spot: int) -> None:
-        """
-        Copy/paste from base game class with asynced methods.
-        """
-        await self._set_asker(spot, True, 1)
-
-    async def _set_vice_asshole(self, spot: int) -> None:
-        """
-        Copy/paste from base game class with asynced methods.
-        """
-        await self._set_giver(spot, True)
-
-    async def _set_asshole(self, spot: int) -> None:
-        """
-        Copy/paste from base game class with asynced methods.
-        """
-        await self._set_giver(spot, True)
-
     async def _set_asker(
         self, spot: int, asker: bool, takes_and_gives: int
     ) -> None:
-        """
-        Copy/paste from base game class with asynced methods.
-        """
-        await self._set_asker_helper(spot, asker, takes_and_gives)
+        await self._set_takes(spot, takes_and_gives)
+        await self._set_gives(spot, takes_and_gives)
         await self._emit("set_asker", {"asker": asker}, self._get_sid(spot))
-
-    async def _set_asker_helper(
-        self, spot: int, asker: bool, takes_and_gives: int
-    ) -> None:
-        await self._set_takes_remaining(spot, takes_and_gives)
-        await self._set_gives_remaining(spot, takes_and_gives)
-
-    async def _set_trading(self, trading: bool) -> None:
-        super()._set_trading(trading)
-        await self._emit_to_server("set_trading", {"trading": trading})
 
     async def _set_giver(self, spot: int, giver: bool) -> None:
         await self._emit("set_giver", {"giver": giver}, self._get_sid(spot))
 
-    async def _set_takes_remaining(
-        self, spot: int, takes_remaining: int
-    ) -> None:
-        super()._set_takes_remaining(spot, takes_remaining)
-        await self._emit(
-            "set_takes_remaining",
-            {"takes_remaining": takes_remaining},
-            self._get_sid(spot),
-        )
+    async def _set_takes(self, spot: int, takes: int) -> None:
+        super()._set_takes(spot, takes)
+        await self._emit("set_takes", {"takes": takes}, self._get_sid(spot))
 
-    async def _set_gives_remaining(
-        self, spot: int, gives_remaining: int
-    ) -> None:
-        super()._set_gives_remaining(spot, gives_remaining)
-        await self._emit(
-            "set_gives_remaining",
-            {"gives_remaining": gives_remaining},
-            self._get_sid(spot),
-        )
+    async def _set_gives(self, spot: int, gives: int) -> None:
+        super()._set_gives(spot, gives)
+        await self._emit("set_gives", {"gives": gives}, self._get_sid(spot))
 
     def _add_to_already_asked(self, spot: int, value: int) -> None:
         super()._add_to_already_asked(spot, value)
@@ -694,6 +638,8 @@ class EmittingGame(Game):
 
         The difference between this and _emit_to_server is that the
         latter emits to spectators as well.
+
+        TODO: to should work instead of room
         """
         maybe_skip_sid = kwargs.get("skip_sid")
         if not maybe_skip_sid:
@@ -728,35 +674,4 @@ class EmittingGame(Game):
     # alerting related methods
 
     async def _emit_alert(self, alert, sid: str) -> None:
-        await self._emit("alert", {"alert": alert}, room=sid)
-
-
-# go through the list of methods that need to be asynced copy pasted;
-# for all instances of f'self.{method}(' where method is overwritten
-# with additional async logic in EmittingGame, prepend 'await' to the
-# method call and dynamically add the method to EmittingGame
-
-get_async_method_names = lambda _class: [
-    method_tuple[0]
-    for method_tuple in filter(
-        lambda method_tuple: inspect.iscoroutinefunction(method_tuple[1]),
-        dict(_class.__dict__).items(),
-    )
-]
-patterns = [
-    re.compile(rf"self.{method}(")
-    for method in get_async_method_names(EmittingGame)
-] + [
-    re.compile(rf"chamber.{method}(")
-    for method in get_async_method_names(EmittingChamber)
-]
-
-for method in ASYNCED_COPY_PASTE_METHODS:
-    method_str = inspect.getsource(eval(f"Game.{method}")).lstrip()
-    method_str = "async " + method_str
-    # prepend await to all async overwritten methods
-    for pattern in patterns:
-        if pattern.pattern in method_str:
-            method_str = pattern.sub(f"await {pattern.pattern}", method_str)
-    exec(method_str)
-    setattr(EmittingGame, method, eval(method))
+        await self._emit("alert", {"alert": alert}, sid)

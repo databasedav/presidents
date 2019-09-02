@@ -111,12 +111,12 @@ export default {
       payload => commit(this.namespace, 'remove_asking_option', payload)
     )
 
-    this.socket.on('set_takes_remaining',
-      payload => commit(this.namespace, 'set_takes_remaining', payload)
+    this.socket.on('set_takes',
+      payload => commit(this.namespace, 'set_takes', payload)
     )
 
-    this.socket.on('set_gives_remaining',
-      payload => commit(this.namespace, 'set_gives_remaining', payload)
+    this.socket.on('set_gives',
+      payload => commit(this.namespace, 'set_gives', payload)
     )
   },
 
