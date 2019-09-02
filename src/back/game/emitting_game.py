@@ -303,9 +303,7 @@ class EmittingGame(Game):
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
 
-    async def _play_current_hand(
-        self, spot: int, *, handle_post: bool = True, **kwargs
-    ) -> Hand:
+    async def _play_current_hand(self, spot: int, **kwargs) -> None:
         assert self._unlocked[spot], "play called without unlocking"
         await self._stop_timer(
             which="turn" if self._turn_times[spot] else "reserve", spot=spot
@@ -351,8 +349,7 @@ class EmittingGame(Game):
                 # non-bomb that other players have unlocked on
                 except NotPlayableOnError:
                     await self.lock(other_spot)
-        if handle_post:
-            await self._post_play_handler(spot)
+        await self._post_play_handler(spot)
 
     async def maybe_unlock_pass_turn_handler(self, sid: str) -> None:
         spot: int = self._get_spot(sid)
@@ -641,8 +638,8 @@ class EmittingGame(Game):
 
         TODO: to should work instead of room
         """
-        await self._emit(*args, **kwargs)
-        return
+        # await self._emit(*args, **kwargs)
+        # return
         maybe_skip_sid = kwargs.get("skip_sid")
         if not maybe_skip_sid:
             await asyncio.gather(
