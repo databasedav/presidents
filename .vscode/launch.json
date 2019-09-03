@@ -17,7 +17,8 @@
             "type": "python",
             "request": "launch",
             "module": "src.back.tests.testing_server",
-            "console": "externalTerminal"
+            "console": "externalTerminal",
+            "justMyCode": false
         },
         {
             "name": "same hand played demo",

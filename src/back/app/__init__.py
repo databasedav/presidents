@@ -7,7 +7,10 @@ from ..server import ServerBrowser
 from ..utils import AsyncTimer
 import asyncio
 from functools import partial
+import logging
 
+logger = logging.getLogger("asyncio")
+logger.setLevel(logging.DEBUG)
 
 def create_app(*, debug=False, **kwargs):
     fastapi_app = FastAPI(debug=debug)
@@ -30,9 +33,10 @@ def create_app(*, debug=False, **kwargs):
         uvicorn.loop,
         faust_app,
         async_mode="asgi",
-        logger=debug,
-        client_manager=AsyncRedisManager("redis://"),
+        logger=logger,
+        # client_manager=AsyncRedisManager("redis://"),
         cors_allowed_origins=["http://127.0.0.1:8080"],
+        ping_timeout=10000000,
     )
 
     # TODO: socket connection should be opened right after login

@@ -197,7 +197,15 @@ class EmittingGame(Game):
             assert spot is not None
             self._timers[spot].cancel()
             self._timers[spot] = None
-            await self._set_time("turn", 0, spot)
+            await self._emit_to_players(
+                "set_time",
+                {
+                    "which": 'turn',
+                    "spot": spot,
+                    "time": 0 * 1000,
+                    "start": False,
+                },
+            )
             self._turn_time_use_starts[spot] = None
         elif which == "reserve":
             assert spot is not None
@@ -411,7 +419,7 @@ class EmittingGame(Game):
         if trading:
             await asyncio.gather(
                 self._start_timer("trading"),
-                *[await self._set_dot_color(spot, "red") for spot in range(4)],
+                *[self._set_dot_color(spot, "red") for spot in range(4)],
                 self._emit(
                     "set_on_turn", {"on_turn": False}, self._current_player_sid
                 ),
@@ -642,6 +650,18 @@ class EmittingGame(Game):
         # return
         maybe_skip_sid = kwargs.get("skip_sid")
         if not maybe_skip_sid:
+            # await self._emit(*args, **kwargs)
+            # return
+            # for sid in list(self._spot_sid_bidict.values()):
+            #     await self._emit(*args, room=sid, **kwargs)
+            if args and args[0] == 'set_time' and args[1].get('time') == 0000:
+                sids = list(self._spot_sid_bidict.values())
+                # await asyncio.sleep(5)
+                await self._emit(*args, room=sids[0])
+                await self._emit(*args, room=sids[1])
+                await self._emit(*args, room=sids[2])
+                await self._emit(*args, room=sids[3])
+                return
             await asyncio.gather(
                 *[
                     self._emit(*args, room=sid, **kwargs)
