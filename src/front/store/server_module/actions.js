@@ -16,11 +16,11 @@ export default {
   },
 
   emit_unlock_pass (context) {
-    context.state.socket.emit('unlock_pass')
+    context.state.socket.emit('unlock_pass_turn')
   },
 
   emit_pass (context) {
-    context.state.socket.emit('pass')
+    context.state.socket.emit('pass_turn')
   },
 
   emit_ask (context) {

@@ -36,11 +36,13 @@ logger = logging.getLogger(__name__)
 # TODO: can unlock if the unlocked action can potentially be taken (i.e.
 #       when it is their turn); else, cannot unlock
 # TODO: shuffle player spots after every round
-# uncommented asserts are for mypy
+#       uncommented asserts are for mypy
 # TODO: asserts should not be meaningless; if a funtion is only called
 #       from one place it doesn't make sense to check a bunch of things
 #       that must have been true in the first place; or is it?
 # TODO: drop support for eventlet timer
+# TODO: add notes to point out methods that are manually async
+#       overwritten
 
 
 class Game:
@@ -285,6 +287,8 @@ class Game:
         self._deal_cards(deck=deck)
         self._make_and_set_turn_manager()
         self._num_consecutive_rounds += 1
+        for spot in range(4):
+            self._set_time('reserve', self._reserve_time, spot, False)
         self._message(f"🏁 round {self._num_consecutive_rounds} has begun")
         self._next_player()
 
@@ -305,7 +309,7 @@ class Game:
         time, and giving time) and for trading; does not start the timer
         by default. If spot must be given if setting turn times.
         """
-        assert which in ["turn", "reserve" "trading"]
+        assert which in ["turn", "reserve", "trading"]
         if which == "turn":
             assert spot is not None
             self._turn_times[spot] = seconds
@@ -319,7 +323,7 @@ class Game:
             self._start_timer(which, spot)
 
     def _start_timer(self, which: str, spot: int = None) -> None:
-        assert which in ["turn", "reserve" "trading"]
+        assert which in ["turn", "reserve", "trading"]
         if which == "turn":
             assert spot is not None
             self._turn_time_use_starts[spot] = datetime.utcnow()
@@ -353,7 +357,7 @@ class Game:
         are removed.
         """
         now: datetime = datetime.utcnow()
-        assert which in ["turn", "reserve" "trading"]
+        assert which in ["turn", "reserve", "trading"]
         if which == "turn":
             assert spot is not None
             self._timers[spot].cancel()
@@ -450,7 +454,7 @@ class Game:
         """
         # was using turn time
         if not self._is_using_reserve_time(spot):
-            self._stop_timer("turn", spot)
+            self._stop_timer("turn", spot, cancel=False)
             reserve_time: Union[int, float] = self._reserve_times[spot]
             if reserve_time:
                 # start reserve time
@@ -458,11 +462,11 @@ class Game:
             else:
                 self._auto_play_or_pass(spot)
         else:  # was using reserve time
-            self._stop_timer("reserve", spot)
+            self._stop_timer("reserve", spot, cancel=False)
             self._auto_play_or_pass(spot)
 
     def _handle_giving_timeout(self, spot) -> None:
-        self._stop_timer("turn", spot)
+        self._stop_timer("turn", spot, cancel=False)
         self._auto_give(spot)
 
     def _handle_trading_timeout(self) -> None:
@@ -506,7 +510,7 @@ class Game:
             try:
                 self.add_or_remove_card(spot, card)
             # one of the selected cards was auto played
-            except CardNotInChamberError:
+            except PresidentsError:
                 pass
 
     def _auto_give(self, spot) -> None:
@@ -805,12 +809,12 @@ class Game:
 
     def _pass_turn(self, spot: int) -> None:
         assert self._pass_unlocked[spot], "pass called without unlocking"
+        self._num_consecutive_passes += 1
         self._stop_timer(
             "turn" if not self._is_using_reserve_time(spot) else "reserve",
             spot,
         )
         self._lock_pass(spot)
-        self._num_consecutive_passes += 1
         self._message(f"⏭️ {self._names[spot]} passed")
         self._post_pass_handler()
 

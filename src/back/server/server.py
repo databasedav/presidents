@@ -93,7 +93,7 @@ class Server(AsyncNamespace):
         timestamp: datetime = datetime.utcnow()
         await self.game.maybe_play_current_hand_handler(sid, timestamp)
 
-    async def on_unlock_pass(self, sid) -> None:
+    async def on_unlock_pass_turn(self, sid) -> None:
         await self.game.maybe_unlock_pass_turn_handler(sid)
 
     async def on_pass_turn(self, sid) -> None:

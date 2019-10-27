@@ -28,7 +28,7 @@ class AsyncTimer:
             await asyncio.sleep(seconds)
             await callback(*args, **kwargs)
 
-        return asyncio.ensure_future(task(), loop=loop)
+        return asyncio.create_task(task())#, loop=loop)
 
 
 def main(fn):

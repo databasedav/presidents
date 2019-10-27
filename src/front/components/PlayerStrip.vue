@@ -22,23 +22,23 @@
       ref='turn'
       :time='this.turn_time'
       :transform='transform'
-      :auto-start='true'
+      :auto-start='false'
       :emit-events='false'
     >
-      <template slot-scope="props">{{ props.seconds }}</template>
+      <template slot-scope="props">{{ props.totalSeconds }}</template>
     </countdown>
 
     <v-spacer></v-spacer>
 
-    <v-icon class='ma-1' size='10px'>fa-clock</v-icon>
+    <v-icon class='ma-1' size='10px'>fa-university</v-icon>
     <countdown
       ref='reserve'
       :time='this.reserve_time'
       :transform='transform'
-      :auto-start='true'
+      :auto-start='false'
       :emit-events='false'
     >
-      <template slot-scope="props">{{ props.seconds }}</template>
+      <template slot-scope="props">{{ props.totalSeconds }}</template>
     </countdown>
   </v-toolbar>
 </template>
@@ -98,7 +98,6 @@ export default {
   watch: {
     turn_time_state (new_val, old_val) {
       if (new_val) {
-        console.log(this.$refs.turn)
         this.$refs.turn.start()
       } else {
         this.$refs.turn.abort()

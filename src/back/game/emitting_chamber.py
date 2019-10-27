@@ -128,6 +128,12 @@ class EmittingChamber(Chamber):
             ]
         )
         await self._emit_update_current_hand_str()
+    
+    async def deselect_selected(self) -> None:
+        """
+        NOTE: logic copy/pasted from base; must update manually
+        """
+        await self.deselect_cards(self.hand)
 
     async def _emit_update_current_hand_str(self) -> None:
         await self._emit("update_current_hand_str", {"str": str(self.hand)})

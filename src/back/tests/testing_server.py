@@ -13,8 +13,8 @@ from ..server import ServerBrowser
 # logger.setLevel(logging.DEBUG)
 
 
-TURN_TIME = 2
-RESERVE_TIME = 0
+TURN_TIME = 5
+RESERVE_TIME = 10
 
 
 @main

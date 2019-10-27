@@ -127,8 +127,8 @@ export default {
         state.turn_time_states.splice(payload.spot, 1, payload.start)
         break
       case 'reserve':
-        state.turn_times.splice(payload.spot, 1 , payload.time)
-        state.turn_time_states.splice(payload.spot, 1, payload.start)
+        state.reserve_times.splice(payload.spot, 1 , payload.time)
+        state.reserve_time_states.splice(payload.spot, 1, payload.start)
         break
       case 'trading':
         // TODO
