@@ -123,11 +123,11 @@ export default {
   set_time(state, payload) {
     switch (payload.which) {
       case 'turn':
-        state.turn_times.splice(payload.spot, 1 , payload.time)
+        state.turn_times.splice(payload.spot, 1 , payload.time - (payload.timestamp - Date.now() / 1000) || 0)
         state.turn_time_states.splice(payload.spot, 1, payload.start)
         break
       case 'reserve':
-        state.reserve_times.splice(payload.spot, 1 , payload.time)
+        state.reserve_times.splice(payload.spot, 1 , payload.time - (payload.timestamp - Date.now() / 1000) || 0)
         state.reserve_time_states.splice(payload.spot, 1, payload.start)
         break
       case 'trading':

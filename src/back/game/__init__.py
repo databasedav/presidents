@@ -20,34 +20,36 @@ __all__ = ["Hand", "Chamber", "EmittingChamber", "Game", "EmittingGame"]
 
 # sorted(ASYNCED_COPY_PASTE_METHODS, key=lambda x: x[1:] if x[0]=='_' else x)
 ASYNCED_COPY_PASTE_METHODS = [
-    'add_or_remove_card',
-    'add_player',
-    '_add_to_already_asked',
-    'ask_for_card',
-    '_auto_give',
-    '_auto_play_or_pass',
-    '_auto_trade',
-    'give_card',
-    '_handle_giving_timeout',
-    '_handle_playing_timeout',
-    '_handle_trading_timeout',
-    'maybe_pass_turn',
-    'maybe_play_current_hand',
-    'maybe_set_selected_asking_option',
-    'maybe_unlock_ask',
-    'maybe_unlock_give',
-    'maybe_unlock_pass_turn',
-    'maybe_unlock_play',
-    '_pause_timers',
-    '_post_pass_handler',
-    '_post_play_handler',
-    '_set_asshole',
-    '_set_president',
-    '_set_vice_asshole',
-    '_set_vice_president'
+    "add_or_remove_card",
+    "add_player",
+    "_add_to_already_asked",
+    "ask_for_card",
+    "_auto_give",
+    "_auto_play_or_pass",
+    "_auto_trade",
+    "give_card",
+    "_handle_giving_timeout",
+    "_handle_playing_timeout",
+    "_handle_trading_timeout",
+    "_lock_if_unlocked",
+    "_lock_if_pass_unlocked",
+    "maybe_pass_turn",
+    "maybe_play_current_hand",
+    "maybe_set_selected_asking_option",
+    "maybe_unlock_ask",
+    "maybe_unlock_give",
+    "maybe_unlock_pass_turn",
+    "maybe_unlock_play",
+    "_pause_timers",
+    "_post_pass_handler",
+    "_post_play_handler",
+    "_set_asshole",
+    "_set_president",
+    "_set_vice_asshole",
+    "_set_vice_president",
 ]
 
-ASYNCED_COPY_PASTE_METHODS_FILE = 'asynced_copy_paste_methods.py'
+ASYNCED_COPY_PASTE_METHODS_FILE = "asynced_copy_paste_methods.py"
 ASYNCED_COPY_PASTE_METHODS_FILE_PATH = f"{os.path.dirname(os.path.abspath(__file__))}/{ASYNCED_COPY_PASTE_METHODS_FILE}"
 # go through the list of methods that need to be asynced copy pasted;
 # for all instances of f'self.{method}(' where method is overwritten
@@ -75,14 +77,17 @@ patterns = [
 # reset
 open(ASYNCED_COPY_PASTE_METHODS_FILE_PATH, "w").close()
 with open(ASYNCED_COPY_PASTE_METHODS_FILE_PATH, "a") as file:
-    print('''from typing import List, Iterable, Union
+    print(
+        """from typing import List, Iterable, Union
 from datetime import datetime
 
 from .utils import rank_articler
 from .game import base_hand, PresidentsError
 from .chamber import Chamber, CardNotInChamberError
 from .hand import Hand, DuplicateCardError, FullHandError, NotPlayableOnError
-    ''', file=file)
+    """,
+        file=file,
+    )
 
 for method in ASYNCED_COPY_PASTE_METHODS:
     method_str = inspect.getsource(eval(f"Game.{method}")).lstrip()
@@ -100,7 +105,9 @@ for method in ASYNCED_COPY_PASTE_METHODS:
         print(textwrap.dedent(method_str), file=file)
 
 importlib.invalidate_caches()
-a = importlib.import_module('.' + ASYNCED_COPY_PASTE_METHODS_FILE[:-3], 'src.back.game')
+a = importlib.import_module(
+    "." + ASYNCED_COPY_PASTE_METHODS_FILE[:-3], "src.back.game"
+)
 
 for method in ASYNCED_COPY_PASTE_METHODS:
-    setattr(EmittingGame, method, eval(f'a.{method}'))
+    setattr(EmittingGame, method, eval(f"a.{method}"))

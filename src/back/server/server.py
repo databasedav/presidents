@@ -9,6 +9,7 @@ from typing import Optional, Dict, Callable, Union
 from itertools import cycle
 from datetime import datetime
 import asyncio
+from time import time
 
 
 import logging
@@ -72,43 +73,79 @@ class Server(AsyncNamespace):
         ...
 
     async def on_card_click(self, sid: str, payload: Dict) -> None:
-        timestamp: datetime = datetime.utcnow()
-        await self.game.add_or_remove_card_handler(sid, payload["card"])
-        # await game_click_agent.send(
-        #     GameClick(
-        #         game_id=self.game.id,
-        #         user_id=self.game.get_user_id(sid),
-        #         timestamp=timestamp,
-        #         action=payload["card"],
-        #     )
-        # )
+        timestamp: float = time() * 10 ** 6  # seconds to microseconds
+        card: int = payload["card"]
+        await asyncio.gather(
+            self.game.add_or_remove_card_handler(sid, card),
+            self.cast_gameclick(sid, timestamp, str(card))
+        )
 
     async def on_unlock(self, sid) -> None:
-        await self.game.unlock_handler(sid)
+        timestamp: float = time() * 10 ** 6  # seconds to microseconds
+        await asyncio.gather(
+            self.game.unlock_handler(sid),
+            self.cast_gameclick(sid, timestamp, 'unlock')
+        )
 
-    def on_lock(self, sid) -> None:
-        self.game.lock_handler(sid)
+    async def on_lock(self, sid) -> None:
+        timestamp: float = time() * 10 ** 6  # seconds to microseconds
+        await asyncio.gather(
+            self.game.lock_handler(sid),
+            self.cast_gameclick(sid, timestamp, 'lock')
+        )
 
     async def on_play(self, sid) -> None:
-        timestamp: datetime = datetime.utcnow()
-        await self.game.maybe_play_current_hand_handler(sid, timestamp)
+        timestamp: float = time()
+        await asyncio.gather(
+            self.game.maybe_play_current_hand_handler(sid, timestamp),
+            self.cast_gameclick(sid, timestamp, 'play')
+        )
 
     async def on_unlock_pass_turn(self, sid) -> None:
-        await self.game.maybe_unlock_pass_turn_handler(sid)
+        timestamp: float = time()
+        await asyncio.gather(
+            self.game.maybe_unlock_pass_turn_handler(sid),
+            self.cast_gameclick(sid, timestamp, 'unlock pass')
+        )
 
     async def on_pass_turn(self, sid) -> None:
-        await self.game.maybe_pass_turn_handler(sid)
-
+        timestamp: float = time()
+        await asyncio.gather(
+            self.game.maybe_pass_turn_handler(sid),
+            self.cast_gameclick(sid, timestamp, 'pass')
+        )
+        
     async def on_select_asking_option(self, sid, payload) -> None:
-        await self.game.maybe_set_selected_asking_option_handler(
-            sid, payload["value"]
+        timestamp: float = time()
+        rank: int = payload['rank']
+        await asyncio.gather(
+            self.game.maybe_set_selected_asking_option_handler(sid, rank),
+            self.cast_gameclick(sid, timestamp, str(-rank))
         )
 
     async def on_ask(self, sid) -> None:
-        await self.game.ask_for_card_handler(sid)
-
+        timestamp: float = time()
+        await asyncio.gather(
+            self.game.ask_for_card_handler(sid),
+            self.cast_gameclick(sid, timestamp, 'ask')
+        )
+        
     async def on_give(self, sid) -> None:
-        await self.game.give_card_handler(sid)
+        timestamp: float = time()
+        await asyncio.gather(
+            self.game.give_card_handler(sid),
+            self.cast_gameclick(sid, timestamp, 'give')
+        )
 
     async def on_request_correct_state(self, sid) -> None:
         await self.game.emit_correct_state(sid)
+
+    async def cast_gameclick(self, sid: str, timestamp: float, action: str) -> None:
+        self.game_click_agent.cast(
+            GameClick(
+                game_id=self.game.id,
+                user_id=self.game.get_user_id(sid),
+                timestamp=timestamp,
+                action=action,
+            )
+        )

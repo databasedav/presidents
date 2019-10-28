@@ -6,6 +6,7 @@ from socketio import AsyncServer
 import asyncio
 import inspect
 import re
+from time import time
 
 from ..game.hand import NotPlayableOnError
 from ..utils import AsyncTimer
@@ -51,6 +52,7 @@ from ..data.stream.records import HandPlay
 
 # TODO: kwargs strat has failed... (this is referring to autoplaying
 #       not happening invisibly to the player)
+
 
 class EmittingGame(Game):
     def __init__(self, server: Server, **kwargs):
@@ -141,9 +143,12 @@ class EmittingGame(Game):
         self._make_and_set_turn_manager()
         self._num_consecutive_rounds += 1
         await asyncio.gather(
-            *[self._set_time('reserve', self._reserve_time, spot, False) for spot in range(4)],
+            *[
+                self._set_time("reserve", self._reserve_time, spot, False)
+                for spot in range(4)
+            ],
             self._message(f"🏁 round {self._num_consecutive_rounds} has begun"),
-            self._next_player()
+            self._next_player(),
         )
 
     async def _next_player(self) -> None:
@@ -156,9 +161,7 @@ class EmittingGame(Game):
         # TODO this mypy error
         self._current_player = spot = next(self._turn_manager)
         await asyncio.gather(
-            self._set_time(
-                which="turn", seconds=self._turn_time, spot=spot, start=True
-            ),
+            self._set_time("turn", self._turn_time, spot, True),
             self._message(f"🎲 it's {self._names[spot]}'s turn"),
             self._emit_set_on_turn_handler(spot),
         )
@@ -169,7 +172,13 @@ class EmittingGame(Game):
             self._set_dot_color(spot, "green"),
         )
 
-    async def _set_time(self, which: str, seconds: Union[int, float], spot: int = None, start: bool = False) -> None:
+    async def _set_time(
+        self,
+        which: str,
+        seconds: Union[int, float],
+        spot: int = None,
+        start: bool = False,
+    ) -> None:
         await self._emit_to_players(
             "set_time",
             {
@@ -177,6 +186,8 @@ class EmittingGame(Game):
                 "spot": spot,
                 "time": seconds * 1000,
                 "start": start,
+                # this item accounts for server/client latency
+                "timestamp": time(),  # seconds since epoch
             },
         )
         super()._set_time(which, seconds, spot, False)
@@ -187,28 +198,20 @@ class EmittingGame(Game):
 
     async def _start_timer(self, which: str, spot: int = None) -> None:
         await self._emit_to_players(
-            "set_timer_state",
-            {
-                "which": which,
-                "spot": spot,
-                "state": True,
-            },
+            "set_timer_state", {"which": which, "spot": spot, "state": True}
         )
         super()._start_timer(which, spot)
 
-    async def _stop_timer(self, which: str, spot: int = None, *, cancel: bool = True) -> None:
+    async def _stop_timer(
+        self, which: str, spot: int = None, *, cancel: bool = True
+    ) -> None:
         """
         NOTE: logic copy/pasted from base; must update manually
         """
         now: datetime = datetime.utcnow()
         assert which in ["turn", "reserve", "trading"]
         await self._emit_to_players(
-            "set_timer_state",
-            {
-                "which": which,
-                "spot": spot,
-                "state": False,
-            },
+            "set_timer_state", {"which": which, "spot": spot, "state": False}
         )
         if which == "turn":
             assert spot is not None
@@ -218,17 +221,12 @@ class EmittingGame(Game):
                 self._timers[spot].cancel()
             # can delete timer even when not cancelling since this only
             # happens when a timeout handler is handling, i.e. said
-            # timer has carried out its purpose and need not be
-            # cancelled
+            # timer has carried out its purpose and cancelling breaks
+            # desired behavior
             self._timers[spot] = None
             await self._emit_to_players(
                 "set_time",
-                {
-                    "which": 'turn',
-                    "spot": spot,
-                    "time": 0,
-                    "start": False,
-                },
+                {"which": "turn", "spot": spot, "time": 0, "start": False},
             )
             self._turn_time_use_starts[spot] = None
         elif which == "reserve":
@@ -260,8 +258,13 @@ class EmittingGame(Game):
         self._pause_timers()
 
     async def _unpause(self) -> None:
-        await self._emit_to_players("set_paused", {"paused": False})
-        self._unpause_timers()
+        await asyncio.gather(
+            self._emit_to_players("set_paused", {"paused": False}),
+            self._unpause_timers(),
+        )
+
+    async def _unpause_timers(self) -> None:
+        await asyncio.gather(*[timer() for timer in self._paused_timers])
 
     async def _player_finish(self, spot: int) -> None:
         assert self._chambers[
@@ -288,10 +291,12 @@ class EmittingGame(Game):
             self._current_player = next(self._turn_manager)
             await self._set_asshole(self._current_player)
             self._positions.append(self._current_player)
-            await self._message(
-                f"🏆 {self._names[spot]} is vice asshole 🥉 and {self._names[self._current_player]} is asshole 💩"
+            await asyncio.gather(
+                self._message(
+                    f"🏆 {self._names[spot]} is vice asshole 🥉 and {self._names[self._current_player]} is asshole 💩"
+                ),
+                self._set_trading(True),
             )
-            await self._set_trading(True)
 
     # TODO
     async def emit_correct_state(self, sid: str):
@@ -341,11 +346,15 @@ class EmittingGame(Game):
     async def _play_current_hand(self, spot: int, **kwargs) -> None:
         assert self._unlocked[spot], "play called without unlocking"
         await self._stop_timer(
-            which="turn" if not self._is_using_reserve_time(spot) else "reserve", spot=spot
+            which="turn"
+            if not self._is_using_reserve_time(spot)
+            else "reserve",
+            spot=spot,
         )
         chamber = self._chambers[spot]
         hand = Hand.copy(chamber.hand)
         await asyncio.gather(
+            # TODO
             # self.hand_play_agent.cast(
             #     HandPlay(
             #         hand_hash=hash(hand),
@@ -427,7 +436,7 @@ class EmittingGame(Game):
             self._lock_pass(spot),
             self._message(f"⏭️ {self._names[spot]} passed"),
             self._set_dot_color(spot, "yellow"),
-            self._post_pass_handler()
+            self._post_pass_handler(),
         )
 
     async def _clear_hand_in_play(self) -> None:
@@ -565,16 +574,12 @@ class EmittingGame(Game):
         self.lock(self._get_spot(sid))
 
     async def _unlock(self, spot: int) -> None:
-        await self._unlock_helper(spot)
-        await self._emit(
-            "set_unlocked", {"unlocked": True}, self._get_sid(spot)
+        await asyncio.gather(
+            self._emit(
+                "set_unlocked", {"unlocked": True}, self._get_sid(spot)
+            ),
+            self._lock_if_pass_unlocked(spot),
         )
-
-    async def _unlock_helper(self, spot: int) -> None:
-        """
-        Copy/paste from base game class with asynced methods.
-        """
-        await self._lock_if_pass_unlocked(spot)
         self._unlocked[spot] = True
 
     async def lock(self, spot: int) -> None:
@@ -582,20 +587,6 @@ class EmittingGame(Game):
         await self._emit(
             "set_unlocked", {"unlocked": False}, self._get_sid(spot)
         )
-
-    async def _lock_if_unlocked(self, spot: int) -> None:
-        """
-        Copy/paste from base game class with asynced methods.
-        """
-        if self._unlocked[spot]:
-            await self.lock(spot)
-
-    async def _lock_if_pass_unlocked(self, spot: int) -> None:
-        """
-        Copy/paste from base game class with asynced methods.
-        """
-        if self._pass_unlocked[spot]:
-            await self._lock_pass(spot)
 
     async def _message(self, message: str) -> None:
         # super()._message(message)
@@ -634,9 +625,11 @@ class EmittingGame(Game):
     async def _set_asker(
         self, spot: int, asker: bool, takes_and_gives: int
     ) -> None:
-        await self._set_takes(spot, takes_and_gives)
-        await self._set_gives(spot, takes_and_gives)
-        await self._emit("set_asker", {"asker": asker}, self._get_sid(spot))
+        await asyncio.gather(
+            self._set_takes(spot, takes_and_gives),
+            self._set_gives(spot, takes_and_gives),
+            self._emit("set_asker", {"asker": asker}, self._get_sid(spot)),
+        )
 
     async def _set_giver(self, spot: int, giver: bool) -> None:
         await self._emit("set_giver", {"giver": giver}, self._get_sid(spot))
@@ -673,23 +666,8 @@ class EmittingGame(Game):
 
         TODO: to should work instead of room
         """
-        # await self._emit(*args, **kwargs)
-        # return
         maybe_skip_sid = kwargs.get("skip_sid")
         if not maybe_skip_sid:
-            # await self._emit(*args, **kwargs)
-            # return
-            # for sid in list(self._spot_sid_bidict.values()):
-            #     await self._emit(*args, room=sid, **kwargs)
-            if args and args[0] == 'set_time' and args[1].get('time') == 0000:
-                sids = list(self._spot_sid_bidict.values())
-                # await asyncio.sleep(1)
-                # await asyncio.sleep(1)
-                await self._emit(*args, room=sids[0])
-                await self._emit(*args, room=sids[1])
-                await self._emit(*args, room=sids[2])
-                await self._emit(*args, room=sids[3])
-                return
             await asyncio.gather(
                 *[
                     self._emit(*args, room=sid, **kwargs)

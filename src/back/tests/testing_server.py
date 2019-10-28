@@ -1,7 +1,9 @@
 import logging
+
 # logging.basicConfig(level=logging.DEBUG)
 import os
-os.environ['PYTHONASYNCIODEBUG'] = '1'
+
+os.environ["PYTHONASYNCIODEBUG"] = "1"
 import asyncio
 from functools import partial
 
@@ -13,7 +15,7 @@ from ..server import ServerBrowser
 # logger.setLevel(logging.DEBUG)
 
 
-TURN_TIME = 5
+TURN_TIME = 10
 RESERVE_TIME = 10
 
 

@@ -288,7 +288,7 @@ class Game:
         self._make_and_set_turn_manager()
         self._num_consecutive_rounds += 1
         for spot in range(4):
-            self._set_time('reserve', self._reserve_time, spot, False)
+            self._set_time("reserve", self._reserve_time, spot, False)
         self._message(f"🏁 round {self._num_consecutive_rounds} has begun")
         self._next_player()
 
@@ -401,7 +401,7 @@ class Game:
             self._timers[spot].cancel()
             self._timers[spot] = None
 
-            if self._turn_time_use_starts[spot] is not None:  # turn ongoing
+            if not self._is_using_reserve_time(spot):
                 self._turn_time_use_starts[spot] = None
                 time_used = (
                     now - self._turn_time_use_starts[spot]
@@ -410,7 +410,7 @@ class Game:
                 self._paused_timers.append(
                     lambda: self._start_timer("turn", spot)
                 )
-            elif self._reserve_time_use_starts[spot] is not None:
+            else:
                 self._reserve_time_use_starts[spot] = None
                 time_used = (
                     now - self._reserve_time_use_starts[spot]
@@ -1202,6 +1202,9 @@ class Game:
             return False
 
     def _is_using_reserve_time(self, spot: int) -> bool:
+        """
+        Equivalently, is not using turn time as it has expired.
+        """
         return self._reserve_time_use_starts[spot] is not None
 
 

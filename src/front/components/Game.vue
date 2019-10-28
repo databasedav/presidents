@@ -170,9 +170,9 @@ export default {
       this.$store.dispatch(`${this.namespace}/emit_give`)
     },
 
-    asking_click (value) {
+    asking_click (rank) {
       this.$store.dispatch(`${this.namespace}/emit_asking_click`, {
-        'value': value
+        'rank': rank
       })
     }
   },

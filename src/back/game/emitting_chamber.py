@@ -128,7 +128,7 @@ class EmittingChamber(Chamber):
             ]
         )
         await self._emit_update_current_hand_str()
-    
+
     async def deselect_selected(self) -> None:
         """
         NOTE: logic copy/pasted from base; must update manually

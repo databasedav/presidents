@@ -12,6 +12,7 @@ import logging
 logger = logging.getLogger("asyncio")
 logger.setLevel(logging.DEBUG)
 
+
 def create_app(*, debug=False, **kwargs):
     fastapi_app = FastAPI(debug=debug)
 

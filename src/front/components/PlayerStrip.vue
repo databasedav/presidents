@@ -22,7 +22,7 @@
       ref='turn'
       :time='this.turn_time'
       :transform='transform'
-      :auto-start='false'
+      :auto-start='this.turn_time_state'
       :emit-events='false'
     >
       <template slot-scope="props">{{ props.totalSeconds }}</template>

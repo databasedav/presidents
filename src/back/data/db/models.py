@@ -20,6 +20,13 @@ class User(Model):
 
 
 class GameClicks(Model):
+    """
+    Valid actions are as follows:
+        1-52: card clicks
+        unlock: unlocking play
+        lock: 
+
+    """
     __table_name__ = "game_user_clicks"
     __keyspace__ = "presidents"
     game_id = UUID(primary_key=True, partition_key=True, required=True)
