@@ -123,15 +123,20 @@ export default {
   set_time(state, payload) {
     switch (payload.which) {
       case 'turn':
-        state.turn_times.splice(payload.spot, 1 , payload.time - (payload.timestamp - Date.now() / 1000) || 0)
+        state.turn_times.splice(payload.spot, 1 , payload.time - (Date.now() / 1000 - payload.timestamp) || 0)
         state.turn_time_states.splice(payload.spot, 1, payload.start)
         break
       case 'reserve':
-        state.reserve_times.splice(payload.spot, 1 , payload.time - (payload.timestamp - Date.now() / 1000) || 0)
+        state.reserve_times.splice(payload.spot, 1 , payload.time - (Date.now() / 1000 - payload.timestamp) || 0)
         state.reserve_time_states.splice(payload.spot, 1, payload.start)
         break
       case 'trading':
-        // TODO
+        // using reserve time var for trading time and just changing
+        // UI icon
+        for (let spot = 0; spot < 4 ; spot += 1) {
+          state.reserve_times.splice(spot, 1, payload.time - (Date.now() / 1000 - payload.timestamp) || 0)
+          state.reserve_time_states.splice(spot, 1, payload.state)
+        }
         break
     }
   },
@@ -154,10 +159,14 @@ export default {
         state.turn_time_states.splice(payload.spot, 1, payload.state)
         break
       case 'reserve':
-        state.reserve_time_states.splice(payload.spot, 1, payload.state)  
+        state.reserve_time_states.splice(payload.spot, 1, payload.state)
         break
       case 'trading':
-        // TODO
+        // using reserve time var for trading time and just changing
+        // UI icon
+        for (let spot = 0; spot < 4; spot += 1) {
+          state.reserve_time_states.splice(spot, 1, payload.state)
+        }
         break
     }
   },

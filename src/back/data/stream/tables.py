@@ -3,6 +3,10 @@ from typing import List
 from datetime import timedelta
 from .records import HandPlay
 
+PRESIDENTS_TABLES = {
+    # TODO
+}
+
 
 def register_hand_player_sids_table(app: App):
     return (

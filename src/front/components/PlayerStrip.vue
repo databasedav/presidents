@@ -30,12 +30,13 @@
 
     <v-spacer></v-spacer>
 
-    <v-icon class='ma-1' size='10px'>fa-university</v-icon>
+    <v-icon v-if='!this.trading' class='ma-1' size='10px'>fa-university</v-icon>
+    <v-icon v-else class='ma-1' size='10px'>fa-exchange-alt</v-icon>
     <countdown
       ref='reserve'
       :time='this.reserve_time'
       :transform='transform'
-      :auto-start='false'
+      :auto-start='this.reserve_time_state'
       :emit-events='false'
     >
       <template slot-scope="props">{{ props.totalSeconds }}</template>
@@ -93,6 +94,10 @@ export default {
     reserve_time_state () {
       return this.$store.state[this.namespace].reserve_time_states[this.spot]
     },
+
+    trading () {
+      return this.$store.state[this.namespace].trading
+    }
   },
 
   watch: {

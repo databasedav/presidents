@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 # TODO: asserts should not be meaningless; if a funtion is only called
 #       from one place it doesn't make sense to check a bunch of things
 #       that must have been true in the first place; or is it?
-# TODO: drop support for eventlet timer
+# TODO: drop support for eventlet timer; ACTUALLY DON'T
 # TODO: add notes to point out methods that are manually async
 #       overwritten
 
@@ -99,8 +99,8 @@ class Game:
         self._reserve_time_use_starts: List[datetime] = [None for _ in range_4]
         self._trading_timer = None
         self._trading_time = trading_time
-        self._giving_time = giving_time
         self._trading_time_start: datetime = None
+        self._giving_time = giving_time
         self._paused_timers = list()
 
         # setup and ID related attributes
@@ -128,10 +128,10 @@ class Game:
         self._already_asked: List[Set[int]] = [set() for _ in range_4]
         self._waiting: List[bool] = [False for _ in range_4]
         self._giving_options: List[Set[int]] = [set() for _ in range_4]
-        self._gives: List[int] = [0 for _ in range_4]
-        self._takes: List[int] = [0 for _ in range_4]
-        self._given: List[Set[int]] = [set() for _ in range_4]
-        self._taken: List[Set[int]] = [set() for _ in range_4]
+        self._gives = [0 for _ in range_4]
+        self._takes = [0 for _ in range_4]
+        self._given = [set() for _ in range_4]
+        self._taken = [set() for _ in range_4]
 
     def reset(
         self,
@@ -144,6 +144,7 @@ class Game:
         Resetting maintains timer and reserve time settings unless
         provided new ones.
         """
+        # TODO: p sure this is missing some attributes
         range_4 = range(4)
         # instance related attributes
         self.num_players = 0
@@ -164,7 +165,7 @@ class Game:
         self._turn_manager = None
         self._current_player = None
         self._chambers = [Chamber() for _ in range_4]
-        self._hand_in_play = base_hand
+        self._hand_in_play = None
         self._num_consecutive_passes = 0
         self._finishing_last_played = False
         self._positions = list()
@@ -270,8 +271,8 @@ class Game:
             chamber.reset()
             chamber.add_cards(cards)
 
-    def _make_and_set_turn_manager(self) -> None:
-        decks = self._get_decks_from_chambers()
+    def _make_and_set_turn_manager(self, testing: bool=False) -> None:
+        decks = self._get_decks_from_chambers(testing)
         # get which deck has the 3 of clubs
         toc_index = np.where(decks == 1)[0][0]
         self._turn_manager = TurnManager(toc_index)
@@ -279,16 +280,17 @@ class Game:
     # game flow related methods
 
     # TODO
-    def _setup_round(self):
-        ...
-
-    def _start_round(self, *, deck: List[Iterable[int]] = None) -> None:
+    def _setup_round(self, *, deck: List[Iterable[int]] = None):
         assert self.num_players == 4, "four players required to start round"
         self._deal_cards(deck=deck)
-        self._make_and_set_turn_manager()
-        self._num_consecutive_rounds += 1
         for spot in range(4):
             self._set_time("reserve", self._reserve_time, spot, False)
+
+    def _start_round(self, *, setup: bool = True, deck: List[Iterable[int]] = None, testing: bool = False) -> None:
+        if setup:
+            self._setup_round(deck=deck)
+        self._num_consecutive_rounds += 1
+        self._make_and_set_turn_manager(testing)
         self._message(f"🏁 round {self._num_consecutive_rounds} has begun")
         self._next_player()
 
@@ -317,6 +319,7 @@ class Game:
             assert spot is not None
             self._reserve_times[spot] = seconds
         elif which == "trading":
+            assert spot is None
             self._trading_time = seconds
 
         if start:
@@ -341,9 +344,10 @@ class Game:
                 self._reserve_times[spot], self._handle_playing_timeout, spot
             )
         elif which == "trading":
+            assert spot is None
             self._trading_time_start = datetime.utcnow()
             self._trading_timer = self._timer(
-                self._trading_time, self._handle_trading_timeout, spot
+                self._trading_time, self._handle_trading_timeout
             )
 
     def _stop_timer(self, which: str, spot: int = None) -> None:
@@ -378,9 +382,11 @@ class Game:
             )
             self._reserve_time_use_starts[spot] = None
         elif which == "trading":
+            assert spot is None
             self._trading_timer.cancel()
             self._trading_timer = None
-            self._set_time("trading", self._trading_time)
+            time_used = (now - self._trading_time_start).total_seconds()
+            self._set_time("trading", self._trading_time - time_used)
             self._trading_time_start = None
 
     def _pause_timers(self) -> None:
@@ -473,10 +479,11 @@ class Game:
         # account for the number of cards the askers have remaining to
         # give and then silently do all the operations that snatch and
         # exchange the appropriate cards from the appropriate players
+        self._stop_timer('trading', cancel=False)
         self._set_trading(False)
         if not self._no_takes_or_gives:
             self._auto_trade()
-        self._start_round()
+        self._start_round(setup=False)
 
     def _auto_play_or_pass(self, spot: int) -> None:
         """
@@ -624,7 +631,7 @@ class Game:
     # card control related methods
 
     def add_or_remove_card(self, spot: int, card: int) -> None:
-        if self._is_finished(spot):
+        if not self.trading and self._is_finished(spot):
             raise PresidentsError(
                 "you have already finished this round", permitted=False
             )
@@ -1069,12 +1076,19 @@ class Game:
     def _get_opposing_position_spot(self, spot: int) -> int:
         return self._positions[3 - self._get_position(spot)]
 
-    def _get_decks_from_chambers(self):
-        assert all(chamber.num_cards == 13 for chamber in self._chambers)
+    def _get_decks_from_chambers(self, testing: bool=False):
+        if not testing:
+            assert all(chamber.num_cards == 13 for chamber in self._chambers)
         deck = list()
         for chamber in self._chambers:
             deck.extend(chamber)
-        return np.array(deck).reshape(4, 13)
+        try:
+            return np.array(deck).reshape(4, 13)
+        except ValueError:
+            if testing:
+                return np.array(deck).reshape(4, 1)
+
+        
 
     def _get_president_and_vice_president(self) -> List[int]:
         return self._positions[0:2]

@@ -21,11 +21,13 @@ jupyterlab = "*"
 aioredis = "*"
 uvloop = "*"
 pytest-asyncio = "*"
-uvicorn = {editable = true,path = "./../uvicorn"}
 fastapi = "*"
 faust = {extras = ["debug", "fast", "uvloop"],version = "*"}
 robinhood-aiokafka = "*"
 eventlet = "*"
+uvicorn = {editable = true,git = "https://github.com/gitavi/uvicorn.git",ref = "extract_loop"}
+aiocassandra = {editable = true,git = "https://github.com/gitavi/aiocassandra.git",ref = "master"}
+pandas = "*"
 
 [requires]
 python_version = "3.7"

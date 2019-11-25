@@ -62,6 +62,8 @@ class ServerBrowser(AsyncNamespace):
         timer: Callable = None,
         turn_time: Union[int, float] = None,
         reserve_time: Union[int, float] = None,
+        trading_time: Union[int, float] = None,
+        giving_time: Union[int, float] = None
     ):
         server: Server = Server(
             server_id,
@@ -69,6 +71,8 @@ class ServerBrowser(AsyncNamespace):
             timer=timer,
             turn_time=turn_time,
             reserve_time=reserve_time,
+            trading_time=trading_time,
+            giving_time=giving_time
         )
         self._server_dict[server_id] = server
         # self.server is the socket.io server

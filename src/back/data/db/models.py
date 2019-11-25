@@ -1,4 +1,4 @@
-from cassandra.cqlengine.models import Model
+from aiocassandra import AioModel
 from cassandra.cqlengine.columns import (
     Boolean,
     DateTime,
@@ -10,23 +10,17 @@ from cassandra.cqlengine.columns import (
     UUID,
 )
 
-DateTime.truncate_microseconds = False
+# milliseconds suffice
+DateTime.truncate_microseconds = True
 
 
-class User(Model):
+class User(AioModel):
     __table_name__ = "user"
     __keyspace__ = "presidents"
     user_id = UUID(primary_key=True, partition_key=True, required=True)
 
 
-class GameClicks(Model):
-    """
-    Valid actions are as follows:
-        1-52: card clicks
-        unlock: unlocking play
-        lock: 
-
-    """
+class GameClicks(AioModel):
     __table_name__ = "game_user_clicks"
     __keyspace__ = "presidents"
     game_id = UUID(primary_key=True, partition_key=True, required=True)
@@ -35,14 +29,14 @@ class GameClicks(Model):
     timestamps = List(value_type=DateTime, required=True)
 
 
-class UserGames(Model):
+class UserGames(AioModel):
     __table_name__ = "user_games"
     __keyspace__ = "presidents"
     user_id = UUID(primary_key=True, partition_key=True, required=True)
     game_ids = List(value_type=UUID, required=False)
 
 
-class UserRoundtimeSpots(Model):
+class UserRoundtimeSpots(AioModel):
     __table_name__ = "user_roundtime_spots"
     __keyspace__ = "presidents"
     user_id = UUID(primary_key=True, partition_key=True, required=True)
@@ -56,7 +50,7 @@ class UserRoundtimeSpots(Model):
     spot = TinyInt(required=True)
 
 
-class UserLeavetimes(Model):
+class UserLeavetimes(AioModel):
     __table_name__ = "user_leave_timestamps"
     __keyspace__ = "presidents"
     user_id = UUID(primary_key=True, partition_key=True, required=True)
@@ -64,7 +58,7 @@ class UserLeavetimes(Model):
     leave_timestamps = List(value_type=DateTime, required=False)
 
 
-class Game(Model):
+class Game(AioModel):
     __table_name__ = "game"
     __keyspace__ = "presidents"
     game_id = UUID(primary_key=True, partition_key=True, required=True)
@@ -76,7 +70,7 @@ class Game(Model):
     pause_end_timestamps = List(value_type=DateTime, required=False)
 
 
-class Round(Model):
+class Round(AioModel):
     __table_name__ = "round"
     __keyspace__ = "presidents"
     round_id = UUID(primary_key=True, partition_key=True, required=True)
@@ -86,7 +80,7 @@ class Round(Model):
     round_number = Integer(required=True)
 
 
-class RoundCards(Model):
+class RoundCards(AioModel):
     __table_name__ = "round_cards"
     __keyspace__ = "presidents"
     round_id = UUID(primary_key=True, partition_key=True, required=True)

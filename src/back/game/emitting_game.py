@@ -30,8 +30,7 @@ from datetime import datetime
 from ..data.stream.records import HandPlay
 
 # from ..server.server import Server  # TODO: pls fix this omg
-
-# from ..data.stream.agents import hand_play_agent
+# from ..data.stream.agents import hand_play_agent 
 
 # TODO: decide what to do for the removal of asking options
 # TODO: spectators should get a completely hidden view of the game being
@@ -64,7 +63,7 @@ class EmittingGame(Game):
         ]
         self._spot_sid_bidict: bidict = bidict()
         self._sid_user_id_dict: Dict[str, str] = dict()
-        self.hand_play_agent = server.server.agents["hand_play_agent"]
+        self._hand_play_agent = server.server.agents["hand_play_agent"]
         self.num_spectators: int = 0  # TODO
 
     # properties
@@ -94,7 +93,7 @@ class EmittingGame(Game):
 
         # TODO TODO: THIS SHOULD NOT BE HERE.
         if self.num_players == 4:
-            await self._start_round()
+            await self._start_round(deck=[[1], [2], [3], [4]], testing=True)
 
     def remove_player(self, sid: str) -> None:
         super().remove_player(self._get_spot(sid))
@@ -133,22 +132,30 @@ class EmittingGame(Game):
         )
 
     # game flow related methods
-
-    async def _start_round(self, *, deck: List[Iterable[int]] = None) -> None:
+    async def _setup_round(self, *, deck: List[Iterable[int]] = None):
         """
         NOTE: logic copy/pasted from base; must update manually
         """
         assert self.num_players == 4, "four players required to start round"
-        await self._deal_cards(deck=deck)
-        self._make_and_set_turn_manager()
-        self._num_consecutive_rounds += 1
         await asyncio.gather(
+            self._deal_cards(deck=deck),
             *[
                 self._set_time("reserve", self._reserve_time, spot, False)
                 for spot in range(4)
-            ],
+            ]
+        )
+
+    async def _start_round(self, *, setup: bool = True, deck: List[Iterable[int]] = None, testing: bool = False) -> None:
+        """
+        NOTE: logic copy/pasted from base; must update manually
+        """
+        if setup:
+            await self._setup_round(deck=deck)
+        self._num_consecutive_rounds += 1
+        self._make_and_set_turn_manager(testing)
+        await asyncio.gather(
             self._message(f"🏁 round {self._num_consecutive_rounds} has begun"),
-            self._next_player(),
+            self._next_player()
         )
 
     async def _next_player(self) -> None:
@@ -179,17 +186,16 @@ class EmittingGame(Game):
         spot: int = None,
         start: bool = False,
     ) -> None:
-        await self._emit_to_players(
-            "set_time",
-            {
-                "which": which,
-                "spot": spot,
-                "time": seconds * 1000,
-                "start": start,
-                # this item accounts for server/client latency
-                "timestamp": time(),  # seconds since epoch
-            },
-        )
+        kwargs = {
+            "which": which,
+            "time": seconds * 1000,
+            "start": start,
+            # this item accounts for server/client latency
+            "timestamp": time(),  # seconds since epoch
+        }
+        if spot:
+            kwargs['spot'] = spot
+        await self._emit_to_players("set_time", kwargs)
         super()._set_time(which, seconds, spot, False)
         # done like this because the "start" item from above takes care
         # of emitting the start state
@@ -244,11 +250,11 @@ class EmittingGame(Game):
             )
             self._reserve_time_use_starts[spot] = None
         elif which == "trading":
-            # TODO
-            # if cancel: ?
-            self._trading_timer.cancel()
+            if cancel and self._trading_timer is not None:
+                self._trading_timer.cancel()
             self._trading_timer = None
-            await self._set_time("trading", self._trading_time)
+            time_used = (now - self._trading_time_start).total_seconds()
+            await self._set_time("trading", self._trading_time - time_used)
             self._trading_time_start = None
 
     async def _pause(self) -> None:
@@ -355,7 +361,7 @@ class EmittingGame(Game):
         hand = Hand.copy(chamber.hand)
         await asyncio.gather(
             # TODO
-            # self.hand_play_agent.cast(
+            # self._hand_play_agent.cast(
             #     HandPlay(
             #         hand_hash=hash(hand),
             #         sid=kwargs.get("sid", self._get_sid(spot)),
@@ -451,43 +457,54 @@ class EmittingGame(Game):
         """
         self.trading = trading
         await self._emit_to_server("set_trading", {"trading": trading})
+        range_4 = range(4)
         # TODO: the below don't set all the required attributes
         if trading:
             await asyncio.gather(
-                self._start_timer("trading"),
-                *[self._set_dot_color(spot, "red") for spot in range(4)],
+                *[self._set_dot_color(spot, "red") for spot in range_4],
                 self._emit(
                     "set_on_turn", {"on_turn": False}, self._current_player_sid
                 ),
                 self._clear_hand_in_play(),
                 self._deal_cards(),
-                self._message("💱 trading has begun"),
+                self._set_time('trading', self._trading_time, start=True),
+                self._message("💱 trading has begun")
             )
-
+            
+            # timer related attributes
+            self._timers = [None for _ in range_4]
+            self._turn_times = [0 for _ in range_4]
+            self._turn_time_use_starts = [None for _ in range_4]
+            self._reserve_times: List[Union[int, float]] = [
+                self._reserve_time for _ in range_4
+            ]
+            self._reserve_time_use_starts: List[datetime] = [None for _ in range_4]
+            
+            # game related attributes
+            self._turn_manager = None
+            self._current_player = None
+            self._hand_in_play = base_hand
             self._num_consecutive_passes: int = 0
             self._finishing_last_played: bool = False
-            self._timers = [None for _ in range(4)]
-            self._selected_asking_options: List[Optional[int]] = [
-                None for _ in range(4)
-            ]
-            self._already_asked: List[Set[int]] = [set() for _ in range(4)]
-            self._giving_options: List[Optional[Set[int]]] = [
-                set() for _ in range(4)
-            ]
-            self._given: List[Set[int]] = [set() for _ in range(4)]
-            self._taken: List[Set[int]] = [set() for _ in range(4)]
-            self._current_player = None
-
+            self._unlocked: List[bool] = [False for _ in range_4]
+            self._pass_unlocked: List[bool] = [False for _ in range_4]
         else:
-            self._stop_timer("trading")
+            # trading related attributes
+            self._selected_asking_options: List[Optional[int]] = [
+                None for _ in range_4
+            ]
+            self._already_asked: List[Set[int]] = [set() for _ in range_4]
+            self._waiting: List[bool] = [False for _ in range_4]
+            self._giving_options: List[Optional[Set[int]]] = [
+                set() for _ in range_4
+            ]
+            self._gives: List[int] = [0 for _ in range_4]
+            self._takes: List[int] = [0 for _ in range_4]
+            self._given: List[Set[int]] = [set() for _ in range_4]
+            self._taken: List[Set[int]] = [set() for _ in range_4]
+            
+            # game related attributes
             self._positions.clear()
-            self._hand_in_play = base_hand
-            # TODO: should be able to do a simple start_round here
-            #       need to define and use setup_round method
-            self._num_consecutive_rounds += 1
-            self._message(f"🏁 round {self._num_consecutive_rounds} has begun")
-            self._make_and_set_turn_manager()
-            self._next_player()
 
     async def maybe_set_selected_asking_option_handler(
         self, sid: str, value: int
@@ -589,8 +606,8 @@ class EmittingGame(Game):
         )
 
     async def _message(self, message: str) -> None:
-        # super()._message(message)
         await self._emit_to_server("message", {"message": message})
+        super()._message(message)
 
     # getters
 

@@ -3,7 +3,7 @@ import logging
 # logging.basicConfig(level=logging.DEBUG)
 import os
 
-os.environ["PYTHONASYNCIODEBUG"] = "1"
+# os.environ["PYTHONASYNCIODEBUG"] = "1"
 import asyncio
 from functools import partial
 
@@ -15,8 +15,10 @@ from ..server import ServerBrowser
 # logger.setLevel(logging.DEBUG)
 
 
-TURN_TIME = 10
-RESERVE_TIME = 10
+TURN_TIME = 1
+RESERVE_TIME = 0
+TRADING_TIME = 60
+GIVING_TIME = 10
 
 
 @main
@@ -31,6 +33,8 @@ def run():
         timer=partial(AsyncTimer.spawn_after, loop=uvicorn.loop),
         turn_time=TURN_TIME,
         reserve_time=RESERVE_TIME,
+        trading_time=TRADING_TIME,
+        giving_time=GIVING_TIME
     )
 
     @sio.event
