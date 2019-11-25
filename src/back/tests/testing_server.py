@@ -15,10 +15,10 @@ from ..server import ServerBrowser
 # logger.setLevel(logging.DEBUG)
 
 
-TURN_TIME = 1
-RESERVE_TIME = 0
+TURN_TIME = 60
+RESERVE_TIME = 60
 TRADING_TIME = 60
-GIVING_TIME = 10
+GIVING_TIME = 1
 
 
 @main

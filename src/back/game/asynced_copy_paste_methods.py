@@ -60,16 +60,16 @@ async def ask_for_card(self, spot: int) -> None:
         for card in range((value - 1) * 4 + 1, value * 4 + 1)
         if card in chamber and card not in self._given[spot]
     }
+
+    await self.lock(spot)  # lock whether or not there are giving options
     if not giving_options:
         await self._message(
             f"❎ {self._names[asked_spot]} does not have such a card"
         )
-        await self.lock(spot)
         await self._add_to_already_asked(spot, value)
     else:
-        # TODO: should there be a lock here?
         await self._set_giving_options(asked_spot, giving_options)
-        self._wait_for_reply(spot, asked_spot)
+        await self._wait_for_reply(spot, asked_spot)
 
 async def _auto_give(self, spot) -> None:
     chamber: Chamber = self._chambers[spot]
@@ -189,6 +189,17 @@ async def _auto_trade(self) -> None:
             except CardNotInChamberError:
                 pass
 
+async def _decrement_takes(self, spot: int) -> None:
+    self._takes[spot] -= 1
+    # TODO: remove asking options when no takes remaining
+    if self._no_takes_or_gives:
+        await self._set_trading(False)
+
+async def _decrement_gives(self, spot: int) -> None:
+    self._gives[spot] -= 1
+    if self._no_takes_or_gives:
+        await self._set_trading(False)
+
 async def give_card(self, spot: int) -> None:
     if not self._unlocked[spot]:
         # await self.lock(spot)  # TODO doing this should be part of resetting the DOM, say
@@ -206,11 +217,11 @@ async def give_card(self, spot: int) -> None:
     )
     if self._is_asker(spot):
         self._add_to_given(spot, card)
-        self._decrement_gives(spot)
+        await self._decrement_gives(spot)
     elif self._is_giver(spot):
         await self._clear_giving_options(spot)
         self._add_to_taken(receiver_spot, card)
-        self._decrement_takes(receiver_spot)
+        await self._decrement_takes(receiver_spot)
         self._waiting[receiver_spot] = False
     await self.lock(spot)
 
@@ -299,6 +310,7 @@ async def maybe_set_selected_asking_option(self, spot: int, value: int) -> None:
             f"{self._names[self._get_opposing_position_spot(spot)]} doesn't have any cards of this rank",
             permitted=False,  # already asked should be unselectable
         )
+    await self.lock(spot)
     await self._set_selected_asking_option(
         spot,
         None if value == self._selected_asking_options[spot] else value,
@@ -524,4 +536,9 @@ async def _set_vice_asshole(self, spot: int) -> None:
 
 async def _set_vice_president(self, spot: int) -> None:
     await self._set_asker(spot, True, 1)
+
+async def _wait_for_reply(self, asker_spot: int, asked_spot: int) -> None:
+    await self._set_time("turn", self._giving_time, asked_spot, True)
+    await self._set_selected_asking_option(asker_spot, None)
+    self._waiting[asker_spot] = True
 

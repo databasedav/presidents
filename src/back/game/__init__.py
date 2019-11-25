@@ -27,6 +27,8 @@ ASYNCED_COPY_PASTE_METHODS = [
     "_auto_give",
     "_auto_play_or_pass",
     "_auto_trade",
+    "_decrement_takes",
+    "_decrement_gives",
     "give_card",
     "_handle_giving_timeout",
     "_handle_playing_timeout",
@@ -47,6 +49,7 @@ ASYNCED_COPY_PASTE_METHODS = [
     "_set_president",
     "_set_vice_asshole",
     "_set_vice_president",
+    "_wait_for_reply"
 ]
 
 ASYNCED_COPY_PASTE_METHODS_FILE = "asynced_copy_paste_methods.py"
@@ -99,6 +102,8 @@ for method in ASYNCED_COPY_PASTE_METHODS:
             method_str = (
                 pattern.sub(f"await {match.group(0)}", method_str)
                 .replace("\\", "")
+                # this is for the paused timers; unpausing uses 
+                # asyncio.gather on the lambda's return values
                 .replace("lambda: await", "lambda:")
             )
     with open(ASYNCED_COPY_PASTE_METHODS_FILE_PATH, "a") as file:

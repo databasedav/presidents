@@ -69,6 +69,17 @@ export default {
     state.asker = true
   },
 
+  set_asking_option(state, payload) {
+    if (payload.old_rank) {
+      state.asking_options.set(payload.old_rank, false)
+      // remove after Vue supports maps
+      state.asking_options_selected_arr.splice(payload.old_rank, 1, false)
+    }
+    state.asking_options.set(payload.new_rank, true)
+    // remove after Vue supports maps
+    state.asking_options_selected_arr.splice(payload.new_rank, 1, true)
+  },
+
   set_cards_remaining (state, payload) {
     state.cards_remaining.splice(payload.spot, 1, payload.cards_remaining)
   },
@@ -123,18 +134,18 @@ export default {
   set_time(state, payload) {
     switch (payload.which) {
       case 'turn':
-        state.turn_times.splice(payload.spot, 1 , payload.time - (Date.now() / 1000 - payload.timestamp) || 0)
+        state.turn_times.splice(payload.spot, 1, Math.max(0, payload.time - (Date.now() / 1000 - payload.timestamp)) || 0)
         state.turn_time_states.splice(payload.spot, 1, payload.start)
         break
       case 'reserve':
-        state.reserve_times.splice(payload.spot, 1 , payload.time - (Date.now() / 1000 - payload.timestamp) || 0)
+        state.reserve_times.splice(payload.spot, 1, Math.max(0, payload.time - (Date.now() / 1000 - payload.timestamp)) || 0)
         state.reserve_time_states.splice(payload.spot, 1, payload.start)
         break
       case 'trading':
         // using reserve time var for trading time and just changing
         // UI icon
         for (let spot = 0; spot < 4 ; spot += 1) {
-          state.reserve_times.splice(spot, 1, payload.time - (Date.now() / 1000 - payload.timestamp) || 0)
+          state.reserve_times.splice(spot, 1, Math.max(0, payload.time - (Date.now() / 1000 - payload.timestamp)) || 0)
           state.reserve_time_states.splice(spot, 1, payload.state)
         }
         break

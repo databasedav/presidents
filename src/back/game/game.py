@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 # TODO: asserts should not be meaningless; if a funtion is only called
 #       from one place it doesn't make sense to check a bunch of things
 #       that must have been true in the first place; or is it?
-# TODO: drop support for eventlet timer; ACTUALLY DON'T
+# TODO: drop support for eventlet timer; actually maybe don't?
 # TODO: add notes to point out methods that are manually async
 #       overwritten
 
@@ -201,7 +201,7 @@ class Game:
 
     @property
     def _no_takes_or_gives(self) -> bool:
-        return bool(sum(self._takes) + sum(self._gives))
+        return not bool(sum(self._takes) + sum(self._gives))
 
     def _set_up_testing_base(
         self, *, deck: List[Iterable[int]] = None
@@ -212,7 +212,7 @@ class Game:
         assert self.is_empty, "game must be empty to set up testing base"
         for spot in range(4):
             self._add_player_to_spot(f"player{spot}", spot)
-        self._start_round(deck=deck)
+        self._start_round(setup=True, deck=deck)
 
     def _get_game_to_trading(self) -> None:
         assert self._current_player is not None
@@ -280,13 +280,13 @@ class Game:
     # game flow related methods
 
     # TODO
-    def _setup_round(self, *, deck: List[Iterable[int]] = None):
+    def _setup_round(self, *, deck: List[Iterable[int]]):
         assert self.num_players == 4, "four players required to start round"
         self._deal_cards(deck=deck)
         for spot in range(4):
             self._set_time("reserve", self._reserve_time, spot, False)
 
-    def _start_round(self, *, setup: bool = True, deck: List[Iterable[int]] = None, testing: bool = False) -> None:
+    def _start_round(self, *, setup: bool, deck: List[Iterable[int]] = None, testing: bool = False) -> None:
         if setup:
             self._setup_round(deck=deck)
         self._num_consecutive_rounds += 1
@@ -375,8 +375,6 @@ class Game:
             time_used = (
                 now - self._reserve_time_use_starts[spot]
             ).total_seconds()
-            # need the max statement since this function is used during
-            # reserve time timeouts
             self._set_time(
                 "reserve", max(0, self._reserve_times[spot] - time_used)
             )
@@ -894,6 +892,7 @@ class Game:
                 f"{self._names[self._get_opposing_position_spot(spot)]} doesn't have any cards of this rank",
                 permitted=False,  # already asked should be unselectable
             )
+        self.lock(spot)
         self._set_selected_asking_option(
             spot,
             None if value == self._selected_asking_options[spot] else value,
@@ -949,14 +948,14 @@ class Game:
             for card in range((value - 1) * 4 + 1, value * 4 + 1)
             if card in chamber and card not in self._given[spot]
         }
+
+        self.lock(spot)  # lock whether or not there are giving options
         if not giving_options:
             self._message(
                 f"❎ {self._names[asked_spot]} does not have such a card"
             )
-            self.lock(spot)
             self._add_to_already_asked(spot, value)
         else:
-            # TODO: should there be a lock here?
             self._set_giving_options(asked_spot, giving_options)
             self._wait_for_reply(spot, asked_spot)
 

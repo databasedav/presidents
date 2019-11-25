@@ -32,6 +32,6 @@ export default {
   },
 
   emit_asking_click (context, payload) {
-    context.state.socket.emit('asking_click', payload)
+    context.state.socket.emit('select_asking_option', payload)
   }
 }

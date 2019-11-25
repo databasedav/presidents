@@ -32,7 +32,8 @@ from ..data.stream.records import HandPlay
 # from ..server.server import Server  # TODO: pls fix this omg
 # from ..data.stream.agents import hand_play_agent 
 
-# TODO: decide what to do for the removal of asking options
+# TODO: decide what to do for the removal of asking options; and whether
+#       or not to remove them
 # TODO: spectators should get a completely hidden view of the game being
 #       played and maybe if you are friends with another player, you can
 #       see that player's cards and stuff like that
@@ -52,6 +53,11 @@ from ..data.stream.records import HandPlay
 # TODO: kwargs strat has failed... (this is referring to autoplaying
 #       not happening invisibly to the player)
 
+# TODO: normalize emit event names with frontend; e.g. pass should be
+#       pass turn and asking click shoud be select asking option
+
+# TODO: rename selected asking option to selected asking rank
+# TODO: add UI elements for takes and gives remaining
 
 class EmittingGame(Game):
     def __init__(self, server: Server, **kwargs):
@@ -93,7 +99,7 @@ class EmittingGame(Game):
 
         # TODO TODO: THIS SHOULD NOT BE HERE.
         if self.num_players == 4:
-            await self._start_round(deck=[[1], [2], [3], [4]], testing=True)
+            await self._start_round(setup=True, deck=[[1], [2], [3], [4]], testing=True)
 
     def remove_player(self, sid: str) -> None:
         super().remove_player(self._get_spot(sid))
@@ -137,15 +143,9 @@ class EmittingGame(Game):
         NOTE: logic copy/pasted from base; must update manually
         """
         assert self.num_players == 4, "four players required to start round"
-        await asyncio.gather(
-            self._deal_cards(deck=deck),
-            *[
-                self._set_time("reserve", self._reserve_time, spot, False)
-                for spot in range(4)
-            ]
-        )
+        await self._deal_cards(deck=deck)
 
-    async def _start_round(self, *, setup: bool = True, deck: List[Iterable[int]] = None, testing: bool = False) -> None:
+    async def _start_round(self, *, setup: bool, deck: List[Iterable[int]] = None, testing: bool = False) -> None:
         """
         NOTE: logic copy/pasted from base; must update manually
         """
@@ -154,6 +154,10 @@ class EmittingGame(Game):
         self._num_consecutive_rounds += 1
         self._make_and_set_turn_manager(testing)
         await asyncio.gather(
+            *[
+                self._set_time("reserve", self._reserve_time, spot, False)
+                for spot in range(4)
+            ],
             self._message(f"🏁 round {self._num_consecutive_rounds} has begun"),
             self._next_player()
         )
@@ -451,7 +455,7 @@ class EmittingGame(Game):
 
     # trading related methods
 
-    async def _set_trading(self, trading: bool) -> None:
+    async def _set_trading(self, trading: bool, *, start: bool = True) -> None:
         """
         NOTE: logic copy/pasted from base; must update manually
         """
@@ -466,7 +470,7 @@ class EmittingGame(Game):
                     "set_on_turn", {"on_turn": False}, self._current_player_sid
                 ),
                 self._clear_hand_in_play(),
-                self._deal_cards(),
+                self._setup_round(),
                 self._set_time('trading', self._trading_time, start=True),
                 self._message("💱 trading has begun")
             )
@@ -488,7 +492,7 @@ class EmittingGame(Game):
             self._finishing_last_played: bool = False
             self._unlocked: List[bool] = [False for _ in range_4]
             self._pass_unlocked: List[bool] = [False for _ in range_4]
-        else:
+        else:  # elif not trading
             # trading related attributes
             self._selected_asking_options: List[Optional[int]] = [
                 None for _ in range_4
@@ -505,6 +509,8 @@ class EmittingGame(Game):
             
             # game related attributes
             self._positions.clear()
+            if start:
+                await self._start_round(setup=False)
 
     async def maybe_set_selected_asking_option_handler(
         self, sid: str, value: int
@@ -528,15 +534,16 @@ class EmittingGame(Game):
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
 
-    async def _set_selected_asking_option(self, spot: int, value: int) -> None:
+    async def _set_selected_asking_option(self, spot: int, rank: int) -> None:
         """
         NOTE: logic copy/pasted from base; must update manually
         """
-        self._selected_asking_options[spot] = value
-        if value:  # selecting asking option
+        old_rank: int = self._selected_asking_options[spot]
+        self._selected_asking_options[spot] = rank
+        if rank:  # selecting asking option
             await self._chambers[spot].deselect_selected()
         await self._emit(
-            "set_asking_option", {"value": value or False}, self._get_sid(spot)
+            "set_asking_option", {"old_rank": old_rank, "new_rank": rank}, self._get_sid(spot)
         )
 
     async def maybe_unlock_give_handler(self, spot: int, sid: str) -> None:
@@ -587,8 +594,8 @@ class EmittingGame(Game):
         else:
             await self._maybe_unlock_play_handler(spot, sid)
 
-    def lock_handler(self, sid: str) -> None:
-        self.lock(self._get_spot(sid))
+    async def lock_handler(self, sid: str) -> None:
+        await self.lock(self._get_spot(sid))
 
     async def _unlock(self, spot: int) -> None:
         await asyncio.gather(
