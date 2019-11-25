@@ -250,8 +250,7 @@ async def _handle_trading_timeout(self) -> None:
     # account for the number of cards the askers have remaining to
     # give and then silently do all the operations that snatch and
     # exchange the appropriate cards from the appropriate players
-    await self._stop_timer('trading', cancel=False)
-    await self._set_trading(False)
+    await self._set_trading(False, start=False, cancel=False)
     if not self._no_takes_or_gives:
         await self._auto_trade()
     await self._start_round(setup=False)

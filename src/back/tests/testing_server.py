@@ -15,15 +15,15 @@ from ..server import ServerBrowser
 # logger.setLevel(logging.DEBUG)
 
 
-TURN_TIME = 60
-RESERVE_TIME = 60
-TRADING_TIME = 60
+TURN_TIME = 100
+RESERVE_TIME = 1
+TRADING_TIME = 1
 GIVING_TIME = 1
 
 
 @main
 def run():
-    uvicorn, sio = create_app(debug=False)
+    uvicorn, sio = create_app(debug=True)
 
     server_browser = ServerBrowser("us-west")
     sio.register_namespace(server_browser)

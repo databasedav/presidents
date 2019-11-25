@@ -58,6 +58,8 @@ from ..data.stream.records import HandPlay
 
 # TODO: rename selected asking option to selected asking rank
 # TODO: add UI elements for takes and gives remaining
+# TODO: go through all gathers and consider whether doing things
+#       concurrently won't break something
 
 class EmittingGame(Game):
     def __init__(self, server: Server, **kwargs):
@@ -97,9 +99,9 @@ class EmittingGame(Game):
         await self._set_name(spot=spot, name=name)
         self.num_players += 1
 
-        # TODO TODO: THIS SHOULD NOT BE HERE.
+        # TODO TODO: THIS SHOULD NOT BE HERE. (JUST FOR TESTING)
         if self.num_players == 4:
-            await self._start_round(setup=True, deck=[[1], [2], [3], [4]], testing=True)
+            await self._start_round(setup=True)#, deck=[[1], [2], [3], [4]], testing=True)
 
     def remove_player(self, sid: str) -> None:
         super().remove_player(self._get_spot(sid))
@@ -363,6 +365,9 @@ class EmittingGame(Game):
         )
         chamber = self._chambers[spot]
         hand = Hand.copy(chamber.hand)
+        # this is outside the gather because the num_cards was being
+        # evaluated before the chamber after removed the cards
+        await chamber.remove_cards(hand)
         await asyncio.gather(
             # TODO
             # self._hand_play_agent.cast(
@@ -372,7 +377,6 @@ class EmittingGame(Game):
             #         timestamp=kwargs.get("timestamp"),
             #     )
             # ),
-            chamber.remove_cards(hand),
             self._set_hand_in_play(hand),
             self._message(f"▶️ {self._names[spot]} played {str(hand)}"),
             self.lock(spot),
@@ -387,7 +391,7 @@ class EmittingGame(Game):
                 "set_cards_remaining",
                 {
                     "spot": spot,
-                    "cards_remaining": self._chambers[spot].num_cards,
+                    "cards_remaining": chamber.num_cards,
                 },
             ),
         )
@@ -455,7 +459,7 @@ class EmittingGame(Game):
 
     # trading related methods
 
-    async def _set_trading(self, trading: bool, *, start: bool = True) -> None:
+    async def _set_trading(self, trading: bool, *, start: bool = True, cancel: bool = True) -> None:
         """
         NOTE: logic copy/pasted from base; must update manually
         """
@@ -493,6 +497,7 @@ class EmittingGame(Game):
             self._unlocked: List[bool] = [False for _ in range_4]
             self._pass_unlocked: List[bool] = [False for _ in range_4]
         else:  # elif not trading
+            await self._stop_timer('trading', cancel=cancel)
             # trading related attributes
             self._selected_asking_options: List[Optional[int]] = [
                 None for _ in range_4

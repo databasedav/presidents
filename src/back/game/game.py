@@ -55,7 +55,7 @@ class Game:
 
     TURN_TIME = 30
     RESERVE_TIME = 60
-    TRADING_TIME = 60
+    TRADING_TIME = 90
     GIVING_TIME = 10
 
     def __init__(
@@ -477,8 +477,7 @@ class Game:
         # account for the number of cards the askers have remaining to
         # give and then silently do all the operations that snatch and
         # exchange the appropriate cards from the appropriate players
-        self._stop_timer('trading', cancel=False)
-        self._set_trading(False)
+        self._set_trading(False, start=False, cancel=False)
         if not self._no_takes_or_gives:
             self._auto_trade()
         self._start_round(setup=False)
@@ -1085,6 +1084,7 @@ class Game:
             return np.array(deck).reshape(4, 13)
         except ValueError:
             if testing:
+                # for testing with singleton decks
                 return np.array(deck).reshape(4, 1)
 
         

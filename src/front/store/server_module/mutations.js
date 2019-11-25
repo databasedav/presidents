@@ -146,7 +146,7 @@ export default {
         // UI icon
         for (let spot = 0; spot < 4 ; spot += 1) {
           state.reserve_times.splice(spot, 1, Math.max(0, payload.time - (Date.now() / 1000 - payload.timestamp)) || 0)
-          state.reserve_time_states.splice(spot, 1, payload.state)
+          state.reserve_time_states.splice(spot, 1, payload.start)
         }
         break
     }
