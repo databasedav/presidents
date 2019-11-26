@@ -10,6 +10,8 @@
 </template>
 
 <script>
+// TODO: implementing this will only be feasible (for me) after
+//       Vue adds supports for reactive maps
 // looks like the following:
 // long bar that u can swipe up down left and right on
 // swiping up and down scrolls thru the combos in order but cycling

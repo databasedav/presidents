@@ -17,7 +17,7 @@ from ..server import ServerBrowser
 
 TURN_TIME = 1
 RESERVE_TIME = 1
-TRADING_TIME = 1
+TRADING_TIME = 5
 GIVING_TIME = 1
 
 

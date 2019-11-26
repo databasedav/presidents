@@ -283,14 +283,14 @@ class Game:
     def _setup_round(self, *, deck: List[Iterable[int]]):
         assert self.num_players == 4, "four players required to start round"
         self._deal_cards(deck=deck)
-        for spot in range(4):
-            self._set_time("reserve", self._reserve_time, spot, False)
 
     def _start_round(self, *, setup: bool, deck: List[Iterable[int]] = None, testing: bool = False) -> None:
         if setup:
             self._setup_round(deck=deck)
         self._num_consecutive_rounds += 1
         self._make_and_set_turn_manager(testing)
+        for spot in range(4):
+            self._set_time("reserve", self._reserve_time, spot, False)
         self._message(f"🏁 round {self._num_consecutive_rounds} has begun")
         self._next_player()
 
@@ -477,9 +477,9 @@ class Game:
         # account for the number of cards the askers have remaining to
         # give and then silently do all the operations that snatch and
         # exchange the appropriate cards from the appropriate players
-        self._set_trading(False, start=False, cancel=False)
         if not self._no_takes_or_gives:
             self._auto_trade()
+        self._set_trading(False, start=False, cancel=False)
         self._start_round(setup=False)
 
     def _auto_play_or_pass(self, spot: int) -> None:
@@ -537,7 +537,7 @@ class Game:
 
     def _auto_trade(self) -> None:
         for spot in self._get_president_and_vice_president():
-            if not self._has_gives(spot) and not self._has_takes:
+            if not self._has_gives(spot) and not self._has_takes(spot):
                 continue
 
             chamber: Chamber = self._chambers[spot]
@@ -599,6 +599,8 @@ class Game:
                 # one of the selected cards was auto given
                 except CardNotInChamberError:
                     pass
+
+        assert self._no_takes_or_gives
 
     def _player_finish(self, spot: int) -> None:
         assert self._chambers[

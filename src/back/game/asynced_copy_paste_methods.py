@@ -126,7 +126,7 @@ async def _auto_play_or_pass(self, spot: int) -> None:
 
 async def _auto_trade(self) -> None:
     for spot in self._get_president_and_vice_president():
-        if not self._has_gives(spot) and not self._has_takes:
+        if not self._has_gives(spot) and not self._has_takes(spot):
             continue
 
         chamber: Chamber = self._chambers[spot]
@@ -189,6 +189,8 @@ async def _auto_trade(self) -> None:
             except CardNotInChamberError:
                 pass
 
+    assert self._no_takes_or_gives
+
 async def _decrement_takes(self, spot: int) -> None:
     self._takes[spot] -= 1
     # TODO: remove asking options when no takes remaining
@@ -250,9 +252,9 @@ async def _handle_trading_timeout(self) -> None:
     # account for the number of cards the askers have remaining to
     # give and then silently do all the operations that snatch and
     # exchange the appropriate cards from the appropriate players
-    await self._set_trading(False, start=False, cancel=False)
     if not self._no_takes_or_gives:
         await self._auto_trade()
+    await self._set_trading(False, start=False, cancel=False)
     await self._start_round(setup=False)
 
 async def _lock_if_unlocked(self, spot: int) -> None:

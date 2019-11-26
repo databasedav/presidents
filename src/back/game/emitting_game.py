@@ -41,7 +41,6 @@ from ..data.stream.records import HandPlay
 #       while user event is being processed
 # TODO: in general, make sure certain state has actually changed before
 #       notifying client
-
 # TODO: ok here is what is gna happen: timer will start server side
 #       w 0 delay and then the on_turn acks will be stored in the db
 #       for analysis, the timer start time will be sent to the front
@@ -49,17 +48,17 @@ from ..data.stream.records import HandPlay
 #       the fact that the player will actually have less time to play
 #       will be handled by the fact that they have reserve time and
 #       also the fact that they should get a better internet connection, bitch
-
 # TODO: kwargs strat has failed... (this is referring to autoplaying
 #       not happening invisibly to the player)
-
 # TODO: normalize emit event names with frontend; e.g. pass should be
 #       pass turn and asking click shoud be select asking option
-
 # TODO: rename selected asking option to selected asking rank
 # TODO: add UI elements for takes and gives remaining
 # TODO: go through all gathers and consider whether doing things
 #       concurrently won't break something
+# TODO: whenever concurrently emitting same event to multipl spots,
+#       randomly decide order, e.g. not just 
+#       "for sid in spot_sid_bidict.values()"  or "for spot in range(4)"
 
 class EmittingGame(Game):
     def __init__(self, server: Server, **kwargs):
@@ -101,7 +100,7 @@ class EmittingGame(Game):
 
         # TODO TODO: THIS SHOULD NOT BE HERE. (JUST FOR TESTING)
         if self.num_players == 4:
-            await self._start_round(setup=True)#, deck=[[1], [2], [3], [4]], testing=True)
+            await self._start_round(setup=True, deck=[[1], [2], [3], [4]], testing=True)
 
     def remove_player(self, sid: str) -> None:
         super().remove_player(self._get_spot(sid))
@@ -134,9 +133,18 @@ class EmittingGame(Game):
         chamber = self._chambers[spot]
         await chamber.reset()
         chamber.set_sid(sid)
+        # this isn't in the gather because the cards remaining event
+        # emitted before all the cards have been async added
+        await chamber.add_cards(cards)
         await asyncio.gather(
-            chamber.add_cards(cards),
             self._emit("set_spot", {"spot": spot}, sid),
+            self._emit_to_players(
+                "set_cards_remaining",
+                {
+                    "spot": spot,
+                    "cards_remaining": chamber.num_cards,
+                },
+            )
         )
 
     # game flow related methods
@@ -459,9 +467,13 @@ class EmittingGame(Game):
 
     # trading related methods
 
-    async def _set_trading(self, trading: bool, *, start: bool = True, cancel: bool = True) -> None:
+    async def _set_trading(self, trading: bool, *, stop: bool = True, start: bool = True, cancel: bool = True) -> None:
         """
         NOTE: logic copy/pasted from base; must update manually
+        stop: whether to stop timer
+        start: whether to start game after setting trading to False
+        cancel: whether to cancel the trading timer; this should be
+                False when the handling trading timeout 
         """
         self.trading = trading
         await self._emit_to_server("set_trading", {"trading": trading})
@@ -489,7 +501,6 @@ class EmittingGame(Game):
             self._reserve_time_use_starts: List[datetime] = [None for _ in range_4]
             
             # game related attributes
-            self._turn_manager = None
             self._current_player = None
             self._hand_in_play = base_hand
             self._num_consecutive_passes: int = 0
