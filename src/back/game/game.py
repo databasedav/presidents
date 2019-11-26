@@ -536,6 +536,8 @@ class Game:
                 pass
 
     def _auto_trade(self) -> None:
+        # TODO: only auto trade for a single spot so pres and vice pres
+        #       can be done concurrently
         for spot in self._get_president_and_vice_president():
             if not self._has_gives(spot) and not self._has_takes(spot):
                 continue
@@ -552,7 +554,7 @@ class Game:
                         break
                 self.add_or_remove_card(spot, card)
                 self.maybe_unlock_give(spot)
-                self.give_card(spot)
+                self.give_card(spot, auto_trading=True)
 
             # reselect asker's selected cards
             for card in currently_selected_cards:  # could be empty list
@@ -581,6 +583,7 @@ class Game:
 
                     self.maybe_set_selected_asking_option(spot, value)
                     self.maybe_unlock_ask(spot)
+                    # requires auto trading argument that 
                     self.ask_for_card(spot)
                     if not self._is_waiting(spot):  # asked doesn't have rank
                         continue
@@ -589,7 +592,7 @@ class Game:
                             asked_spot, min(self._giving_options[asked_spot])
                         )
                         self.maybe_unlock_give(asked_spot)
-                        self.give_card(asked_spot)
+                        self.give_card(asked_spot, auto_trading=True)
                         break
 
             # reselect asked's selected cards
@@ -1002,12 +1005,13 @@ class Game:
             else:
                 self._unlock(spot)
 
-    def give_card(self, spot: int) -> None:
+    def give_card(self, spot: int, *, auto_trading: bool = False) -> None:
         if not self._unlocked[spot]:
             # self.lock(spot)  # TODO doing this should be part of resetting the DOM, say
             raise PresidentsError(
                 "you must unlock before giving", permitted=False
             )
+        self._stop_timer('turn', spot)  # stop giving time
         card = self._get_current_hand(spot)[4]
         giver_chamber: Chamber = self._chambers[spot]
         receiver_spot: int = self._get_opposing_position_spot(spot)
@@ -1019,11 +1023,11 @@ class Game:
         )
         if self._is_asker(spot):
             self._add_to_given(spot, card)
-            self._decrement_gives(spot)
+            self._decrement_gives(spot, auto_trading=auto_trading)
         elif self._is_giver(spot):
             self._clear_giving_options(spot)
             self._add_to_taken(receiver_spot, card)
-            self._decrement_takes(receiver_spot)
+            self._decrement_takes(receiver_spot, auto_trading=auto_trading)
             self._waiting[receiver_spot] = False
         self.lock(spot)
 
@@ -1033,15 +1037,15 @@ class Game:
     def _clear_giving_options(self, spot: int) -> None:
         self._giving_options[spot].clear()
 
-    def _decrement_takes(self, spot: int) -> None:
+    def _decrement_takes(self, spot: int, *, auto_trading: bool = False) -> None:
         self._takes[spot] -= 1
         # TODO: remove asking options when no takes remaining
-        if self._no_takes_or_gives:
+        if not auto_trading and self._no_takes_or_gives:
             self._set_trading(False)
 
-    def _decrement_gives(self, spot: int) -> None:
+    def _decrement_gives(self, spot: int, *, auto_trading: bool = False) -> None:
         self._gives[spot] -= 1
-        if self._no_takes_or_gives:
+        if not auto_trading and self._no_takes_or_gives:
             self._set_trading(False)
 
     # misc
