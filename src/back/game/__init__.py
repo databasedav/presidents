@@ -49,7 +49,7 @@ ASYNCED_COPY_PASTE_METHODS = [
     "_set_president",
     "_set_vice_asshole",
     "_set_vice_president",
-    "_wait_for_reply"
+    "_wait_for_reply",
 ]
 
 ASYNCED_COPY_PASTE_METHODS_FILE = "asynced_copy_paste_methods.py"
@@ -100,9 +100,10 @@ for method in ASYNCED_COPY_PASTE_METHODS:
         match = pattern.search(method_str)
         if match:
             method_str = (
-                pattern.sub(f"await {match.group(0)}", method_str)
-                .replace("\\", "")
-                # this is for the paused timers; unpausing uses 
+                pattern.sub(f"await {match.group(0)}", method_str).replace(
+                    "\\", ""
+                )
+                # this is for the paused timers; unpausing uses
                 # asyncio.gather on the lambda's return values
                 .replace("lambda: await", "lambda:")
             )

@@ -22,7 +22,7 @@ export default {
 
   props: {
     card: Number,
-    is_selected: Boolean,
+    selected: Boolean,
     is_giving_option: Boolean
   },
 
@@ -41,7 +41,7 @@ export default {
     },
 
     transform () {
-      return this.is_selected ? 'rotate(15deg)': 'rotate(0deg)'
+      return this.selected ? 'rotate(15deg)': 'rotate(0deg)'
     },
 
     // border () {

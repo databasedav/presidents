@@ -13,7 +13,7 @@ import asyncio
 
 import logging
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 
 class Server(AsyncNamespace):
@@ -35,7 +35,7 @@ class Server(AsyncNamespace):
         turn_time: Union[int, float] = None,
         reserve_time: Union[int, float] = None,
         trading_time: Union[int, float] = None,
-        giving_time: Union[int, float] = None
+        giving_time: Union[int, float] = None,
     ) -> None:
         """
         Provided timer, turn time, and reserve time overwrites game's if
@@ -72,7 +72,7 @@ class Server(AsyncNamespace):
                     turn_time=self._turn_time,
                     reserve_time=self._reserve_time,
                     trading_time=self._trading_time,
-                    giving_time=self._giving_time
+                    giving_time=self._giving_time,
                 )
             )
         await self.game.add_player(sid=sid, user_id=user_id, name=name)

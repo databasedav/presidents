@@ -30,7 +30,7 @@ from datetime import datetime
 from ..data.stream.records import HandPlay
 
 # from ..server.server import Server  # TODO: pls fix this omg
-# from ..data.stream.agents import hand_play_agent 
+# from ..data.stream.agents import hand_play_agent
 
 # TODO: decide what to do for the removal of asking options; and whether
 #       or not to remove them
@@ -57,8 +57,9 @@ from ..data.stream.records import HandPlay
 # TODO: go through all gathers and consider whether doing things
 #       concurrently won't break something
 # TODO: whenever concurrently emitting same event to multipl spots,
-#       randomly decide order, e.g. not just 
+#       randomly decide order, e.g. not just
 #       "for sid in spot_sid_bidict.values()"  or "for spot in range(4)"
+
 
 class EmittingGame(Game):
     def __init__(self, server: Server, **kwargs):
@@ -100,7 +101,9 @@ class EmittingGame(Game):
 
         # TODO TODO: THIS SHOULD NOT BE HERE. (JUST FOR TESTING)
         if self.num_players == 4:
-            await self._start_round(setup=True, deck=[[1], [2], [3], [4]], testing=True)
+            await self._start_round(
+                setup=True, )#deck=[[1], [2], [3], [4]], testing=True
+            # )
 
     def remove_player(self, sid: str) -> None:
         super().remove_player(self._get_spot(sid))
@@ -140,11 +143,8 @@ class EmittingGame(Game):
             self._emit("set_spot", {"spot": spot}, sid),
             self._emit_to_players(
                 "set_cards_remaining",
-                {
-                    "spot": spot,
-                    "cards_remaining": chamber.num_cards,
-                },
-            )
+                {"spot": spot, "cards_remaining": chamber.num_cards},
+            ),
         )
 
     # game flow related methods
@@ -155,7 +155,13 @@ class EmittingGame(Game):
         assert self.num_players == 4, "four players required to start round"
         await self._deal_cards(deck=deck)
 
-    async def _start_round(self, *, setup: bool, deck: List[Iterable[int]] = None, testing: bool = False) -> None:
+    async def _start_round(
+        self,
+        *,
+        setup: bool,
+        deck: List[Iterable[int]] = None,
+        testing: bool = False,
+    ) -> None:
         """
         NOTE: logic copy/pasted from base; must update manually
         """
@@ -169,7 +175,7 @@ class EmittingGame(Game):
                 for spot in range(4)
             ],
             self._message(f"🏁 round {self._num_consecutive_rounds} has begun"),
-            self._next_player()
+            self._next_player(),
         )
 
     async def _next_player(self) -> None:
@@ -208,7 +214,7 @@ class EmittingGame(Game):
             "timestamp": time(),  # seconds since epoch
         }
         if spot:
-            kwargs['spot'] = spot
+            kwargs["spot"] = spot
         await self._emit_to_players("set_time", kwargs)
         super()._set_time(which, seconds, spot, False)
         # done like this because the "start" item from above takes care
@@ -397,10 +403,7 @@ class EmittingGame(Game):
             ],
             self._emit_to_players(
                 "set_cards_remaining",
-                {
-                    "spot": spot,
-                    "cards_remaining": chamber.num_cards,
-                },
+                {"spot": spot, "cards_remaining": chamber.num_cards},
             ),
         )
         self._num_consecutive_passes = 0
@@ -467,7 +470,14 @@ class EmittingGame(Game):
 
     # trading related methods
 
-    async def _set_trading(self, trading: bool, *, stop: bool = True, start: bool = True, cancel: bool = True) -> None:
+    async def _set_trading(
+        self,
+        trading: bool,
+        *,
+        stop: bool = True,
+        start: bool = True,
+        cancel: bool = True,
+    ) -> None:
         """
         NOTE: logic copy/pasted from base; must update manually
         stop: whether to stop timer
@@ -487,10 +497,10 @@ class EmittingGame(Game):
                 ),
                 self._clear_hand_in_play(),
                 self._setup_round(),
-                self._set_time('trading', self._trading_time, start=True),
-                self._message("💱 trading has begun")
+                self._set_time("trading", self._trading_time, start=True),
+                self._message("💱 trading has begun"),
             )
-            
+
             # timer related attributes
             self._timers = [None for _ in range_4]
             self._turn_times = [0 for _ in range_4]
@@ -498,8 +508,10 @@ class EmittingGame(Game):
             self._reserve_times: List[Union[int, float]] = [
                 self._reserve_time for _ in range_4
             ]
-            self._reserve_time_use_starts: List[datetime] = [None for _ in range_4]
-            
+            self._reserve_time_use_starts: List[datetime] = [
+                None for _ in range_4
+            ]
+
             # game related attributes
             self._current_player = None
             self._hand_in_play = base_hand
@@ -508,7 +520,7 @@ class EmittingGame(Game):
             self._unlocked: List[bool] = [False for _ in range_4]
             self._pass_unlocked: List[bool] = [False for _ in range_4]
         else:  # elif not trading
-            await self._stop_timer('trading', cancel=cancel)
+            await self._stop_timer("trading", cancel=cancel)
             # trading related attributes
             self._selected_asking_options: List[Optional[int]] = [
                 None for _ in range_4
@@ -522,7 +534,7 @@ class EmittingGame(Game):
             self._takes: List[int] = [0 for _ in range_4]
             self._given: List[Set[int]] = [set() for _ in range_4]
             self._taken: List[Set[int]] = [set() for _ in range_4]
-            
+
             # game related attributes
             self._positions.clear()
             if start:
@@ -559,7 +571,9 @@ class EmittingGame(Game):
         if rank:  # selecting asking option
             await self._chambers[spot].deselect_selected()
         await self._emit(
-            "set_asking_option", {"old_rank": old_rank, "new_rank": rank}, self._get_sid(spot)
+            "set_asking_option",
+            {"old_rank": old_rank, "new_rank": rank},
+            self._get_sid(spot),
         )
 
     async def maybe_unlock_give_handler(self, spot: int, sid: str) -> None:

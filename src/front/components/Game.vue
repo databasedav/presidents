@@ -45,6 +45,9 @@
         @card_click='this.card_click'
       >
       </CardBox>
+      
+      <StoredHandBox>
+      </StoredHandBox>
 
       <v-flex xs12>
         <ButtonBox
@@ -73,6 +76,7 @@ import AlertSnackbar from './AlertSnackbar.vue'
 import MessageBox from './MessageBox.vue'
 import PlayerStrip from './PlayerStrip.vue'
 import OtherPlayerBox from './OtherPlayerBox.vue'
+import StoredHandBox from './StoredHandBox.vue'
 
 import { create_server_module, EVENTS } from '../utils/utils'
 
@@ -88,7 +92,8 @@ export default {
     AlertSnackbar,
     MessageBox,
     PlayerStrip,
-    OtherPlayerBox
+    OtherPlayerBox,
+    StoredHandBox
   },
 
   props: {

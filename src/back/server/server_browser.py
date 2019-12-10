@@ -17,7 +17,7 @@ import asyncio
 from functools import partial
 from ..game.emitting_game import AsyncTimer
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 # TODO: add "copy server id" button so ppl can text their frens the rid
 # TODO: add space where you can enter a server id and join
@@ -30,7 +30,8 @@ class ServerBrowser(AsyncNamespace):
         self._server_dict: Dict[str, Server] = dict()
 
     def on_connect(self, sid, payload):
-        logger.info(f"{sid} connected to {self.namespace}")
+        # logger.info(f"{sid} connected to {self.namespace}")
+        ...
 
     def _server_list(self) -> List:
         return [
@@ -63,7 +64,7 @@ class ServerBrowser(AsyncNamespace):
         turn_time: Union[int, float] = None,
         reserve_time: Union[int, float] = None,
         trading_time: Union[int, float] = None,
-        giving_time: Union[int, float] = None
+        giving_time: Union[int, float] = None,
     ):
         server: Server = Server(
             server_id,
@@ -72,7 +73,7 @@ class ServerBrowser(AsyncNamespace):
             turn_time=turn_time,
             reserve_time=reserve_time,
             trading_time=trading_time,
-            giving_time=giving_time
+            giving_time=giving_time,
         )
         self._server_dict[server_id] = server
         # self.server is the socket.io server

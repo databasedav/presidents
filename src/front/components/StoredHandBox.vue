@@ -1,11 +1,59 @@
 <template>
-  <div>
-    <!-- <Hand
-      v-for='(hand, index) in stored_hands'
-      :key='index'
-      :cards='hand.cards'
-      :is_selected='hand.is_selected'
-    ></Hand> -->
+  <div class='MagicScroll' data-options="width: 10; items: 3; step: 0;">
+    <a>a</a>
+    <a>b</a>
+    <a>c</a>
+    <a>a</a>
+    <a>b</a>
+    <a>c</a>
+    <a>a</a>
+    <a>b</a>
+    <a>c</a>
+    <a>a</a>
+    <a>b</a>
+    <a>c</a>
+    <a>a</a>
+    <a>b</a>
+    <a>c</a>
+    <a>a</a>
+    <a>b</a>
+    <a>c</a>
+    <a>a</a>
+    <a>b</a>
+    <a>c</a>
+    <a>a</a>
+    <a>b</a>
+    <a>c</a>
+    <a>a</a>
+    <a>b</a>
+    <a>c</a>
+    <a>a</a>
+    <a>b</a>
+    <a>c</a>
+    <a>a</a>
+    <a>b</a>
+    <a>c</a>
+    <a>a</a>
+    <a>b</a>
+    <a>c</a>
+    <a>a</a>
+    <a>b</a>
+    <a>c</a>
+    <a>a</a>
+    <a>b</a>
+    <a>c</a>
+    <a>a</a>
+    <a>b</a>
+    <a>c</a>
+    <a>a</a>
+    <a>b</a>
+    <a>c</a>
+    <a>a</a>
+    <a>b</a>
+    <a>c</a>
+    <a>a</a>
+    <a>b</a>
+    <a>c</a>
   </div>
 </template>
 
@@ -24,12 +72,29 @@
 
 
 import { mapGetters } from 'vuex'
-import Hand from './Hand.vue'
+import StoredHand from './StoredHand.vue'
 
 export default {
   name: 'StoredHandBox',
   components: {
-    Hand
+    StoredHand
+  },
+  mounted () {
+    // dynamically add magicscoll dependencies
+    // css
+    let link = document.createElement('link')
+    link.setAttribute('type', 'text/css')
+    link.setAttribute('rel', 'stylesheet')
+    link.setAttribute('href', '/magicscroll/magicscroll.css')
+    link.setAttribute('async', true)
+    document.head.appendChild(link)
+    // js
+    link = document.createElement('script')
+    link.setAttribute('type', 'text/javascript')
+    link.setAttribute('src', '/magicscroll/magicscroll.js')
+    link.setAttribute('async', true)
+    document.head.appendChild(link)
+    
   },
   props: {
     cards: Array[Number]

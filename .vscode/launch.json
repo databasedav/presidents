@@ -18,7 +18,7 @@
             "request": "launch",
             "module": "src.back.tests.testing_server",
             "console": "externalTerminal",
-            "justMyCode": false
+            // "justMyCode": false
         },
         {
             "name": "same hand played demo",

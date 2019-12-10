@@ -23,16 +23,12 @@ export default {
   },
   props: {
     cards: Array[Number],
-    is_selected: Boolean
-  },
-  data () {
-    return {
-    }
+    selected: Boolean
   },
   computed: {
     selected_style () {
       return {
-        borderColor: this.is_selected ? 'red' : 'black'
+        borderColor: this.selected ? 'red' : 'black'
       }
     }
   },

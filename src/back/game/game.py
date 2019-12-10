@@ -25,7 +25,7 @@ from eventlet.greenthread import GreenThread
 
 import uuid
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 
 # TODO: nice way to remove asking options after takes are exhausted
@@ -271,7 +271,7 @@ class Game:
             chamber.reset()
             chamber.add_cards(cards)
 
-    def _make_and_set_turn_manager(self, testing: bool=False) -> None:
+    def _make_and_set_turn_manager(self, testing: bool = False) -> None:
         decks = self._get_decks_from_chambers(testing)
         # get which deck has the 3 of clubs
         toc_index = np.where(decks == 1)[0][0]
@@ -284,7 +284,13 @@ class Game:
         assert self.num_players == 4, "four players required to start round"
         self._deal_cards(deck=deck)
 
-    def _start_round(self, *, setup: bool, deck: List[Iterable[int]] = None, testing: bool = False) -> None:
+    def _start_round(
+        self,
+        *,
+        setup: bool,
+        deck: List[Iterable[int]] = None,
+        testing: bool = False,
+    ) -> None:
         if setup:
             self._setup_round(deck=deck)
         self._num_consecutive_rounds += 1
@@ -474,6 +480,7 @@ class Game:
         self._auto_give(spot)
 
     def _handle_trading_timeout(self) -> None:
+        # TODO:
         # account for the number of cards the askers have remaining to
         # give and then silently do all the operations that snatch and
         # exchange the appropriate cards from the appropriate players
@@ -583,7 +590,7 @@ class Game:
 
                     self.maybe_set_selected_asking_option(spot, value)
                     self.maybe_unlock_ask(spot)
-                    # requires auto trading argument that 
+                    # requires auto trading argument that
                     self.ask_for_card(spot)
                     if not self._is_waiting(spot):  # asked doesn't have rank
                         continue
@@ -1011,7 +1018,7 @@ class Game:
             raise PresidentsError(
                 "you must unlock before giving", permitted=False
             )
-        self._stop_timer('turn', spot)  # stop giving time
+        self._stop_timer("turn", spot)  # stop giving time
         card = self._get_current_hand(spot)[4]
         giver_chamber: Chamber = self._chambers[spot]
         receiver_spot: int = self._get_opposing_position_spot(spot)
@@ -1037,13 +1044,17 @@ class Game:
     def _clear_giving_options(self, spot: int) -> None:
         self._giving_options[spot].clear()
 
-    def _decrement_takes(self, spot: int, *, auto_trading: bool = False) -> None:
+    def _decrement_takes(
+        self, spot: int, *, auto_trading: bool = False
+    ) -> None:
         self._takes[spot] -= 1
         # TODO: remove asking options when no takes remaining
         if not auto_trading and self._no_takes_or_gives:
             self._set_trading(False)
 
-    def _decrement_gives(self, spot: int, *, auto_trading: bool = False) -> None:
+    def _decrement_gives(
+        self, spot: int, *, auto_trading: bool = False
+    ) -> None:
         self._gives[spot] -= 1
         if not auto_trading and self._no_takes_or_gives:
             self._set_trading(False)
@@ -1080,7 +1091,7 @@ class Game:
     def _get_opposing_position_spot(self, spot: int) -> int:
         return self._positions[3 - self._get_position(spot)]
 
-    def _get_decks_from_chambers(self, testing: bool=False):
+    def _get_decks_from_chambers(self, testing: bool = False):
         if not testing:
             assert all(chamber.num_cards == 13 for chamber in self._chambers)
         deck = list()
@@ -1092,8 +1103,6 @@ class Game:
             if testing:
                 # for testing with singleton decks
                 return np.array(deck).reshape(4, 1)
-
-        
 
     def _get_president_and_vice_president(self) -> List[int]:
         return self._positions[0:2]

@@ -25,9 +25,9 @@ fastapi = "*"
 faust = {extras = ["debug", "fast", "uvloop"],version = "*"}
 robinhood-aiokafka = "*"
 eventlet = "*"
-uvicorn = {editable = true,git = "https://github.com/gitavi/uvicorn.git",ref = "extract_loop"}
 aiocassandra = {editable = true,git = "https://github.com/gitavi/aiocassandra.git",ref = "master"}
 pandas = "*"
+uvicorn = "*"
 
 [requires]
 python_version = "3.7"

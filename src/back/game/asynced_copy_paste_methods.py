@@ -172,7 +172,7 @@ async def _auto_trade(self) -> None:
 
                 await self.maybe_set_selected_asking_option(spot, value)
                 await self.maybe_unlock_ask(spot)
-                # requires auto trading argument that 
+                # requires auto trading argument that
                 await self.ask_for_card(spot)
                 if not self._is_waiting(spot):  # asked doesn't have rank
                     continue
@@ -194,13 +194,17 @@ async def _auto_trade(self) -> None:
 
     assert self._no_takes_or_gives
 
-async def _decrement_takes(self, spot: int, *, auto_trading: bool = False) -> None:
+async def _decrement_takes(
+    self, spot: int, *, auto_trading: bool = False
+) -> None:
     self._takes[spot] -= 1
     # TODO: remove asking options when no takes remaining
     if not auto_trading and self._no_takes_or_gives:
         await self._set_trading(False)
 
-async def _decrement_gives(self, spot: int, *, auto_trading: bool = False) -> None:
+async def _decrement_gives(
+    self, spot: int, *, auto_trading: bool = False
+) -> None:
     self._gives[spot] -= 1
     if not auto_trading and self._no_takes_or_gives:
         await self._set_trading(False)
@@ -211,7 +215,7 @@ async def give_card(self, spot: int, *, auto_trading: bool = False) -> None:
         raise PresidentsError(
             "you must unlock before giving", permitted=False
         )
-    await self._stop_timer('turn', spot)  # stop giving time
+    await self._stop_timer("turn", spot)  # stop giving time
     card = self._get_current_hand(spot)[4]
     giver_chamber: Chamber = self._chambers[spot]
     receiver_spot: int = self._get_opposing_position_spot(spot)
@@ -253,6 +257,7 @@ async def _handle_playing_timeout(self, spot: int) -> None:
         await self._auto_play_or_pass(spot)
 
 async def _handle_trading_timeout(self) -> None:
+    # TODO:
     # account for the number of cards the askers have remaining to
     # give and then silently do all the operations that snatch and
     # exchange the appropriate cards from the appropriate players
