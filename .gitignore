@@ -19,3 +19,17 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
+
+__pycache__
+.ipynb_checkpoints
+.cache
+.pkl
+.mypy_cache
+
+playground.py
+playground.ipynb
+*.lock
+.pytest_cache
+config.py
+test.ipynb
+idea.txt

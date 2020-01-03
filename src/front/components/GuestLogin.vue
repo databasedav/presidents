@@ -1,0 +1,63 @@
+<template>
+  <div>
+    <v-text-field
+      label="nickname"
+      v-model="nickname"
+      clearable
+      counter
+      maxlength="10"
+      color="grey"
+    ></v-text-field>
+    <v-btn
+      color="success"
+      :disabled="!nickname"
+      @click="send_to_server_browser"
+    >
+      browse servers
+    </v-btn>
+  </div>
+</template>
+
+<script>
+import router from "../router";
+
+export default {
+  name: "GuestLogin",
+
+  data() {
+    return {
+      // will be able to choose server eventually...
+      server: "US-West"
+    };
+  },
+
+  computed: {
+    nickname: {
+      get() {
+        return this.$store.state.nickname;
+      },
+
+      set(nickname) {
+        this.$store.commit("set_nickname", { nickname: nickname });
+      }
+    }
+  },
+
+  methods: {
+    send_to_server_browser() {
+      router.push({
+        name: "server browser",
+        params: {
+          rbnsp: `/server_browser_${this.server}`
+        }
+      });
+    }
+  }
+};
+</script>
+
+<style scoped>
+.v-btn {
+  text-transform: lowercase !important;
+}
+</style>
