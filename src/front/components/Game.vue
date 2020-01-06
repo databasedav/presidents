@@ -115,7 +115,14 @@ export default {
 
   created () {
     const socket = io(`http://127.0.0.1:5000${this.server}`, {
-      forceNew: true
+      forceNew: true,
+      transportOptions: {
+        polling: {
+          extraHeaders: {
+            'key': 'peepeepoopoo'
+          }
+        }
+      }
     });
 
     socket.once("connect", () => {

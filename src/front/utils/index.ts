@@ -9,7 +9,7 @@ import router from "../router";
 //     return store.getters[`${namespace}/${getter}`]
 // }
 
-function create_server_module() {
+function create_game_module() {
   return {
     strict: process.env.NODE_ENV !== "production",
     namespaced: true,
@@ -94,4 +94,4 @@ const EVENTS = [
   "update_current_hand_str"
 ];
 
-export { create_server_module, create_server_browser_module, EVENTS };
+export { create_game_module, create_server_browser_module, EVENTS };

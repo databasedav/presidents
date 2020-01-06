@@ -1,0 +1,22 @@
+version: '3'
+services:
+  game_browser:
+    build:
+      context: ./
+      dockerfile: ./src/back/server/game_browser/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src/back:/src/back
+  game_server:
+    build:
+      context: ./
+      dockerfile: ./src/back/server/game_server/Dockerfile
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./src/back:/src/back
+  redis:
+    image: "redis:6.0-rc-buster"
+    ports: 
+      - "6379:6379"

@@ -22,8 +22,12 @@ import os
 
 # TODO create the .pkl if it doesn't exist
 # hash table for identifying hands
-with open(f"{os.getcwd()}/src/back/game/utils/hand_table.pkl", "rb") as file:
-    hand_table = pickle.load(file)
+try:
+    with open(f"{os.getcwd()}/src/back/game/utils/hand_table.pkl", "rb") as file:
+        hand_table = pickle.load(file)
+except FileNotFoundError:        
+    with open(f"{os.getcwd()}src/back/game/utils/hand_table.pkl", "rb") as file:
+        hand_table = pickle.load(file)
 
 
 class Hand:

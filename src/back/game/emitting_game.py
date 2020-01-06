@@ -567,8 +567,7 @@ class EmittingGame(Game):
         receiver_spot: int = self._get_opposing_position_spot(spot)
         receiver_chamber: Chamber = self._chambers[receiver_spot]
         await asyncio.gather(
-            giver_chamber.remove_card(card),
-            receiver_chamber.add_card(card),
+            giver_chamber.remove_card(card), receiver_chamber.add_card(card)
         )
         # separate gathers because chamber must update num_cards
         await asyncio.gather(

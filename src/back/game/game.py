@@ -18,9 +18,8 @@ import numpy as np
 from .hand import Hand, DuplicateCardError, FullHandError, NotPlayableOnError
 from .chamber import Chamber, CardNotInChamberError
 from .utils import rank_articler
-from ..utils.utils import NoopTimer
+from ..utils import NoopTimer
 import logging
-from eventlet.greenthread import GreenThread
 
 
 import uuid
@@ -85,7 +84,7 @@ class Game:
         self._timer: Callable = timer
         # all spot timers (turn, including playing and giving, and
         # reserve) are all stored here; only trading timer is separate
-        self._timers: List[Union[NoopTimer, GreenThread]] = [
+        self._timers: List = [
             None for _ in range_4
         ]
         self._turn_time: Union[int, float] = turn_time

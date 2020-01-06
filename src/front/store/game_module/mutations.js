@@ -47,7 +47,7 @@ export default {
 
   remove_card(state, payload) {
     state.cards.delete(payload.card);
-    state.cards_arr.splice(state.cards_arr.indexOf(payload.card), 1)
+    state.cards_arr.splice(state.cards_arr.indexOf(payload.card), 1);
     state.cards_selected_arr.splice(payload.card, 1, false);
   },
 

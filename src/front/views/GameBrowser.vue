@@ -83,7 +83,7 @@ import { server_browser_plugin } from "../store/plugins";
 import { create_server_browser_socket_plugin } from "../store/plugins";
 
 export default {
-  data() {
+  data () {
     return {
       dialog: false,
       headers: [
@@ -109,14 +109,10 @@ export default {
     };
   },
 
-  props: {
-    rbnsp: String
-  },
-
   created() {
-    this.$store.dispatch("plugin_server_browser", {
-      rbnsp: this.rbnsp
-    });
+    // this.$store.dispatch("plugin_server_browser", {
+    //   rbnsp: this.rbnsp
+    // });
   },
 
   beforeMount() {
@@ -159,15 +155,15 @@ export default {
 
     add_server() {
       this.loading = true;
-      this.$store.dispatch(`${this.rbnsp}/emit_add_server`, {
+      this.$store.dispatch('add_server', {
         name: this.name
       });
     },
 
-    join_server(rid) {
-      this.$store.dispatch(`${this.rbnsp}/emit_join_server`, {
-        rid: rid,
-        name: this.nickname
+    join_server(game_server_id) {
+      this.$store.dispatch('join_server', {
+        game_server_id: game_server_id,
+        username: this.username,
       });
     }
   }

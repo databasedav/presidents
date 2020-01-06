@@ -25,7 +25,7 @@ def create_app(*, debug=False, **kwargs):
         logger=True,
         async_mode="asgi",
         # client_manager=AsyncRedisManager("redis://"),
-        cors_allowed_origins=["192.168.1.4:8080"],
+        cors_allowed_origins="*",
         ping_timeout=10000000,
     )
 

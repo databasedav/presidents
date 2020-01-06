@@ -1,7 +1,8 @@
-from ..game import EmittingGame
+from ...game import EmittingGame
 
 # from ..data.stream import game_click_agent
-from ..data.stream.records import GameClick
+# from ..data.stream.records import GameClick
+from ...utils import AsyncTimer
 
 from socketio import AsyncNamespace
 
@@ -47,37 +48,45 @@ class GameServer(AsyncNamespace):
 
     def __init__(
         self,
-        server_id: str,
         name: str,
         *,
         game: EmittingGame = None,
-        timer: Callable = None,
         turn_time: Union[int, float] = None,
         reserve_time: Union[int, float] = None,
         trading_time: Union[int, float] = None,
         giving_time: Union[int, float] = None,
     ) -> None:
         """
-        Provided timer, turn time, and reserve time overwrites game's if
-        given.
+        Provided timer related attributes overwrites game's
+        corresponding attributes if given.
         """
-        super().__init__(namespace=f"/server={server_id}")
+        self.game_server_id = uuid4()
+        super().__init__(namespace=f"/game_server={self.game_server_id}")
         self.name: str = name
         self.game: EmittingGame = game
         if game:
-            game._timer = timer
             game._turn_time = turn_time
             game._reserve_time = reserve_time
             game._trading_time = trading_time
             game._giving_time = giving_time
-        self._timer = timer
         self._turn_time = turn_time
         self._reserve_time = reserve_time
         self._trading_time = trading_time
         self._giving_time = giving_time
         # self._game_click_agent = self.server.agentds["game_click_agent"]
+        
 
-    def is_full(self) -> None:
+    @property
+    def game_server_server(self):
+        return self.server
+
+    async def on_connect(self, sid, environ):
+        # only look at keys that have not expired
+        if environ['HTTP_KEY'] not in self.game_server_server.redis:
+            ...
+        # remove expired keys after
+
+    def is_full(self) -> bool:
         return self.game.is_full if self.game else False
 
     def _set_game(self, game: EmittingGame) -> None:
@@ -88,7 +97,7 @@ class GameServer(AsyncNamespace):
             self._set_game(
                 EmittingGame(
                     self,
-                    timer=self._timer,
+                    timer=AsyncTimer.spawn_after,
                     turn_time=self._turn_time,
                     reserve_time=self._reserve_time,
                     trading_time=self._trading_time,
