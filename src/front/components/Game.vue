@@ -114,34 +114,36 @@ export default {
   },
 
   created () {
-    const socket = io(`http://127.0.0.1:5000${this.server}`, {
-      forceNew: true,
-      transportOptions: {
-        polling: {
-          extraHeaders: {
-            'key': 'peepeepoopoo'
-          }
-        }
-      }
-    });
+    this.$store.commit('set_username', {'username': 'test'})
+    this.$store.dispatch('create_game', {'name': 'test'})
+    // const socket = io(`http://0.0.0.0:8000${this.server}`, {
+    //   forceNew: true,
+    //   transportOptions: {
+    //     polling: {
+    //       extraHeaders: {
+    //         'key': 'peepeepoopoo'
+    //       }
+    //     }
+    //   }
+    // });
 
-    socket.once("connect", () => {
-      // if testing (i.e. four player vue), use socket's engine id (client's sid)
-      // as namespace; otherwise uses the server namespace as individual
-      // players (sockets) can be in a single game at most once; this is
-      // here because need to wait till socket connects to get its id (sid)
-      const namespace = this.testing ? socket.io.engine.id : this.server;
-      this.$store.registerModule(namespace, create_server_module());
-      // register presidents event listeners
-      EVENTS.forEach(event => {
-        socket.on(event, payload => {
-          this.$store.commit(`${namespace}/${event}`, payload);
-        });
-      });
-      // gives store access to namespaced socket
-      this.$store.commit(`${namespace}/set_socket`, { socket: socket });
-      this.sid = namespace;
-    });
+    // socket.once("connect", () => {
+    //   // if testing (i.e. four player vue), use socket's engine id (client's sid)
+    //   // as namespace; otherwise uses the server namespace as individual
+    //   // players (sockets) can be in a single game at most once; this is
+    //   // here because need to wait till socket connects to get its id (sid)
+    //   const namespace = this.testing ? socket.io.engine.id : this.server;
+    //   this.$store.registerModule(namespace, create_server_module());
+    //   // register presidents event listeners
+    //   EVENTS.forEach(event => {
+    //     socket.on(event, payload => {
+    //       this.$store.commit(`${namespace}/${event}`, payload);
+    //     });
+    //   });
+    //   // gives store access to namespaced socket
+    //   this.$store.commit(`${namespace}/set_socket`, { socket: socket });
+    //   this.sid = namespace;
+    // });
   },
 
   methods: {

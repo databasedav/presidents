@@ -1,198 +1,142 @@
-from ...game import EmittingGame
-
-# from ..data.stream import game_click_agent
-# from ..data.stream.records import GameClick
-from ...utils import AsyncTimer
-
-from socketio import AsyncNamespace
-
-from typing import Optional, Dict, Callable, Union
-from itertools import cycle
-from datetime import datetime
 import asyncio
-
-from uuid import uuid4
-
-
+import aioredis
+import socketio
+import fastapi
+import uvicorn
+import aiohttp
 import logging
+from time import time
+from fastapi import HTTPException
+from datetime import datetime
+from secrets import token_urlsafe
+from starlette.middleware.cors import CORSMiddleware
 
-# logger = logging.getLogger(__name__)
+from ...utils import main
+from ..models import Game, GameAttrs, GameIdUsername
+
+KEY_TTL = 10  # time to live in seconds
 
 
-class GameServer(AsyncNamespace):
+logger = logging.getLogger(__name__)
+
+game_server_fast = fastapi.FastAPI()
+game_server_fast.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+game_server_sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
+
+game_store = None
+game_god_client = aiohttp.ClientSession()
+
+sid_game_id_dict = dict()
+
+
+async def get_game_id(sid: str):
+    try:
+        return sid_game_id_dict[sid]
+    except KeyError:
+        game_id = await game_store.get(sid, encoding="utf-8")
+        sid_game_id_dict[sid] = game_id
+    return game_id
+
+
+@game_server_fast.on_event("startup")
+async def on_startup():
+    global game_store
+    game_store = await aioredis.create_redis_pool("redis://game_store")
+
+
+# TODO: requires auth
+@game_server_fast.post("/create_game", response_model=Game, status_code=201)
+async def add_game(game_attrs: GameAttrs):
+    async with game_god_client.post(
+        "http://game_god:8000/add_game", json=game_attrs.dict()
+    ) as response:
+        assert response.status == 201
+        return Game(**await response.json())
+
+
+# TODO: requires auth
+# TODO: jwt token contains username; can remove username arg after
+#       can remove above model after as well
+@game_server_fast.put("/join_game", status_code=200)
+async def request_game_key(game_id_username: GameIdUsername):
     """
-    presidents game server.
-    
-    Implemented as an python-socket.io for the convenience of not having
-    to maintain a game sid dictionary; client events are emitted
-    directly to the appropriate game server and then game with no
-    additional tunneling.
-    
-    A game server holds exactly one game instance.
-
-    The game server's socket.io namespace is f'/server={server_id}'.
-
-    Game servers live on a python-socket.io AsyncServer. Each
-    AsyncServer lives on its own pod and does not use the available
-    message queues to coordinate events across AsyncServers as there is
-    no inter game communication yet (TODO: what would this even look
-    like?).
-    
-    TODO: orchestrate game server management, i.e. how many game servers
-          live on a single AsyncServer. Current idea is to spawn a new
-          pod based on cpu load and handle malicious loading via rate
-          limiting; then, on creation, game servers would simply be
-          assigned to the AsyncServer living on the pod with the lowest
-          cpu load.
+    Simply returns to the client a key to join the specified game if
+    there is space in the game at the time of their request to join.
     """
+    game_id = game_id_username.game_id
+    if not await game_store.exists(game_id):
+        raise HTTPException(status_code=406, detail="game does not exist")
+    # if the number of valid distributed keys fills the game, tell the
+    # client that the game is full and they should refresh and try again
+    if (
+        int(await game_store.hget(game_id, "num_players"))
+        + await game_store.zcount(f"{game_id}:game_keys", min=time())
+        >= 4
+    ):
+        raise HTTPException(
+            status_code=409, detail="game is full; refresh and try again"
+        )
+    game_key = token_urlsafe()
+    # game key is valid for 10 seconds
+    await asyncio.gather(
+        prune_expired_keys(game_id),
+        # add a game key
+        game_store.zadd(f"{game_id}:game_keys", time() + KEY_TTL, game_key),
+        # only a specific user can use the key
+        game_store.set(game_key, game_id_username.username)
+    )
+    return {"game_key": game_key}
 
-    def __init__(
-        self,
-        name: str,
-        *,
-        game: EmittingGame = None,
-        turn_time: Union[int, float] = None,
-        reserve_time: Union[int, float] = None,
-        trading_time: Union[int, float] = None,
-        giving_time: Union[int, float] = None,
-    ) -> None:
-        """
-        Provided timer related attributes overwrites game's
-        corresponding attributes if given.
-        """
-        self.game_server_id = uuid4()
-        super().__init__(namespace=f"/game_server={self.game_server_id}")
-        self.name: str = name
-        self.game: EmittingGame = game
-        if game:
-            game._turn_time = turn_time
-            game._reserve_time = reserve_time
-            game._trading_time = trading_time
-            game._giving_time = giving_time
-        self._turn_time = turn_time
-        self._reserve_time = reserve_time
-        self._trading_time = trading_time
-        self._giving_time = giving_time
-        # self._game_click_agent = self.server.agentds["game_click_agent"]
-        
 
-    @property
-    def game_server_server(self):
-        return self.server
+@game_server_sio.event
+async def connect(sid, environ):
+    now = time()
+    game_id = environ.get("HTTP_GAME_ID")
+    game_key = environ.get("HTTP_GAME_KEY")
+    if not game_id or not game_key:
+        raise ConnectionRefusedError("connecting requires game id and key")
+    elif game_key.encode() not in await game_store.zrevrangebyscore(
+        f"{game_id}:game_keys", min=now
+    ):
+        raise ConnectionRefusedError("invalid game key")
+    await prune_expired_keys(game_id)
 
-    async def on_connect(self, sid, environ):
-        # only look at keys that have not expired
-        if environ['HTTP_KEY'] not in self.game_server_server.redis:
-            ...
-        # remove expired keys after
-
-    def is_full(self) -> bool:
-        return self.game.is_full if self.game else False
-
-    def _set_game(self, game: EmittingGame) -> None:
-        self.game = game
-
-    async def add_player(self, sid: str, user_id: str, name: str) -> None:
-        if not self.game:
-            self._set_game(
-                EmittingGame(
-                    self,
-                    timer=AsyncTimer.spawn_after,
-                    turn_time=self._turn_time,
-                    reserve_time=self._reserve_time,
-                    trading_time=self._trading_time,
-                    giving_time=self._giving_time,
-                )
+    async with game_god_client.put(
+        "http://game_god:8000/add_player_to_game",
+        json={
+            "username": (await game_store.get(game_key)).decode(),
+            "sid": sid,
+            "game_id": game_id,
+        },
+    ) as response:
+        await game_store.delete(game_key)
+        if response.status != 200:
+            raise ConnectionRefusedError(
+                "could not add player to game; try again"
             )
-        await self.game.add_player(sid=sid, user_id=user_id, name=name)
 
-    def add_spectator(self):
-        ...
 
-    async def on_card_click(self, sid: str, payload: Dict) -> None:
-        timestamp: datetime = datetime.utcnow()
-        card: int = payload["card"]
-        await asyncio.gather(
-            self.game.add_or_remove_card_handler(sid, card),
-            # self._cast_game_click(sid, timestamp, str(card)),
-        )
+async def prune_expired_keys(game_id: str):
+    await game_store.zremrangebyscore(f"{game_id}:keys", max=time())
 
-    async def on_unlock(self, sid) -> None:
-        timestamp: datetime = datetime.utcnow()
-        await asyncio.gather(
-            self.game.unlock_handler(sid),
-            # self.cast_game_click(sid, timestamp, "unlock"),
-        )
 
-    async def on_lock(self, sid) -> None:
-        timestamp: datetime = datetime.utcnow()
-        await asyncio.gather(
-            self.game.lock_handler(sid),
-            # self.cast_game_click(sid, timestamp, "lock"),
-        )
+@game_server_sio.event
+async def game_click(sid, payload):
+    timestamp = datetime.utcnow()
+    async with game_god_client.put(
+        "http://game_god/game_click",
+        params={**payload, "sid": sid, "game_id": get_game_id(sid)},
+    ) as response:
+        assert response.status == 201
+        # await cast_game_click
 
-    async def on_play(self, sid) -> None:
-        timestamp: datetime = datetime.utcnow()
-        await asyncio.gather(
-            self.game.maybe_play_current_hand_handler(sid, timestamp),
-            # self.cast_game_click(sid, timestamp, "play"),
-        )
 
-    async def on_unlock_pass_turn(self, sid) -> None:
-        timestamp: datetime = datetime.utcnow()
-        await asyncio.gather(
-            self.game.maybe_unlock_pass_turn_handler(sid),
-            # self.cast_game_click(sid, timestamp, "unlock pass"),
-        )
-
-    async def on_pass_turn(self, sid) -> None:
-        timestamp: datetime = datetime.utcnow()
-        await asyncio.gather(
-            self.game.maybe_pass_turn_handler(sid),
-            # self.cast_game_click(sid, timestamp, "pass"),
-        )
-
-    async def on_select_asking_option(self, sid, payload) -> None:
-        timestamp: datetime = datetime.utcnow()
-        rank: int = payload["rank"]
-        await asyncio.gather(
-            self.game.maybe_set_selected_asking_option_handler(sid, rank),
-            # self.cast_game_click(sid, timestamp, str(-rank)),
-        )
-
-    async def on_ask(self, sid) -> None:
-        timestamp: datetime = datetime.utcnow()
-        await asyncio.gather(
-            self.game.ask_for_card_handler(sid),
-            # self.cast_game_click(sid, timestamp, "ask"),
-        )
-
-    async def on_give(self, sid) -> None:
-        timestamp: datetime = datetime.utcnow()
-        await asyncio.gather(
-            self.game.give_card_handler(sid),
-            # self.cast_game_click(sid, timestamp, "give"),
-        )
-
-    async def on_request_correct_state(self, sid) -> None:
-        await self.game.emit_correct_state(sid)
-
-    async def _cast_game_click(
-        self, sid: str, timestamp: datetime, action: str
-    ) -> None:
-        await game_click_agent.cast(
-            GameClick(
-                game_id=uuid4(),
-                user_id=uuid4(),
-                timestamp=timestamp,
-                action=action,
-            )
-        )
-        # self._game_click_agent.cast(
-        #     GameClick(
-        #         game_id=self.game.id,
-        #         user_id=self.game.get_user_id(sid),
-        #         timestamp=timestamp,
-        #         action=action,
-        #     )
-        # )
+game_server = socketio.ASGIApp(
+    socketio_server=game_server_sio, other_asgi_app=game_server_fast
+)

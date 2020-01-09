@@ -62,15 +62,14 @@ from ..data.stream.records import HandPlay
 
 
 class EmittingGame(Game):
-    def __init__(self, server: Server, **kwargs):
+    def __init__(self, sio, name: str, **kwargs):
         super().__init__(**kwargs)
         # TODO: server stuff (including emitting should be entirely handled by the Server, which is an AsyncNamespace)
-        self._server: Server = server
+        self._sio = sio
         self._chambers: List[EmittingChamber] = [
-            EmittingChamber(self._server) for _ in range(4)
+            EmittingChamber(self._sio) for _ in range(4)
         ]
         self._spot_sid_bidict: bidict = bidict()
-        self._sid_user_id_dict: Dict[str, str] = dict()
         # self._hand_play_agent = server.server.agents["hand_play_agent"]
         self.num_spectators: int = 0  # TODO
 
@@ -82,11 +81,11 @@ class EmittingGame(Game):
 
     # setup related methods
 
-    def set_server(self, server: str) -> None:
-        self._server = server
+    def set_sio(self, sio) -> None:
+        self._sio = sio
 
     async def _add_player_to_spot(
-        self, sid: str, user_id: str, name: str, spot: int
+        self, sid: str, name: str, spot: int
     ) -> None:
         """
         NOTE: logic copy/pasted from base; must update manually
@@ -96,7 +95,6 @@ class EmittingGame(Game):
         self._open_spots.remove(spot)
         self._chambers[spot].set_sid(sid)
         self._spot_sid_bidict.inv[sid] = spot
-        self._sid_user_id_dict[sid] = user_id
         await self._set_name(spot=spot, name=name)
         self.num_players += 1
 
@@ -109,7 +107,6 @@ class EmittingGame(Game):
     def remove_player(self, sid: str) -> None:
         super().remove_player(self._get_spot(sid))
         self._spot_sid_bidict.inv.pop(sid)
-        self._sid_user_id_dict.pop(sid)
 
     async def _deal_cards(
         self, *, deck: Optional[List[Iterable[int]]] = None
@@ -663,9 +660,6 @@ class EmittingGame(Game):
     def _get_spot(self, sid: str) -> int:
         return self._spot_sid_bidict.inv[sid]
 
-    def get_user_id(self, sid: str) -> str:
-        return self._sid_user_id_dict[sid]
-
     # setters
 
     async def _set_name(self, **kwargs) -> None:
@@ -717,7 +711,7 @@ class EmittingGame(Game):
     # emitters
 
     async def _emit(self, *args, **kwargs) -> None:
-        await self._server.emit(*args, **kwargs)
+        await self._sio.emit(*args, **kwargs)
 
     async def _emit_to_players(self, *args, **kwargs):
         """

@@ -8,6 +8,7 @@ class NoopTimer:
     """
     For games with no time limits.
     """
+
     @classmethod
     def timer(cls, *args, **kwargs):
         return cls()
@@ -22,6 +23,7 @@ class AsyncTimer:
         """
         Calls callback with args and kwargs after seconds.
         """
+
         async def task():
             await asyncio.sleep(seconds)
             await callback(*args, **kwargs)

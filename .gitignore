@@ -25,6 +25,7 @@ __pycache__
 .cache
 .pkl
 .mypy_cache
+.devcontainer
 
 playground.py
 playground.ipynb
@@ -33,3 +34,4 @@ playground.ipynb
 config.py
 test.ipynb
 idea.txt
+secrets.py

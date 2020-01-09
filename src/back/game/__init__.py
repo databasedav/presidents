@@ -29,7 +29,6 @@ ASYNCED_COPY_PASTE_METHODS = [
     "_auto_trade",
     "_decrement_takes",
     "_decrement_gives",
-    # "give_card",
     "_handle_giving_timeout",
     "_handle_playing_timeout",
     "_handle_trading_timeout",
@@ -62,55 +61,55 @@ ASYNCED_COPY_PASTE_METHODS_FILE_PATH = f"{os.path.dirname(os.path.abspath(__file
 # method call and dynamically add the method to EmittingGame
 # TODO: add comments to the below
 
-get_async_method_names = lambda _class: [
-    method_tuple[0]
-    for method_tuple in filter(
-        lambda method_tuple: inspect.iscoroutinefunction(method_tuple[1]),
-        dict(_class.__dict__).items(),
-    )
-]
+# get_async_method_names = lambda _class: [
+#     method_tuple[0]
+#     for method_tuple in filter(
+#         lambda method_tuple: inspect.iscoroutinefunction(method_tuple[1]),
+#         dict(_class.__dict__).items(),
+#     )
+# ]
 
-patterns = [
-    re.compile(rf"self.{method}\(")
-    for method in get_async_method_names(EmittingGame)
-    + ASYNCED_COPY_PASTE_METHODS
-] + [
-    re.compile(rf"[a-z_]*chamber.{method}\(")
-    for method in get_async_method_names(EmittingChamber)
-]
+# patterns = [
+#     re.compile(rf"self.{method}\(")
+#     for method in get_async_method_names(EmittingGame)
+#     + ASYNCED_COPY_PASTE_METHODS
+# ] + [
+#     re.compile(rf"[a-z_]*chamber.{method}\(")
+#     for method in get_async_method_names(EmittingChamber)
+# ]
 
-# reset
-open(ASYNCED_COPY_PASTE_METHODS_FILE_PATH, "w").close()
-with open(ASYNCED_COPY_PASTE_METHODS_FILE_PATH, "a") as file:
-    print(
-        """from typing import List, Iterable, Union
-from datetime import datetime
+# # reset
+# open(ASYNCED_COPY_PASTE_METHODS_FILE_PATH, "w").close()
+# with open(ASYNCED_COPY_PASTE_METHODS_FILE_PATH, "a") as file:
+#     print(
+#         """from typing import List, Iterable, Union
+# from datetime import datetime
 
-from .utils import rank_articler
-from .game import base_hand, PresidentsError
-from .chamber import Chamber, CardNotInChamberError
-from .hand import Hand, DuplicateCardError, FullHandError, NotPlayableOnError
-    """,
-        file=file,
-    )
+# from .utils import rank_articler
+# from .game import base_hand, PresidentsError
+# from .chamber import Chamber, CardNotInChamberError
+# from .hand import Hand, DuplicateCardError, FullHandError, NotPlayableOnError
+#     """,
+#         file=file,
+#     )
 
-for method in ASYNCED_COPY_PASTE_METHODS:
-    method_str = inspect.getsource(eval(f"Game.{method}")).lstrip()
-    method_str = "    async " + method_str
-    # prepend await to all async overwritten methods
-    for pattern in patterns:
-        match = pattern.search(method_str)
-        if match:
-            method_str = (
-                pattern.sub(f"await {match.group(0)}", method_str).replace(
-                    "\\", ""
-                )
-                # this is for the paused timers; unpausing uses
-                # asyncio.gather on the lambda's return values
-                .replace("lambda: await", "lambda:")
-            )
-    with open(ASYNCED_COPY_PASTE_METHODS_FILE_PATH, "a") as file:
-        print(textwrap.dedent(method_str), file=file)
+# for method in ASYNCED_COPY_PASTE_METHODS:
+#     method_str = inspect.getsource(eval(f"Game.{method}")).lstrip()
+#     method_str = "    async " + method_str
+#     # prepend await to all async overwritten methods
+#     for pattern in patterns:
+#         match = pattern.search(method_str)
+#         if match:
+#             method_str = (
+#                 pattern.sub(f"await {match.group(0)}", method_str).replace(
+#                     "\\", ""
+#                 )
+#                 # this is for the paused timers; unpausing uses
+#                 # asyncio.gather on the lambda's return values
+#                 .replace("lambda: await", "lambda:")
+#             )
+#     with open(ASYNCED_COPY_PASTE_METHODS_FILE_PATH, "a") as file:
+#         print(textwrap.dedent(method_str), file=file)
 
 importlib.invalidate_caches()
 a = importlib.import_module(

@@ -1,6 +1,6 @@
 <template>
   <v-row>
-    <v-col cols="6" v-for="i in 4">
+    <v-col cols="6" v-for="i in 1">
       <Game
         :server="'/server=dev'"
         :testing="true"

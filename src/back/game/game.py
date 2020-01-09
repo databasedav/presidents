@@ -22,7 +22,7 @@ from ..utils import NoopTimer
 import logging
 
 
-import uuid
+from uuid import uuid4
 
 # logger = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ class Game:
         range_4 = range(4)  # software engineering
 
         # instance related attributes
-        self.id: str = str(uuid.uuid4())
+        self.game_id = uuid4()
         self.num_players: int = 0
         self._num_consecutive_rounds: int = 0
         self._times_reset: int = 0
@@ -84,9 +84,7 @@ class Game:
         self._timer: Callable = timer
         # all spot timers (turn, including playing and giving, and
         # reserve) are all stored here; only trading timer is separate
-        self._timers: List = [
-            None for _ in range_4
-        ]
+        self._timers: List = [None for _ in range_4]
         self._turn_time: Union[int, float] = turn_time
         # these turn time lists are used for both playing and giving
         self._turn_times: List[Union[int, float]] = [0 for _ in range_4]
