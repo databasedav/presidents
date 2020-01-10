@@ -3,7 +3,6 @@
     class="card"
     @click="$emit('card_click', card)"
     :style="{ color, transform, 'background-color': bc }"
-    :outlined="outline"
     height="70"
     width="35"
   >

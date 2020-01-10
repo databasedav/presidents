@@ -2,7 +2,9 @@ import axios from 'axios'
 import io from 'socket.io-client'
 
 export default {
-  
+  emit_game_action (context, payload) {
+    context.state.socket.emit('game_action', payload)
+  },
 
   emit_card_click (context, payload) {
     context.state.socket.emit("card_click", payload);

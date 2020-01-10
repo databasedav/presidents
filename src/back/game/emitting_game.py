@@ -101,8 +101,8 @@ class EmittingGame(Game):
         # TODO TODO: THIS SHOULD NOT BE HERE. (JUST FOR TESTING)
         if self.num_players == 4:
             await self._start_round(
-                setup=True, deck=[[1], [2], [3], [4]], testing=True
-            )
+                setup=True)#, deck=[[1], [2], [3], [4]], testing=True
+            # )
 
     def remove_player(self, sid: str) -> None:
         super().remove_player(self._get_spot(sid))
@@ -134,11 +134,11 @@ class EmittingGame(Game):
         chamber = self._chambers[spot]
         await chamber.reset()
         chamber.set_sid(sid)
-        # this isn't in the gather because the cards remaining event
+        # this isn't in the gather because the cards remaining event is
         # emitted before all the cards have been async added
         await chamber.add_cards(cards)
         await asyncio.gather(
-            self._emit("set_spot", {"spot": spot}, sid),
+            self._emit("set_spot", {"spot": spot}, room=sid),
             self._emit_to_players(
                 "set_cards_remaining",
                 {"spot": spot, "cards_remaining": chamber.num_cards},
@@ -174,7 +174,7 @@ class EmittingGame(Game):
     async def _next_player(self) -> None:
         try:  # current player is no longer on turn
             await self._emit(
-                "set_on_turn", {"on_turn": False}, self._current_player_sid
+                "set_on_turn", {"on_turn": False}, room=self._current_player_sid
             )
         except KeyError:  # self._current_player is None on round start
             pass
@@ -188,7 +188,7 @@ class EmittingGame(Game):
 
     async def _emit_set_on_turn_handler(self, spot: int) -> None:
         await asyncio.gather(
-            self._emit("set_on_turn", {"on_turn": True}, self._get_sid(spot)),
+            self._emit("set_on_turn", {"on_turn": True}, room=self._get_sid(spot)),
             self._set_dot_color(spot, "green"),
         )
 
@@ -290,12 +290,12 @@ class EmittingGame(Game):
                 "unlocked": self._unlocked[spot],
                 "pass_unlocked": self._pass_unlocked[spot],
             },
-            sid,
+            room=sid,
         )
 
     # card management related methods
 
-    async def add_or_remove_card_handler(self, sid: str, card: int) -> None:
+    async def card_click_handler(self, sid: str, card: int) -> None:
         spot: int = self._get_spot(sid)
         try:
             await self.add_or_remove_card(spot, card)
@@ -314,7 +314,7 @@ class EmittingGame(Game):
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
 
-    async def maybe_play_current_hand_handler(
+    async def play_handler(
         self, sid: str, timestamp: datetime
     ) -> None:
         try:
@@ -375,7 +375,7 @@ class EmittingGame(Game):
                     await self.lock(other_spot)
         await self._post_play_handler(spot)
 
-    async def maybe_unlock_pass_turn_handler(self, sid: str) -> None:
+    async def unlock_pass_handler(self, sid: str) -> None:
         spot: int = self._get_spot(sid)
         try:
             await self.maybe_unlock_pass_turn(spot)
@@ -386,16 +386,16 @@ class EmittingGame(Game):
         await self._lock_if_unlocked(spot)
         self._pass_unlocked[spot] = True
         await self._emit(
-            "set_pass_unlocked", {"pass_unlocked": True}, self._get_sid(spot)
+            "set_pass_unlocked", {"pass_unlocked": True}, room=self._get_sid(spot)
         )
 
     async def _lock_pass(self, spot: int) -> None:
         super()._lock_pass(spot)
         await self._emit(
-            "set_pass_unlocked", {"pass_unlocked": False}, self._get_sid(spot)
+            "set_pass_unlocked", {"pass_unlocked": False}, room=self._get_sid(spot)
         )
 
-    async def maybe_pass_turn_handler(self, sid: str) -> None:
+    async def pass_handler(self, sid: str) -> None:
         spot: int = self._get_spot(sid)
         try:
             await self.maybe_pass_turn(spot)
@@ -422,7 +422,7 @@ class EmittingGame(Game):
 
     async def _clear_hand_in_play(self) -> None:
         super()._clear_hand_in_play()
-        await self._emit_to_players("clear_hand_in_play")
+        await self._emit_to_players("clear_hand_in_play", {})
 
     # trading related methods
 
@@ -448,7 +448,7 @@ class EmittingGame(Game):
             await asyncio.gather(
                 *[self._set_dot_color(spot, "red") for spot in range_4],
                 self._emit(
-                    "set_on_turn", {"on_turn": False}, self._current_player_sid
+                    "set_on_turn", {"on_turn": False}, room=self._current_player_sid
                 ),
                 self._clear_hand_in_play(),
                 self._setup_round(),
@@ -495,12 +495,12 @@ class EmittingGame(Game):
             if start:
                 await self._start_round(setup=False)
 
-    async def maybe_set_selected_asking_option_handler(
-        self, sid: str, value: int
+    async def asking_click_handler(
+        self, sid: str, rank: int
     ) -> None:
         spot: int = self._get_spot(sid)
         try:
-            await self.maybe_set_selected_asking_option(spot, value)
+            await self.maybe_set_selected_asking_option(spot, rank)
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
 
@@ -510,7 +510,7 @@ class EmittingGame(Game):
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
 
-    async def ask_for_card_handler(self, sid: str) -> None:
+    async def ask_handler(self, sid: str) -> None:
         spot: int = self._get_spot(sid)
         try:
             await self.ask_for_card(spot)
@@ -529,7 +529,7 @@ class EmittingGame(Game):
         await self._emit(
             "set_asking_option",
             {"old_rank": old_rank, "new_rank": rank},
-            self._get_sid(spot),
+            room=self._get_sid(spot),
         )
 
     async def maybe_unlock_give_handler(self, spot: int, sid: str) -> None:
@@ -538,7 +538,7 @@ class EmittingGame(Game):
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
 
-    async def give_card_handler(self, sid: str) -> None:
+    async def give_handler(self, sid: str) -> None:
         spot: int = self._get_spot(sid)
         try:
             await self.give_card(spot)
@@ -602,14 +602,14 @@ class EmittingGame(Game):
         await self._emit(
             "set_giving_options",
             {"options": list(giving_options), "highlight": True},
-            self._get_sid(spot),
+            room=self._get_sid(spot),
         )
 
     async def _clear_giving_options(self, spot: int) -> None:
         await self._emit(
             "set_giving_options",
             {"options": list(self._giving_options[spot]), "highlight": False},
-            self._get_sid(spot),
+            room=self._get_sid(spot),
         )
         super()._clear_giving_options(spot)
 
@@ -636,7 +636,7 @@ class EmittingGame(Game):
     async def _unlock(self, spot: int) -> None:
         await asyncio.gather(
             self._emit(
-                "set_unlocked", {"unlocked": True}, self._get_sid(spot)
+                "set_unlocked", {"unlocked": True}, room=self._get_sid(spot)
             ),
             self._lock_if_pass_unlocked(spot),
         )
@@ -645,7 +645,7 @@ class EmittingGame(Game):
     async def lock(self, spot: int) -> None:
         super().lock(spot)
         await self._emit(
-            "set_unlocked", {"unlocked": False}, self._get_sid(spot)
+            "set_unlocked", {"unlocked": False}, room=self._get_sid(spot)
         )
 
     async def _message(self, message: str) -> None:
@@ -685,19 +685,19 @@ class EmittingGame(Game):
         await asyncio.gather(
             self._set_takes(spot, takes_and_gives),
             self._set_gives(spot, takes_and_gives),
-            self._emit("set_asker", {"asker": asker}, self._get_sid(spot)),
+            self._emit("set_asker", {"asker": asker}, room=self._get_sid(spot)),
         )
 
     async def _set_giver(self, spot: int, giver: bool) -> None:
-        await self._emit("set_giver", {"giver": giver}, self._get_sid(spot))
+        await self._emit("set_giver", {"giver": giver}, room=self._get_sid(spot))
 
     async def _set_takes(self, spot: int, takes: int) -> None:
         super()._set_takes(spot, takes)
-        await self._emit("set_takes", {"takes": takes}, self._get_sid(spot))
+        await self._emit("set_takes", {"takes": takes}, room=self._get_sid(spot))
 
     async def _set_gives(self, spot: int, gives: int) -> None:
         super()._set_gives(spot, gives)
-        await self._emit("set_gives", {"gives": gives}, self._get_sid(spot))
+        await self._emit("set_gives", {"gives": gives}, room=self._get_sid(spot))
 
     def _add_to_already_asked(self, spot: int, value: int) -> None:
         super()._add_to_already_asked(spot, value)
@@ -756,4 +756,4 @@ class EmittingGame(Game):
     # alerting related methods
 
     async def _emit_alert(self, alert, sid: str) -> None:
-        await self._emit("alert", {"alert": alert}, sid)
+        await self._emit("alert", {"alert": alert}, room=sid)

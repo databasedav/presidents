@@ -17,11 +17,11 @@ class Player(BaseModel):
 
 class PlayerSidGame(Player):
     sid: str
-    game_id: UUID
+    game_id: str
 
 
 class Game(GameAttrs):
-    game_id: UUID = None
+    game_id: str = None
     num_players: int = None
     players: List[Player] = None
 
@@ -29,3 +29,11 @@ class Game(GameAttrs):
 class GameIdUsername(BaseModel):
     game_id: str
     username: str
+
+
+class GameAction(BaseModel):
+    game_id: str
+    sid: str
+    action: str
+    card: int = None  # for card clicks
+    rank: int = None  # for asking clicks

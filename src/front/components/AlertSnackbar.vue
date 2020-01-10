@@ -1,5 +1,5 @@
 <template>
-  <v-snackbar v-model="snackbar" top="true">
+  <v-snackbar v-model="snackbar" :top="true">
     {{ alert }}
     <v-btn color="pink" flat @click="snackbar = false">
       Close

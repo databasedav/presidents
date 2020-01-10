@@ -13,7 +13,9 @@ export default new Vuex.Store({
   state: {
     username: "",
     servers: [],
-    alert: ''
+    alert: '',
+    testing_sids: []
+
   },
 
   mutations: {
@@ -24,8 +26,9 @@ export default new Vuex.Store({
 
   actions: {
     create_game ({ dispatch }, payload) {
-      axios.post('http://0.0.0.0:8001/create_game', {name: payload.name})
-        .then(response => {
+      axios.post('http://0.0.0.0:8001/create_game', {
+        name: payload.name
+      }).then(response => {
         // adding a server auto joins it
         dispatch('join_game', {game_id: response.data.game_id})
       })
@@ -33,7 +36,7 @@ export default new Vuex.Store({
 
     join_game ({ state, commit }, payload) {
       const game_id = payload.game_id
-      axios.put('http://0.0.0.0:8001/join_game', {
+      return axios.put('http://0.0.0.0:8001/join_game', {
         game_id: game_id,
         username: state.username
       }).then(response => {
@@ -50,24 +53,32 @@ export default new Vuex.Store({
         })
         // if connection is succesful
         socket.once('connect', _ => {
-          // game server id is used as a vuex namespace because
+          // game id is used as a vuex namespace because
           // I plan to support playing multiple games at the
           // same time TODO
-          context.registerModule(game_server_id, create_game_module())
-          commit('set_socket', {
-            socket: socket
-          })
+          // for testing, the sid is used
+          const sid = socket.io.engine.id
+          const namespace = payload.testing ? sid : game_id
+          // need to do this because otherwise game views cannot use the sid
+          // as the vuex namespace
+          if (payload.testing) {
+            state.testing_sids.push(sid)
+          }
+          this.registerModule(namespace, create_game_module())
+          commit(`${namespace}/set_socket`, {socket: socket})
           // register presidents event listeners
           EVENTS.forEach(event => {
             socket.on(event, payload => {
-              commit(`${game_server_id}/${event}`, payload)
+              commit(`${namespace}/${event}`, payload)
             })
           })
 
-          router.push('presidents')
+          if (!payload.testing) {
+            router.push('presidents')
+          }
         })
       }).catch(err => {
-        console.log(err)
+        // console.log(err)
         // state.alert = err.response.detail
       })
       

@@ -97,14 +97,14 @@ export default {
   },
 
   props: {
-    // server namespace; also vuex module namespace when not testing
-    server: String,
+    game_id: null,
     // when true, plugs in testing socket and vuex module whose namespaces
     // are the id of the socket instead of the server namespace
     testing: {
       type: Boolean,
       default: false
-    }
+    },
+    testing_sid_index: Number
   },
 
   data () {
@@ -113,76 +113,70 @@ export default {
     };
   },
 
-  created () {
-    this.$store.commit('set_username', {'username': 'test'})
-    this.$store.dispatch('create_game', {'name': 'test'})
-    // const socket = io(`http://0.0.0.0:8000${this.server}`, {
-    //   forceNew: true,
-    //   transportOptions: {
-    //     polling: {
-    //       extraHeaders: {
-    //         'key': 'peepeepoopoo'
-    //       }
-    //     }
-    //   }
-    // });
-
-    // socket.once("connect", () => {
-    //   // if testing (i.e. four player vue), use socket's engine id (client's sid)
-    //   // as namespace; otherwise uses the server namespace as individual
-    //   // players (sockets) can be in a single game at most once; this is
-    //   // here because need to wait till socket connects to get its id (sid)
-    //   const namespace = this.testing ? socket.io.engine.id : this.server;
-    //   this.$store.registerModule(namespace, create_server_module());
-    //   // register presidents event listeners
-    //   EVENTS.forEach(event => {
-    //     socket.on(event, payload => {
-    //       this.$store.commit(`${namespace}/${event}`, payload);
-    //     });
-    //   });
-    //   // gives store access to namespaced socket
-    //   this.$store.commit(`${namespace}/set_socket`, { socket: socket });
-    //   this.sid = namespace;
-    // });
+  watch: {
+    game_id: {
+      handler: function (game_id) {
+        if (game_id) {
+          this.$store.dispatch('join_game', {game_id: game_id, testing: this.testing})
+        }
+      },
+      immediate: true
+    }
   },
 
   methods: {
     card_click (card) {
-      this.$store.dispatch(`${this.namespace}/emit_card_click`, {
+      this.$store.dispatch(`${this.namespace}/emit_game_action`, {
+        action: 'card_click',
         card: card
-      });
+      })
     },
 
     unlock () {
-      this.$store.dispatch(`${this.namespace}/emit_unlock`);
+      this.$store.dispatch(`${this.namespace}/emit_game_action`, {
+        action: 'unlock'
+      });
     },
 
     lock () {
-      this.$store.dispatch(`${this.namespace}/emit_lock`);
+      this.$store.dispatch(`${this.namespace}/emit_game_action`, {
+        action: 'lock'
+      });
     },
 
     play () {
-      this.$store.dispatch(`${this.namespace}/emit_play`);
+      this.$store.dispatch(`${this.namespace}/emit_game_action`, {
+        action: 'play'
+      });
     },
 
     unlock_pass () {
-      this.$store.dispatch(`${this.namespace}/emit_unlock_pass`);
+      this.$store.dispatch(`${this.namespace}/emit_game_action`, {
+        action: 'unlock_pass'
+      });
     },
 
     pass () {
-      this.$store.dispatch(`${this.namespace}/emit_pass`);
+      this.$store.dispatch(`${this.namespace}/emit_game_action`, {
+        action: 'pass'
+      });
     },
 
     ask () {
-      this.$store.dispatch(`${this.namespace}/emit_ask`);
+      this.$store.dispatch(`${this.namespace}/emit_game_action`, {
+        action: 'ask'
+      });
     },
 
     give () {
-      this.$store.dispatch(`${this.namespace}/emit_give`);
+      this.$store.dispatch(`${this.namespace}/emit_game_action`, {
+        action: 'give'
+      });
     },
 
     asking_click (rank) {
-      this.$store.dispatch(`${this.namespace}/emit_asking_click`, {
+      this.$store.dispatch(`${this.namespace}/emit_game_action`, {
+        action: 'asking_click',
         rank: rank
       });
     }
@@ -190,7 +184,7 @@ export default {
 
   computed: {
     namespace () {
-      return (this.testing && this.sid) || this.server;
+      return (this.testing && this.$store.state.testing_sids[this.testing_sid_index-1]) || this.game_id;
     },
 
     on_turn () {

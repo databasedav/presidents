@@ -14,12 +14,14 @@ from starlette.middleware.cors import CORSMiddleware
 from ...utils import main
 from ..models import Game, GameAttrs, GameIdUsername
 
+
 KEY_TTL = 10  # time to live in seconds
 
 
 logger = logging.getLogger(__name__)
 
 game_server_fast = fastapi.FastAPI()
+# TODO: i don't need all of these
 game_server_fast.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,7 +29,11 @@ game_server_fast.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-game_server_sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
+game_server_sio = socketio.AsyncServer(
+    async_mode="asgi",
+    client_manager=socketio.AsyncRedisManager('redis://socketio_pubsub'),
+    cors_allowed_origins="*"
+)
 
 game_store = None
 game_god_client = aiohttp.ClientSession()
@@ -125,16 +131,28 @@ async def connect(sid, environ):
 async def prune_expired_keys(game_id: str):
     await game_store.zremrangebyscore(f"{game_id}:keys", max=time())
 
+VALID_GAME_ACTIONS = {  # value is required payload
+    'card_click': ['card', 'timestamp'],
+    'unlock': None,
+    'lock': None,
+    'play': None,
+    'unlock_pass': None,
+    'pass': None,
+    'ask': None,
+    'give': None,
+    'asking_click': ['rank']
+}
 
 @game_server_sio.event
-async def game_click(sid, payload):
+async def game_action(sid, payload):
     timestamp = datetime.utcnow()
+    assert payload['action'] in VALID_GAME_ACTIONS and VALID_GAME_ACTIONS[payload['action']] in payload if VALID_GAME_ACTIONS[payload['action']] else True
     async with game_god_client.put(
-        "http://game_god/game_click",
-        params={**payload, "sid": sid, "game_id": get_game_id(sid)},
+        "http://game_god:8000/game_action",
+        json={**payload, "sid": sid, "game_id": await get_game_id(sid)},
     ) as response:
-        assert response.status == 201
-        # await cast_game_click
+        assert response.status == 200
+        # await cast_game_click(timestamp)
 
 
 game_server = socketio.ASGIApp(

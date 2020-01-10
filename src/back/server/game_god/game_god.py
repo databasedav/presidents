@@ -4,7 +4,7 @@ import aioredis
 import logging
 from starlette.middleware import cors
 
-from ..models import Game, GameAttrs, PlayerSidGame
+from ..models import Game, GameAttrs, PlayerSidGame, GameAction
 from ...game import EmittingGame
 from ...utils import AsyncTimer
 
@@ -45,11 +45,12 @@ async def add_game(game_attrs: GameAttrs):
 
 @game_god.put("/add_player_to_game", status_code=200)
 async def add_player_to_game(player_sid_game: PlayerSidGame):
-    games[str(player_sid_game.game_id)].add_player(
+    await games[player_sid_game.game_id].add_player(
         sid=player_sid_game.sid, name=player_sid_game.username
     )
+    await game_store.set(player_sid_game.sid, player_sid_game.game_id)
 
 
-@game_god.put("/game_click", status_code=200)
-async def game_click():
-    ...
+@game_god.put("/game_action", status_code=200)
+async def game_action(game_action: GameAction):
+    await getattr(games[game_action.game_id], f'{game_action.action}_handler')(game_action.sid, *[getattr(game_action, arg) for arg in ['card', 'rank', 'timestamp'] if getattr(game_action, arg)])
