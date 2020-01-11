@@ -57,8 +57,8 @@ class ClientBotFarm:
         name: str,
         server_id: str,
         *,
-        turn_time: Union[int, float] = None,
-        reserve_time: Union[int, float] = None,
+        turn_time: float = None,
+        reserve_time: float = None,
     ):
         if not self._server_browser_client:
             raise Exception(

@@ -5,8 +5,7 @@ from .utils import rank_articler
 from .game import base_hand, PresidentsError
 from .chamber import Chamber, CardNotInChamberError
 from .hand import Hand, DuplicateCardError, FullHandError, NotPlayableOnError
-
-
+    
 async def add_or_remove_card(self, spot: int, card: int) -> None:
     if not self.trading and self._is_finished(spot):
         raise PresidentsError(
@@ -28,17 +27,14 @@ async def add_or_remove_card(self, spot: int, card: int) -> None:
     except FullHandError:
         raise PresidentsError("your current hand is full", permitted=True)
 
-
 async def add_player(self, name: str, **kwargs) -> None:
     await self._add_player_to_spot(
         name=name, spot=self._rand_open_spot(), **kwargs
     )
 
-
 async def _add_to_already_asked(self, spot: int, value: int) -> None:
     await self._set_selected_asking_option(spot, None)
     self._already_asked[spot].add(value)
-
 
 async def ask_for_card(self, spot: int) -> None:
     if not self.trading:
@@ -47,7 +43,9 @@ async def ask_for_card(self, spot: int) -> None:
         raise PresidentsError("you are not an asker", permitted=False)
     if not self._unlocked[spot]:
         # await self.lock(spot)  # TODO doing this should be part of resetting the DOM, say
-        raise PresidentsError("you must unlock before asking", permitted=False)
+        raise PresidentsError(
+            "you must unlock before asking", permitted=False
+        )
     # TODO: remove trading options when takes run out
     value: int = self._selected_asking_options[spot]
     articled_rank: str = rank_articler(value)
@@ -73,7 +71,6 @@ async def ask_for_card(self, spot: int) -> None:
         await self._set_giving_options(asked_spot, giving_options)
         await self._wait_for_reply(spot, asked_spot)
 
-
 async def _auto_give(self, spot) -> None:
     chamber: Chamber = self._chambers[spot]
     currently_selected_cards: List[int] = chamber.hand.to_list()
@@ -91,7 +88,6 @@ async def _auto_give(self, spot) -> None:
         # one of the selected cards was auto given
         except CardNotInChamberError:
             pass
-
 
 async def _auto_play_or_pass(self, spot: int) -> None:
     """
@@ -127,7 +123,6 @@ async def _auto_play_or_pass(self, spot: int) -> None:
         # one of the selected cards was auto played
         except PresidentsError:
             pass
-
 
 async def _auto_trade(self) -> None:
     # TODO: only auto trade for a single spot so pres and vice pres
@@ -199,7 +194,6 @@ async def _auto_trade(self) -> None:
 
     assert self._no_takes_or_gives
 
-
 async def _decrement_takes(
     self, spot: int, *, auto_trading: bool = False
 ) -> None:
@@ -208,7 +202,6 @@ async def _decrement_takes(
     if not auto_trading and self._no_takes_or_gives:
         await self._set_trading(False)
 
-
 async def _decrement_gives(
     self, spot: int, *, auto_trading: bool = False
 ) -> None:
@@ -216,11 +209,9 @@ async def _decrement_gives(
     if not auto_trading and self._no_takes_or_gives:
         await self._set_trading(False)
 
-
 async def _handle_giving_timeout(self, spot) -> None:
     await self._stop_timer("turn", spot, cancel=False)
     await self._auto_give(spot)
-
 
 async def _handle_playing_timeout(self, spot: int) -> None:
     """
@@ -229,7 +220,7 @@ async def _handle_playing_timeout(self, spot: int) -> None:
     # was using turn time
     if not self._is_using_reserve_time(spot):
         await self._stop_timer("turn", spot, cancel=False)
-        reserve_time: Union[int, float] = self._reserve_times[spot]
+        reserve_time: float = self._reserve_times[spot]
         if reserve_time:
             # start reserve time
             await self._set_time("reserve", reserve_time, spot, True)
@@ -238,7 +229,6 @@ async def _handle_playing_timeout(self, spot: int) -> None:
     else:  # was using reserve time
         await self._stop_timer("reserve", spot, cancel=False)
         await self._auto_play_or_pass(spot)
-
 
 async def _handle_trading_timeout(self) -> None:
     # TODO:
@@ -250,16 +240,13 @@ async def _handle_trading_timeout(self) -> None:
     await self._set_trading(False, start=False, cancel=False)
     await self._start_round(setup=False)
 
-
 async def _lock_if_unlocked(self, spot: int) -> None:
     if self._unlocked[spot]:
         await self.lock(spot)
 
-
 async def _lock_if_pass_unlocked(self, spot: int) -> None:
     if self._pass_unlocked[spot]:
         await self._lock_pass(spot)
-
 
 async def maybe_pass_turn(self, spot: int) -> None:
     if self._is_finished(spot):
@@ -272,10 +259,11 @@ async def maybe_pass_turn(self, spot: int) -> None:
             "you must unlock pass before passing", permitted=False
         )
     if not self._is_current_player(spot):
-        raise PresidentsError("you can only pass on your turn", permitted=True)
+        raise PresidentsError(
+            "you can only pass on your turn", permitted=True
+        )
     else:
         await self._pass_turn(spot)
-
 
 async def maybe_play_current_hand(self, spot: int, **kwargs) -> None:
     if self._is_finished(spot):
@@ -294,14 +282,13 @@ async def maybe_play_current_hand(self, spot: int, **kwargs) -> None:
     else:
         await self._play_current_hand(spot, **kwargs)
 
-
-async def maybe_set_selected_asking_option(
-    self, spot: int, value: int
-) -> None:
+async def maybe_set_selected_asking_option(self, spot: int, value: int) -> None:
     if not self._is_asker(spot):
         raise PresidentsError("you are not an asker", permitted=False)
     if not 1 <= value <= 13:
-        raise PresidentsError("you cannot ask for this value", permitted=False)
+        raise PresidentsError(
+            "you cannot ask for this value", permitted=False
+        )
     if self._is_already_asked(spot, value):
         raise PresidentsError(
             f"{self._names[self._get_opposing_position_spot(spot)]} doesn't have any cards of this rank",
@@ -309,9 +296,9 @@ async def maybe_set_selected_asking_option(
         )
     await self.lock(spot)
     await self._set_selected_asking_option(
-        spot, None if value == self._selected_asking_options[spot] else value
+        spot,
+        None if value == self._selected_asking_options[spot] else value,
     )
-
 
 async def maybe_unlock_ask(self, spot: int) -> None:
     if not self.trading:
@@ -327,7 +314,9 @@ async def maybe_unlock_ask(self, spot: int) -> None:
         # unlocking even if it knows that no takes since potentially
         # unlocking should be generally allowed when the error is
         # caused by the rules of presidents itself
-        raise PresidentsError("you have no takes remaining", permitted=True)
+        raise PresidentsError(
+            "you have no takes remaining", permitted=True
+        )
     # selected_asking_option is None if no trading option is selected
     if not self._selected_asking_options[spot]:
         raise PresidentsError(
@@ -337,16 +326,18 @@ async def maybe_unlock_ask(self, spot: int) -> None:
     else:
         await self._unlock(spot)
 
-
 async def maybe_unlock_give(self, spot: int) -> None:
     if not self.trading:
         raise PresidentsError("trading is not ongoing", permitted=False)
     if self._is_asker(spot) and not self._has_gives(spot):
-        raise PresidentsError("you have no gives remaining", permitted=True)
+        raise PresidentsError(
+            "you have no gives remaining", permitted=True
+        )
     hand: Hand = self._get_current_hand(spot)
     if hand.is_empty:
         raise PresidentsError(
-            "you must add cards before attempting to unlock", permitted=True
+            "you must add cards before attempting to unlock",
+            permitted=True,
         )
     # TODO: add ability to give valid/invalid 2 card hand
     if not hand.is_single:
@@ -367,7 +358,6 @@ async def maybe_unlock_give(self, spot: int) -> None:
         else:
             await self._unlock(spot)
 
-
 async def maybe_unlock_pass_turn(self, spot: int) -> None:
     if self._is_finished(spot):
         raise PresidentsError(
@@ -376,12 +366,12 @@ async def maybe_unlock_pass_turn(self, spot: int) -> None:
     if self._is_current_player(spot):
         if self._hand_in_play is base_hand:
             raise PresidentsError(
-                "you cannot pass when you have the 3 of clubs", permitted=True
+                "you cannot pass when you have the 3 of clubs",
+                permitted=True,
             )
         if self._hand_in_play is None:
             raise PresidentsError("you can play anyhand", permitted=True)
     await self._unlock_pass(spot)
-
 
 async def maybe_unlock_play(self, spot: int):
     """
@@ -397,10 +387,13 @@ async def maybe_unlock_play(self, spot: int):
     hand = self._get_current_hand(spot)
     if hand.is_empty:
         raise PresidentsError(
-            "you must add cards before attempting to unlock", permitted=True
+            "you must add cards before attempting to unlock",
+            permitted=True,
         )
     if not hand.is_valid:
-        raise PresidentsError("you can't play invalid hands", permitted=True)
+        raise PresidentsError(
+            "you can't play invalid hands", permitted=True
+        )
     hip = self._hand_in_play
     if hip is base_hand:  # start of the game
         if self._is_current_player(spot):  # player with 3 of clubs
@@ -430,7 +423,6 @@ async def maybe_unlock_play(self, spot: int):
         except NotPlayableOnError as e:
             raise PresidentsError(str(e), permitted=True)
 
-
 async def _pause_timers(self) -> None:
     """
     Pausing all timers is different from stopping them; pausing only 
@@ -455,7 +447,9 @@ async def _pause_timers(self) -> None:
                 now - self._turn_time_use_starts[spot]
             ).total_seconds()
             await self._set_time("turn", self._turn_times[spot] - time_used)
-            self._paused_timers.append(lambda: self._start_timer("turn", spot))
+            self._paused_timers.append(
+                lambda: self._start_timer("turn", spot)
+            )
         else:
             self._reserve_time_use_starts[spot] = None
             time_used = (
@@ -485,8 +479,9 @@ async def _pause_timers(self) -> None:
             ).total_seconds()
             self._turn_times[spot] -= time_used
             self._turn_time_use_starts[spot] = None
-            self._paused_timers.append(lambda: self._start_timer("turn", spot))
-
+            self._paused_timers.append(
+                lambda: self._start_timer("turn", spot)
+            )
 
 async def _post_pass_handler(self) -> None:
     # all remaining players passed on a winning hand
@@ -505,7 +500,6 @@ async def _post_pass_handler(self) -> None:
     else:
         await self._next_player()
 
-
 async def _post_play_handler(self, spot: int) -> None:
     if self._chambers[spot].is_empty:
         # player_finish takes care of going to the next player
@@ -515,27 +509,21 @@ async def _post_play_handler(self, spot: int) -> None:
         self._finishing_last_played = False
         await self._next_player()
 
-
 async def _set_asshole(self, spot: int) -> None:
     await self._set_giver(spot, True)
-
 
 async def _set_president(self, spot: int) -> None:
     await self._set_asker(spot, True, 2)
 
-
 async def _set_vice_asshole(self, spot: int) -> None:
     await self._set_giver(spot, True)
-
 
 async def _set_vice_president(self, spot: int) -> None:
     await self._set_asker(spot, True, 1)
 
-
 async def _setup_round(self, *, deck: List[Iterable[int]] = None):
     assert self.num_players == 4, "four players required to start round"
     await self._deal_cards(deck=deck)
-
 
 async def _stop_timer(
     self, which: str, spot: int = None, *, cancel: bool = True
@@ -571,7 +559,9 @@ async def _stop_timer(
         if cancel and self._timers[spot] is not None:
             self._timers[spot].cancel()
         self._timers[spot] = None
-        time_used = (now - self._reserve_time_use_starts[spot]).total_seconds()
+        time_used = (
+            now - self._reserve_time_use_starts[spot]
+        ).total_seconds()
         await self._set_time(
             # need the max statement since this function is used during
             # reserve time timeouts
@@ -586,11 +576,11 @@ async def _stop_timer(
             self._trading_timer.cancel()
         self._trading_timer = None
         time_used = (now - self._trading_time_start).total_seconds()
-        await self._set_time("trading", self._trading_time - time_used)
+        await self._set_time("trading", self._trading_time)
         self._trading_time_start = None
-
 
 async def _wait_for_reply(self, asker_spot: int, asked_spot: int) -> None:
     await self._set_time("turn", self._giving_time, asked_spot, True)
     await self._set_selected_asking_option(asker_spot, None)
     self._waiting[asker_spot] = True
+

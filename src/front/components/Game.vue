@@ -117,7 +117,7 @@ export default {
     game_id: {
       handler: function (game_id) {
         if (game_id) {
-          this.$store.dispatch('join_game', {game_id: game_id, testing: this.testing})
+          this.$store.dispatch('join_game', {game_id: game_id, testing: this.testing, testing_username: 'abcd'[this.testing_sid_index-1]})
         }
       },
       immediate: true

@@ -129,40 +129,30 @@ export default {
   },
 
   computed: {
-    ...mapState(["nickname"]),
-
-    socket() {
-      return this.$store.state[this.rbnsp].socket;
-    },
-
-    servers() {
-      return this.$store.state[this.rbnsp]
-        ? this.$store.state[this.rbnsp].servers
-        : [];
-    }
+    ...mapState(["username", "games"])
   },
 
   methods: {
-    refresh() {
+    refresh () {
       this.$store.dispatch(`${this.rbnsp}/emit_refresh`);
     },
 
-    close() {
+    close () {
       this.loading = false;
       this.name = "";
       this.dialog = false;
     },
 
-    add_server() {
+    create_game () {
       this.loading = true;
-      this.$store.dispatch('add_server', {
+      this.$store.dispatch('create_game', {
         name: this.name
       });
     },
 
-    join_server(game_server_id) {
-      this.$store.dispatch('join_server', {
-        game_server_id: game_server_id,
+    join_server (game_id) {
+      this.$store.dispatch('join_game', {
+        game_id: game_id,
         username: this.username,
       });
     }

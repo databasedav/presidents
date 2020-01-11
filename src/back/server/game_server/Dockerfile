@@ -5,4 +5,4 @@ copy Pipfile.lock Pipfile.lock
 run pip install pipenv
 # https://stackoverflow.com/a/55610857
 run pipenv install --deploy --ignore-pipfile --dev
-entrypoint pipenv run uvicorn --host 0.0.0.0 --reload src.back.server.game_server.game_server:game_server
+cmd pipenv run uvicorn --host 0.0.0.0 --reload src.back.server.game_server.game_server:game_server

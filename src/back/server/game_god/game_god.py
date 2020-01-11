@@ -2,11 +2,13 @@ import fastapi
 import socketio
 import aioredis
 import logging
+import uvicorn
+import asyncio
 from starlette.middleware import cors
 
 from ..models import Game, GameAttrs, PlayerSidGame, GameAction
 from ...game import EmittingGame
-from ...utils import AsyncTimer
+from ...utils import AsyncTimer, main
 
 
 logger = logging.getLogger(__name__)
@@ -29,7 +31,9 @@ game_store = None
 @game_god.on_event("startup")
 async def on_startup():
     global game_store
-    game_store = await aioredis.create_redis_pool("redis://game_store")
+    while not game_store:
+        game_store = await aioredis.create_redis_pool("redis://game_store")
+        await asyncio.sleep(0.5)
 
 
 @game_god.post("/add_game", response_model=Game, status_code=201)
@@ -45,12 +49,29 @@ async def add_game(game_attrs: GameAttrs):
 
 @game_god.put("/add_player_to_game", status_code=200)
 async def add_player_to_game(player_sid_game: PlayerSidGame):
-    await games[player_sid_game.game_id].add_player(
-        sid=player_sid_game.sid, name=player_sid_game.username
+    game_id = player_sid_game.game_id
+    sid = player_sid_game.sid
+    await games[game_id].add_player(sid=sid, name=player_sid_game.username)
+    await asyncio.gather(
+        game_store.set(sid, game_id),
+        game_store.hincrby(game_id, 'num_players')
     )
-    await game_store.set(player_sid_game.sid, player_sid_game.game_id)
 
 
 @game_god.put("/game_action", status_code=200)
 async def game_action(game_action: GameAction):
-    await getattr(games[game_action.game_id], f'{game_action.action}_handler')(game_action.sid, *[getattr(game_action, arg) for arg in ['card', 'rank', 'timestamp'] if getattr(game_action, arg)])
+    action = game_action.action
+    method = getattr(games[game_action.game_id], f'{game_action.action}_handler')
+    if action == 'card_click':
+        await method(game_action.sid, game_action.card)
+    elif action == 'play':
+        await method(game_action.sid, game_action.timestamp)
+    elif action == 'asking_click':
+        await method(game_action.sid, game_action.rank)
+    else:
+        await method(game_action.sid)
+
+
+@main
+def run():
+    uvicorn.run(game_god, host='0.0.0.0')

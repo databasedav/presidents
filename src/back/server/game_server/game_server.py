@@ -53,7 +53,9 @@ async def get_game_id(sid: str):
 @game_server_fast.on_event("startup")
 async def on_startup():
     global game_store
-    game_store = await aioredis.create_redis_pool("redis://game_store")
+    while not game_store:
+        game_store = await aioredis.create_redis_pool("redis://game_store")
+        await asyncio.sleep(0.5)
 
 
 # TODO: requires auth
@@ -100,6 +102,9 @@ async def request_game_key(game_id_username: GameIdUsername):
     return {"game_key": game_key}
 
 
+# @game_server_fast.on('/get_servers')
+
+
 @game_server_sio.event
 async def connect(sid, environ):
     now = time()
@@ -131,8 +136,11 @@ async def connect(sid, environ):
 async def prune_expired_keys(game_id: str):
     await game_store.zremrangebyscore(f"{game_id}:keys", max=time())
 
+
+
+
 VALID_GAME_ACTIONS = {  # value is required payload
-    'card_click': ['card', 'timestamp'],
+    'card_click': 'card',
     'unlock': None,
     'lock': None,
     'play': None,
@@ -140,13 +148,20 @@ VALID_GAME_ACTIONS = {  # value is required payload
     'pass': None,
     'ask': None,
     'give': None,
-    'asking_click': ['rank']
+    'asking_click': 'rank'
 }
 
 @game_server_sio.event
 async def game_action(sid, payload):
     timestamp = datetime.utcnow()
-    assert payload['action'] in VALID_GAME_ACTIONS and VALID_GAME_ACTIONS[payload['action']] in payload if VALID_GAME_ACTIONS[payload['action']] else True
+
+    # action and payload validation
+    action = payload['action']
+    assert action in VALID_GAME_ACTIONS
+    required_payload = VALID_GAME_ACTIONS[action]
+    if required_payload:
+        assert required_payload in payload
+
     async with game_god_client.put(
         "http://game_god:8000/game_action",
         json={**payload, "sid": sid, "game_id": await get_game_id(sid)},
@@ -158,3 +173,8 @@ async def game_action(sid, payload):
 game_server = socketio.ASGIApp(
     socketio_server=game_server_sio, other_asgi_app=game_server_fast
 )
+
+
+@main
+def run():
+    uvicorn.run(game_server, host='0.0.0.0')

@@ -1,8 +1,8 @@
 <template>
   <div>
     <v-text-field
-      label="nickname"
-      v-model="nickname"
+      label="username"
+      v-model="username"
       clearable
       counter
       maxlength="10"
@@ -10,10 +10,10 @@
     ></v-text-field>
     <v-btn
       color="success"
-      :disabled="!nickname"
+      :disabled="!username"
       @click="send_to_server_browser"
     >
-      browse servers
+      browse games
     </v-btn>
   </div>
 </template>
@@ -22,23 +22,22 @@
 import router from "../router";
 
 export default {
-  name: "GuestLogin",
+  name: "Login",
 
   data() {
     return {
-      // will be able to choose server eventually...
-      server: "US-West"
+      
     };
   },
 
   computed: {
     nickname: {
       get() {
-        return this.$store.state.nickname;
+        return this.$store.state.username;
       },
 
       set(nickname) {
-        this.$store.commit("set_nickname", { nickname: nickname });
+        this.$store.commit("set_username", { username: username });
       }
     }
   },

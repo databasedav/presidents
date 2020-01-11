@@ -61,10 +61,10 @@ class Game:
         self,
         *,
         timer: Callable = NoopTimer.timer,
-        turn_time: Union[int, float] = TURN_TIME,
-        reserve_time: Union[int, float] = RESERVE_TIME,
-        trading_time: Union[int, float] = TRADING_TIME,
-        giving_time: Union[int, float] = GIVING_TIME,
+        turn_time: float = TURN_TIME,
+        reserve_time: float = RESERVE_TIME,
+        trading_time: float = TRADING_TIME,
+        giving_time: float = GIVING_TIME,
     ) -> None:
 
         range_4 = range(4)  # software engineering
@@ -85,12 +85,12 @@ class Game:
         # all spot timers (turn, including playing and giving, and
         # reserve) are all stored here; only trading timer is separate
         self._timers: List = [None for _ in range_4]
-        self._turn_time: Union[int, float] = turn_time
+        self._turn_time: float = turn_time
         # these turn time lists are used for both playing and giving
-        self._turn_times: List[Union[int, float]] = [0 for _ in range_4]
+        self._turn_times: List[float] = [0 for _ in range_4]
         self._turn_time_use_starts: List[datetime] = [None for _ in range_4]
-        self._reserve_time: Union[int, float] = reserve_time
-        self._reserve_times: List[Union[int, float]] = [
+        self._reserve_time: float = reserve_time
+        self._reserve_times: List[float] = [
             reserve_time for _ in range_4
         ]
         self._reserve_time_use_starts: List[datetime] = [None for _ in range_4]
@@ -134,8 +134,8 @@ class Game:
         self,
         *,
         timer: Optional[Callable] = None,
-        turn_time: Optional[Union[int, float]] = None,
-        reserve_time: Union[int, float] = 0,
+        turn_time: Optional[float] = None,
+        reserve_time: float = 0,
     ):
         """
         Resetting maintains timer and reserve time settings unless
@@ -305,7 +305,7 @@ class Game:
     def _set_time(
         self,
         which: str,
-        seconds: Union[int, float],
+        seconds: float,
         spot: int = None,
         start: bool = False,
     ):
@@ -407,7 +407,7 @@ class Game:
                 self._trading_timer.cancel()
             self._trading_timer = None
             time_used = (now - self._trading_time_start).total_seconds()
-            self._set_time("trading", self._trading_time - time_used)
+            self._set_time("trading", self._trading_time)
             self._trading_time_start = None
 
     def _pause_timers(self) -> None:
@@ -482,7 +482,7 @@ class Game:
         # was using turn time
         if not self._is_using_reserve_time(spot):
             self._stop_timer("turn", spot, cancel=False)
-            reserve_time: Union[int, float] = self._reserve_times[spot]
+            reserve_time: float = self._reserve_times[spot]
             if reserve_time:
                 # start reserve time
                 self._set_time("reserve", reserve_time, spot, True)

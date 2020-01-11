@@ -100,9 +100,7 @@ class EmittingGame(Game):
 
         # TODO TODO: THIS SHOULD NOT BE HERE. (JUST FOR TESTING)
         if self.num_players == 4:
-            await self._start_round(
-                setup=True)#, deck=[[1], [2], [3], [4]], testing=True
-            # )
+            await self._start_round(setup=True)#, deck=[[1], [2], [3], [4]], testing=True)
 
     def remove_player(self, sid: str) -> None:
         super().remove_player(self._get_spot(sid))
@@ -195,7 +193,7 @@ class EmittingGame(Game):
     async def _set_time(
         self,
         which: str,
-        seconds: Union[int, float],
+        seconds: float,
         spot: int = None,
         start: bool = False,
     ) -> None:
@@ -442,7 +440,7 @@ class EmittingGame(Game):
                 False when the handling trading timeout 
         """
         self.trading = trading
-        await self._emit_to_server("set_trading", {"trading": trading})
+        await self._emit_to_players("set_trading", {"trading": trading})
         range_4 = range(4)
         if trading:
             await asyncio.gather(
@@ -460,7 +458,7 @@ class EmittingGame(Game):
             self._timers = [None for _ in range_4]
             self._turn_times = [0 for _ in range_4]
             self._turn_time_use_starts = [None for _ in range_4]
-            self._reserve_times: List[Union[int, float]] = [
+            self._reserve_times: List[float] = [
                 self._reserve_time for _ in range_4
             ]
             self._reserve_time_use_starts: List[datetime] = [
@@ -649,7 +647,7 @@ class EmittingGame(Game):
         )
 
     async def _message(self, message: str) -> None:
-        await self._emit_to_server("message", {"message": message})
+        await self._emit_to_players("message", {"message": message})
         super()._message(message)
 
     # getters
@@ -750,8 +748,16 @@ class EmittingGame(Game):
         else:
             raise AssertionError("skip_sid can only be a string or a list")
 
+    # TODO
+    async def _emit_to_spectators(self, *args, **kwargs):
+        ...
+
+    # TODO
     async def _emit_to_server(self, *args, **kwargs):
-        await self._emit(*args, **kwargs)
+        """
+        Emits to players and spectators
+        """
+        ...
 
     # alerting related methods
 

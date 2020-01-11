@@ -51,10 +51,10 @@ class GameServer(AsyncNamespace):
         name: str,
         *,
         game: EmittingGame = None,
-        turn_time: Union[int, float] = None,
-        reserve_time: Union[int, float] = None,
-        trading_time: Union[int, float] = None,
-        giving_time: Union[int, float] = None,
+        turn_time: float = None,
+        reserve_time: float = None,
+        trading_time: float = None,
+        giving_time: float = None,
     ) -> None:
         """
         Provided timer related attributes overwrites game's

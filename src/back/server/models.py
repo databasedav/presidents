@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from uuid import UUID
 from typing import List
+import datetime
 
 
 class GameAttrs(BaseModel):
@@ -37,3 +38,4 @@ class GameAction(BaseModel):
     action: str
     card: int = None  # for card clicks
     rank: int = None  # for asking clicks
+    timestamp: datetime.datetime = None

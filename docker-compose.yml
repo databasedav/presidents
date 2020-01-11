@@ -1,15 +1,17 @@
 version: '3'
 services:
-  # game_browser:
-  #   build:
-  #     context: ./
-  #     dockerfile: ./src/back/server/game_browser/Dockerfile
-  #   ports:
-  #     - "8000:8000"
-  #   volumes:
-  #     - ./src/back:/src/back
-  #   restart: always
+  game_store:
+    image: "redis:6.0-rc-buster"
+    ports: 
+      - "6379:6379"
+    restart: always
   
+  socketio_pubsub:
+    image: "redis:6.0-rc-buster"
+    ports: 
+      - "6380:6379"
+    restart: always
+
   game_server:
     build:
       context: ./
@@ -28,16 +30,4 @@ services:
       - "8002:8000"
     volumes:
       - ./src/back:/src/back
-    restart: always
-  
-  game_store:
-    image: "redis:6.0-rc-buster"
-    ports: 
-      - "6379:6379"
-    restart: always
-  
-  socketio_pubsub:
-    image: "redis:6.0-rc-buster"
-    ports: 
-      - "6380:6379"
     restart: always

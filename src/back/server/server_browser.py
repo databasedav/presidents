@@ -61,10 +61,10 @@
 #         *,
 #         server_id: str = str(uuid.uuid4()),
 #         timer: Callable = None,
-#         turn_time: Union[int, float] = None,
-#         reserve_time: Union[int, float] = None,
-#         trading_time: Union[int, float] = None,
-#         giving_time: Union[int, float] = None,
+#         turn_time: float = None,
+#         reserve_time: float = None,
+#         trading_time: float = None,
+#         giving_time: float = None,
 #     ):
 #         server: GameServer = GameServer(
 #             server_id,

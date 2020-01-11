@@ -12,10 +12,9 @@ Vue.use(Vuex);
 export default new Vuex.Store({
   state: {
     username: "",
-    servers: [],
+    games: [],
     alert: '',
     testing_sids: []
-
   },
 
   mutations: {
@@ -26,7 +25,7 @@ export default new Vuex.Store({
 
   actions: {
     create_game ({ dispatch }, payload) {
-      axios.post('http://0.0.0.0:8001/create_game', {
+      axios.post('http://presidents.cards/game_server/create_game', {
         name: payload.name
       }).then(response => {
         // adding a server auto joins it
@@ -36,11 +35,11 @@ export default new Vuex.Store({
 
     join_game ({ state, commit }, payload) {
       const game_id = payload.game_id
-      return axios.put('http://0.0.0.0:8001/join_game', {
+      return axios.put('http://presidents.cards/game_server/join_game', {
         game_id: game_id,
-        username: state.username
+        username: payload.testing_username || state.username
       }).then(response => {
-        const socket = io('/', {
+        const socket = io('http://presidents.cards/game_server/socket.io', {
           forceNew: true,
           transportOptions: {
             polling: {
@@ -60,7 +59,7 @@ export default new Vuex.Store({
           const sid = socket.io.engine.id
           const namespace = payload.testing ? sid : game_id
           // need to do this because otherwise game views cannot use the sid
-          // as the vuex namespace
+          // as the vuex namespace during testing
           if (payload.testing) {
             state.testing_sids.push(sid)
           }
@@ -78,20 +77,11 @@ export default new Vuex.Store({
           }
         })
       }).catch(err => {
-        // console.log(err)
-        // state.alert = err.response.detail
       })
-      
+    },
+
+    refresh_games ({state}, payload) {
+      axios.get('http://0.0.0.0')
     }
   }
-
-  // actions: {
-  //   plugin_server_browser (context, payload) {
-  //     server_browser_plugin(payload.rbnsp)(this)
-  //   },
-
-  //   plugin_server (context, payload) {
-  //     server_plugin(payload)(this)
-  //   },
-  // }
 });
