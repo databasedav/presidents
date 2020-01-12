@@ -1,21 +1,27 @@
 <template>
-  <div>
-    <v-text-field
-      label="username"
-      v-model="username"
-      clearable
-      counter
-      maxlength="10"
-      color="grey"
-    ></v-text-field>
-    <v-btn
-      color="success"
-      :disabled="!username"
-      @click="send_to_server_browser"
-    >
-      browse games
-    </v-btn>
-  </div>
+  <v-container>
+    <v-row justify="center">
+      <v-col cols="6">
+        <v-text-field
+          label="username"
+          v-model="username"
+          clearable
+          counter
+          maxlength="10"
+          color="grey"
+        ></v-text-field>
+      </v-col>
+    </v-row>
+    <v-row justify="center">
+      <v-btn
+        color="success"
+        :disabled="!username"
+        @click="send_to_game_browser"
+      >
+        browse games
+      </v-btn>
+    </v-row> 
+  </v-container>
 </template>
 
 <script>
@@ -24,32 +30,21 @@ import router from "../router";
 export default {
   name: "Login",
 
-  data() {
-    return {
-      
-    };
-  },
-
   computed: {
-    nickname: {
+    username: {
       get() {
         return this.$store.state.username;
       },
 
-      set(nickname) {
+      set(username) {
         this.$store.commit("set_username", { username: username });
       }
     }
   },
 
   methods: {
-    send_to_server_browser() {
-      router.push({
-        name: "server browser",
-        params: {
-          rbnsp: `/server_browser_${this.server}`
-        }
-      });
+    send_to_game_browser () {
+      router.push({ name: 'game browser' });
     }
   }
 };

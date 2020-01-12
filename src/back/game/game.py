@@ -90,9 +90,7 @@ class Game:
         self._turn_times: List[float] = [0 for _ in range_4]
         self._turn_time_use_starts: List[datetime] = [None for _ in range_4]
         self._reserve_time: float = reserve_time
-        self._reserve_times: List[float] = [
-            reserve_time for _ in range_4
-        ]
+        self._reserve_times: List[float] = [reserve_time for _ in range_4]
         self._reserve_time_use_starts: List[datetime] = [None for _ in range_4]
         self._trading_timer = None
         self._trading_time = trading_time
@@ -303,11 +301,7 @@ class Game:
         self._message(f"🎲 it's {self._names[self._current_player]}'s turn")
 
     def _set_time(
-        self,
-        which: str,
-        seconds: float,
-        spot: int = None,
-        start: bool = False,
+        self, which: str, seconds: float, spot: int = None, start: bool = False
     ):
         """
         Stores remaining time for turns (includes playing time, reserve

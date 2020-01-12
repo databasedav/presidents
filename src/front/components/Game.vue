@@ -109,7 +109,6 @@ export default {
 
   data () {
     return {
-      sid: null
     };
   },
 

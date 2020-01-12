@@ -12,7 +12,7 @@ from secrets import token_urlsafe
 from starlette.middleware.cors import CORSMiddleware
 
 from ...utils import main
-from ..models import Game, GameAttrs, GameIdUsername
+from ..models import Game, GameAttrs, GameIdUsername, GameKey, Username
 
 
 KEY_TTL = 10  # time to live in seconds
@@ -31,10 +31,16 @@ game_server_fast.add_middleware(
 )
 game_server_sio = socketio.AsyncServer(
     async_mode="asgi",
-    client_manager=socketio.AsyncRedisManager('redis://socketio_pubsub'),
-    cors_allowed_origins="*"
+    client_manager=socketio.AsyncRedisManager("redis://socketio_pubsub"),
+    cors_allowed_origins="*",
 )
 
+# the game store holds keys corresponding to the following:
+#   - game id to game attributes (these are available in the 
+#     game browser)
+#   - game id keys to sorted set used to manage game specific keys and
+#     expirations
+#   - sid to game id
 game_store = None
 game_god_client = aiohttp.ClientSession()
 
@@ -54,15 +60,17 @@ async def get_game_id(sid: str):
 async def on_startup():
     global game_store
     while not game_store:
-        game_store = await aioredis.create_redis_pool("redis://game_store")
-        await asyncio.sleep(0.5)
+        try:
+            game_store = await aioredis.create_redis_pool("redis://game_store")
+        except ConnectionRefusedError:
+            await asyncio.sleep(0.5)
 
 
 # TODO: requires auth
 @game_server_fast.post("/create_game", response_model=Game, status_code=201)
-async def add_game(game_attrs: GameAttrs):
+async def add_game(payload: GameAttrs):
     async with game_god_client.post(
-        "http://game_god:8000/add_game", json=game_attrs.dict()
+        "http://game_god:8000/add_game", json=payload.dict()
     ) as response:
         assert response.status == 201
         return Game(**await response.json())
@@ -71,13 +79,13 @@ async def add_game(game_attrs: GameAttrs):
 # TODO: requires auth
 # TODO: jwt token contains username; can remove username arg after
 #       can remove above model after as well
-@game_server_fast.put("/join_game", status_code=200)
-async def request_game_key(game_id_username: GameIdUsername):
+@game_server_fast.put("/join_game", response_model=GameKey, status_code=200)
+async def request_game_key(payload: GameIdUsername):
     """
     Simply returns to the client a key to join the specified game if
     there is space in the game at the time of their request to join.
     """
-    game_id = game_id_username.game_id
+    game_id = payload.game_id
     if not await game_store.exists(game_id):
         raise HTTPException(status_code=406, detail="game does not exist")
     # if the number of valid distributed keys fills the game, tell the
@@ -97,9 +105,9 @@ async def request_game_key(game_id_username: GameIdUsername):
         # add a game key
         game_store.zadd(f"{game_id}:game_keys", time() + KEY_TTL, game_key),
         # only a specific user can use the key
-        game_store.set(game_key, game_id_username.username)
+        game_store.set(game_key, payload.username),
     )
-    return {"game_key": game_key}
+    return GameKey(game_key)
 
 
 # @game_server_fast.on('/get_servers')
@@ -137,26 +145,25 @@ async def prune_expired_keys(game_id: str):
     await game_store.zremrangebyscore(f"{game_id}:keys", max=time())
 
 
-
-
 VALID_GAME_ACTIONS = {  # value is required payload
-    'card_click': 'card',
-    'unlock': None,
-    'lock': None,
-    'play': None,
-    'unlock_pass': None,
-    'pass': None,
-    'ask': None,
-    'give': None,
-    'asking_click': 'rank'
+    "card_click": "card",
+    "unlock": None,
+    "lock": None,
+    "play": None,
+    "unlock_pass": None,
+    "pass": None,
+    "ask": None,
+    "give": None,
+    "asking_click": "rank",
 }
+
 
 @game_server_sio.event
 async def game_action(sid, payload):
     timestamp = datetime.utcnow()
 
     # action and payload validation
-    action = payload['action']
+    action = payload["action"]
     assert action in VALID_GAME_ACTIONS
     required_payload = VALID_GAME_ACTIONS[action]
     if required_payload:
@@ -171,10 +178,11 @@ async def game_action(sid, payload):
 
 
 game_server = socketio.ASGIApp(
-    socketio_server=game_server_sio, other_asgi_app=game_server_fast
+    socketio_server=game_server_sio,
+    other_asgi_app=game_server_fast,
 )
 
 
 @main
 def run():
-    uvicorn.run(game_server, host='0.0.0.0')
+    uvicorn.run(game_server, host="0.0.0.0")

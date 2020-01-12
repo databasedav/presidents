@@ -12,11 +12,12 @@ class GameAttrs(BaseModel):
     giving_time: float = 10
 
 
-class Player(BaseModel):
+class Username(BaseModel):
     username: str
 
 
-class PlayerSidGame(Player):
+class UsernameSidGame(Username):
+    username: str
     sid: str
     game_id: str
 
@@ -24,7 +25,11 @@ class PlayerSidGame(Player):
 class Game(GameAttrs):
     game_id: str = None
     num_players: int = None
-    players: List[Player] = None
+    players: List[Username] = None
+
+
+class GameKey(BaseModel):
+    game_key: str
 
 
 class GameIdUsername(BaseModel):

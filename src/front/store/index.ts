@@ -5,8 +5,6 @@ import { create_game_module, EVENTS } from '../utils'
 import axios from 'axios'
 import io from 'socket.io-client'
 
-// import { server_browser_plugin, server_plugin } from './plugins'
-
 Vue.use(Vuex);
 
 export default new Vuex.Store({
@@ -25,7 +23,7 @@ export default new Vuex.Store({
 
   actions: {
     create_game ({ dispatch }, payload) {
-      axios.post('http://presidents.cards/game_server/create_game', {
+      axios.post('/game_server/create_game', {
         name: payload.name
       }).then(response => {
         // adding a server auto joins it
@@ -35,11 +33,12 @@ export default new Vuex.Store({
 
     join_game ({ state, commit }, payload) {
       const game_id = payload.game_id
-      return axios.put('http://presidents.cards/game_server/join_game', {
+      return axios.put('/game_server/join_game', {
         game_id: game_id,
         username: payload.testing_username || state.username
       }).then(response => {
-        const socket = io('http://presidents.cards/game_server/socket.io', {
+        const socket = io('/', {  // first arg is the namespace
+          path: '/game_server/socket.io',
           forceNew: true,
           transportOptions: {
             polling: {
@@ -67,7 +66,7 @@ export default new Vuex.Store({
           commit(`${namespace}/set_socket`, {socket: socket})
           // register presidents event listeners
           EVENTS.forEach(event => {
-            socket.on(event, payload => {
+            socket.on(event, (payload: any) => {
               commit(`${namespace}/${event}`, payload)
             })
           })
