@@ -351,11 +351,11 @@ def test_make_and_set_turn_manager():
     assert 1 in game._chambers[next(game._turn_manager)]
 
 
-def test_start_round():
+def teststart_round():
     game: Game = Game()
     for i in range(4):
         game.add_player(f"player{i}")
-    game._start_round()
+    game.start_round()
     assert all(chamber.num_cards == 13 for chamber in game._chambers)
     assert game._turn_manager is not None
     assert game._num_consecutive_rounds == 1
@@ -363,12 +363,12 @@ def test_start_round():
 
     with pytest.raises(AssertionError, match=r"four players"):
         game = Game()
-        game._start_round()
+        game.start_round()
 
     game.reset()
     for i in range(4):
         game.add_player(f"player{i}")
-    game._start_round(
+    game.start_round(
         deck=[
             range(lower, upper)
             for lower, upper in zip(range(1, 53, 13), range(14, 54, 13))

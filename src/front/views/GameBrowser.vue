@@ -3,9 +3,10 @@
     :headers="headers"
     :items="games"
     class="elevation-1"
+    mobile-breakpoint=""
   >
     <template v-slot:top>
-      <v-toolbar flat color="white">
+      <v-toolbar flat color="black">
         <v-toolbar-title>presidents</v-toolbar-title>
         <v-divider
           class="mx-4"
@@ -13,32 +14,28 @@
           vertical
         ></v-divider>
         <v-spacer></v-spacer>
+        <v-btn color="success" @click="refresh">
+          refresh
+        </v-btn>
         <v-dialog v-model="dialog" max-width="500px">
           <template v-slot:activator="{ on }">
-            <v-btn color="primary" dark class="mb-2" v-on="on">New Item</v-btn>
+            <v-btn color="primary" dark class="mb-2" v-on="on">create game</v-btn>
           </template>
           <v-card>
             <v-card-title>
-              <span class="headline">{{ formTitle }}</span>
+              <span class="headline">new game</span>
             </v-card-title>
 
             <v-card-text>
               <v-container>
-                <v-row>
-                  <v-col cols="12" sm="6" md="4">
-                    <v-text-field v-model="editedItem.name" label="Dessert name"></v-text-field>
+                <v-row justify="center">
+                  <v-col cols="10">
+                    <v-text-field v-model="name" label="game name" clearable counter maxlength="20"></v-text-field>
                   </v-col>
-                  <v-col cols="12" sm="6" md="4">
-                    <v-text-field v-model="editedItem.calories" label="Calories"></v-text-field>
-                  </v-col>
-                  <v-col cols="12" sm="6" md="4">
-                    <v-text-field v-model="editedItem.fat" label="Fat (g)"></v-text-field>
-                  </v-col>
-                  <v-col cols="12" sm="6" md="4">
-                    <v-text-field v-model="editedItem.carbs" label="Carbs (g)"></v-text-field>
-                  </v-col>
-                  <v-col cols="12" sm="6" md="4">
-                    <v-text-field v-model="editedItem.protein" label="Protein (g)"></v-text-field>
+                </v-row>
+                <v-row justify="center">
+                  <v-col cols="10">
+                    <v-text-field disabled label="password (coming soon)"></v-text-field>
                   </v-col>
                 </v-row>
               </v-container>
@@ -46,36 +43,31 @@
 
             <v-card-actions>
               <v-spacer></v-spacer>
-              <v-btn color="blue darken-1" text @click="close">Cancel</v-btn>
-              <v-btn color="blue darken-1" text @click="save">Save</v-btn>
+              <v-btn color="blue darken-1" text @click="close">cancel</v-btn>
+              <v-btn color="blue darken-1" text @click="create_game">create game</v-btn>
             </v-card-actions>
           </v-card>
         </v-dialog>
       </v-toolbar>
     </template>
-    <template v-slot:item.action="{ item }">
-      <v-icon
-        small
-        class="mr-2"
-        @click="editItem(item)"
+    <template v-slot:item.join_button="{ item }">
+      <v-btn
+        color="success"
+        :disabled="item.num_players == 4"
+        @click="join_game(item.game_id)"
       >
-        edit
-      </v-icon>
-      <v-icon
-        small
-        @click="deleteItem(item)"
-      >
-        delete
-      </v-icon>
+        join game
+      </v-btn>
     </template>
     <template v-slot:no-data>
-      <v-btn color="primary" @click="initialize">Reset</v-btn>
+      <v-alert :value="true" type="error">
+        sorry no one's playin right now; create a new game
+      </v-alert>
     </template>
   </v-data-table>
 </template>
 
 <script>
-import io from "socket.io-client";
 import { mapState } from "vuex";
 
 export default {
@@ -97,7 +89,8 @@ export default {
         {
           text: "",
           align: "right",
-          sortable: false
+          sortable: false,
+          value: "join_button"
         }
       ],
       name: "",
@@ -105,17 +98,8 @@ export default {
     };
   },
 
-  created() {
+  created () {
     this.refresh()
-  },
-
-  watch: {
-    servers() {
-      // this will fire when the server force refreshes when a server is successfully added
-      if (this.loading) {
-        this.close();
-      }
-    }
   },
 
   computed: {
@@ -140,7 +124,7 @@ export default {
       });
     },
 
-    join_server (game_id) {
+    join_game (game_id) {
       this.$store.dispatch('join_game', {
         game_id: game_id,
         username: this.username,

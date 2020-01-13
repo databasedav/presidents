@@ -89,24 +89,36 @@ class EmittingGame(Game):
     ) -> None:
         """
         NOTE: logic copy/pasted from base; must update manually
-              adds various ids required for emitting
+              manages sids and set name must be awaited
         """
         assert self._names[spot] is None, f"player already in spot {spot}"
         self._open_spots.remove(spot)
-        self._chambers[spot].set_sid(sid)
-        self._spot_sid_bidict.inv[sid] = spot
         await self._set_name(spot=spot, name=name)
         self.num_players += 1
+        self._spot_sid_bidict.inv[sid] = spot
+        self._chambers[spot].set_sid(sid)
+
+        # if 
 
         # TODO TODO: THIS SHOULD NOT BE HERE. (JUST FOR TESTING)
-        if self.num_players == 4:
-            await self._start_round(
-                setup=True
-            )  # , deck=[[1], [2], [3], [4]], testing=True)
+        # TODO: add pre game chatting screen with timer to start game
+        #       once 4 bois have joined
+        # if self.num_players == 4:
+        #     await self.start_round(
+        #         setup=True
+        #     )  # , deck=[[1], [2], [3], [4]], testing=True)    
 
-    def remove_player(self, sid: str) -> None:
-        super().remove_player(self._get_spot(sid))
-        self._spot_sid_bidict.inv.pop(sid)
+    async def remove_player(self, sid: str) -> None:
+        """
+        NOTE: logic copy/pasted from base; must update manually
+              manages sids and set name must be awaited
+        """
+        spot: int = self._get_spot(sid)
+        self._open_spots.add(spot)
+        await self._set_name(spot=spot, name=None)
+        self.num_players -= 1
+        self._spot_sid_bidict.pop(spot)
+        self._chambers[spot].set_sid(None)
 
     async def _deal_cards(
         self, *, deck: Optional[List[Iterable[int]]] = None
@@ -147,7 +159,7 @@ class EmittingGame(Game):
 
     # game flow related methods
 
-    async def _start_round(
+    async def start_round(
         self,
         *,
         setup: bool,
@@ -164,7 +176,7 @@ class EmittingGame(Game):
         self._make_and_set_turn_manager(testing)
         await asyncio.gather(
             *[
-                self._set_time("reserve", self._reserve_time, spot, False)
+                self._set_time("reserve", self._reserve_time, spot)
                 for spot in range(4)
             ],
             self._message(f"🏁 round {self._num_consecutive_rounds} has begun"),
@@ -231,20 +243,19 @@ class EmittingGame(Game):
             payload["spot"] = spot
         await self._emit_to_players("set_timer_state", payload)
 
-    async def _pause(self) -> None:
-        # TODO
-        await self._emit_to_players(
-            "set_paused", {"paused": True}
-        )  # game has been paused...
-        self._pause_timers()
-
-    async def _unpause(self) -> None:
+    async def pause(self) -> None:
         await asyncio.gather(
-            self._emit_to_players("set_paused", {"paused": False}),
-            self._unpause_timers(),
+            self._pause_timers(),
+            self._emit_to_players("set_paused", {"paused": True}),
         )
 
-    async def _unpause_timers(self) -> None:
+    async def resume(self) -> None:
+        await asyncio.gather(
+            self._emit_to_players("set_paused", {"paused": False}),
+            self._resume_timers(),
+        )
+
+    async def _resume_timers(self) -> None:
         await asyncio.gather(*[timer() for timer in self._paused_timers])
 
     async def _player_finish(self, spot: int) -> None:
@@ -279,18 +290,11 @@ class EmittingGame(Game):
                 self._set_trading(True),
             )
 
-    # TODO
-    async def emit_correct_state(self, sid: str):
+    async def emit_full_state(self, sid: str):
         spot: int = self._get_spot(sid)
-        await self._emit(
-            "correct_state",
-            {
-                "cards": list(self._chambers[spot]),
-                "selected_cards": self._get_current_hand(spot).to_list(),
-                "unlocked": self._unlocked[spot],
-                "pass_unlocked": self._pass_unlocked[spot],
-            },
-            room=sid,
+        chamber = self._chambers[spot]
+        await asyncio.gather(
+            *[self._emit('add_card', {'card': card}) for card in chamber]
         )
 
     # card management related methods
@@ -497,7 +501,7 @@ class EmittingGame(Game):
             # game related attributes
             self._positions.clear()
             if start:
-                await self._start_round(setup=False)
+                await self.start_round(setup=False)
 
     async def asking_click_handler(self, sid: str, rank: int) -> None:
         spot: int = self._get_spot(sid)
@@ -661,13 +665,27 @@ class EmittingGame(Game):
 
     def _get_spot(self, sid: str) -> int:
         return self._spot_sid_bidict.inv[sid]
+    
+    # TODO: this is gna need some brain power
+    def _get_dot_color(self, spot: int):
+        if spot in self._positions:
+            return 'purple'  # finished
+        elif ...:
+            return 'green'  # has not passed on current hand
+        elif ...:
+            return 'yellow'  # has passed on current hand
+        elif ...:
+            return 'blue'  # played the current hand
 
     # setters
 
     async def _set_name(self, **kwargs) -> None:
         super()._set_name(**kwargs)
-        # TODO: make this emit single name plus the spot
-        await self._emit_to_players("set_names", {"names": self._names})
+        # TODO: make this emit single name plus the spot after vue 3 :)
+        await self._emit_to_players(
+            "set_names",
+            {"names": ["" if name is None else name for name in self._names]},
+        )
 
     async def _set_hand_in_play(self, hand: Hand) -> None:
         if hand.is_empty or not hand.is_valid:

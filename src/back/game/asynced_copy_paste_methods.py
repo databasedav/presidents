@@ -238,7 +238,7 @@ async def _handle_trading_timeout(self) -> None:
     if not self._no_takes_or_gives:
         await self._auto_trade()
     await self._set_trading(False, start=False, cancel=False)
-    await self._start_round(setup=False)
+    await self.start_round(setup=False)
 
 async def _lock_if_unlocked(self, spot: int) -> None:
     if self._unlocked[spot]:
@@ -436,27 +436,29 @@ async def _pause_timers(self) -> None:
     now: datetime = datetime.utcnow()
     if not self.trading:
         spot: int = self._current_player
-        assert self._timers[spot]
+        # assert self._timers[spot]
         # both turn and reserve timers stored in timers
         self._timers[spot].cancel()
         self._timers[spot] = None
 
         if not self._is_using_reserve_time(spot):
-            self._turn_time_use_starts[spot] = None
             time_used = (
                 now - self._turn_time_use_starts[spot]
             ).total_seconds()
-            await self._set_time("turn", self._turn_times[spot] - time_used)
+            self._turn_time_use_starts[spot] = None
+            await self._set_time(
+                "turn", self._turn_times[spot] - time_used, spot
+            )
             self._paused_timers.append(
                 lambda: self._start_timer("turn", spot)
             )
         else:
-            self._reserve_time_use_starts[spot] = None
             time_used = (
                 now - self._reserve_time_use_starts[spot]
             ).total_seconds()
+            self._reserve_time_use_starts[spot] = None
             await self._set_time(
-                "reserve", self._reserve_times[spot] - time_used
+                "reserve", self._reserve_times[spot] - time_used, spot
             )
             self._paused_timers.append(
                 lambda: self._start_timer("reserve", spot)
@@ -465,7 +467,7 @@ async def _pause_timers(self) -> None:
         self._trading_timer.cancel()
         self._trading_timer = None
         time_used = (now - self._trading_time_start).total_seconds()
-        self._trading_time -= time_used
+        self._trading_time_remaining -= time_used
         self._trading_time_start = None
         self._paused_timers.append(lambda: self._start_timer("trading"))
         # giving timers if currently active

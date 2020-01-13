@@ -16,16 +16,27 @@ class Username(BaseModel):
     username: str
 
 
-class UsernameSidGame(Username):
-    username: str
+class Sid(BaseModel):
     sid: str
+
+
+class GameId(BaseModel):
     game_id: str
 
 
+class UsernameSidGameId(Username, Sid, GameId):
+    pass
+
+
 class Game(GameAttrs):
-    game_id: str = None
+    game_id: str
     num_players: int = None
     players: List[Username] = None
+    paused: int = 0  # redis doesn't support bools
+
+
+class GameList(BaseModel):
+    games: List[Game]
 
 
 class GameKey(BaseModel):

@@ -6,13 +6,23 @@ import uvicorn
 import aiohttp
 import logging
 from time import time
+from typing import List
 from fastapi import HTTPException
 from datetime import datetime
 from secrets import token_urlsafe
 from starlette.middleware.cors import CORSMiddleware
 
 from ...utils import main
-from ..models import Game, GameAttrs, GameIdUsername, GameKey, Username
+from ..models import (
+    Game,
+    GameAttrs,
+    GameIdUsername,
+    UsernameSidGameId,
+    GameKey,
+    Username,
+    GameList,
+    GameAction,
+)
 
 
 KEY_TTL = 10  # time to live in seconds
@@ -36,11 +46,13 @@ game_server_sio = socketio.AsyncServer(
 )
 
 # the game store holds keys corresponding to the following:
-#   - game id to game attributes (these are available in the 
+#   - game id to game attributes (these are available in the
 #     game browser)
 #   - game id keys to sorted set used to manage game specific keys and
 #     expirations
+#   - game key to username (remove after auth)
 #   - sid to game id
+#   - list of game_ids
 game_store = None
 game_god_client = aiohttp.ClientSession()
 
@@ -107,10 +119,20 @@ async def request_game_key(payload: GameIdUsername):
         # only a specific user can use the key
         game_store.set(game_key, payload.username),
     )
-    return GameKey(game_key)
+    return GameKey(game_key=game_key)
 
 
-# @game_server_fast.on('/get_servers')
+@game_server_fast.get("/get_games", response_model=GameList)
+async def get_games():
+    return GameList(
+        games=[
+            {
+                key.decode(): value.decode()
+                for key, value in (await game_store.hgetall(game_id)).items()
+            }
+            async for game_id in game_store.isscan("game_ids")
+        ]
+    )
 
 
 @game_server_sio.event
@@ -124,6 +146,7 @@ async def connect(sid, environ):
         f"{game_id}:game_keys", min=now
     ):
         raise ConnectionRefusedError("invalid game key")
+    # else key is valid
     await prune_expired_keys(game_id)
 
     async with game_god_client.put(
@@ -134,15 +157,48 @@ async def connect(sid, environ):
             "game_id": game_id,
         },
     ) as response:
-        await game_store.delete(game_key)
+        # consume key even if player could not be added
+        await asyncio.gather(
+            game_store.zrem(f"{game_id}:game_keys", game_key),
+            game_store.delete(game_key),
+        )
+
         if response.status != 200:
             raise ConnectionRefusedError(
                 "could not add player to game; try again"
             )
+        else:
+            num_players = int(await game_store.hget(game_id, "num_players"))
+            if num_players == 4:
+                # game is paused
+                if int(await game_store.hget(game_id, "paused")):
+                    async with game_god_client.put(
+                        "http://game_god:8000/resume_game",
+                        json={"game_id": game_id},
+                    ) as response:
+                        assert response.status == 200
+                else:
+                    async with game_god_client.put(
+                        "http://game_god:8000/start_game",
+                        json={"game_id": game_id},
+                    ) as response:
+                        assert response.status == 200
 
 
 async def prune_expired_keys(game_id: str):
-    await game_store.zremrangebyscore(f"{game_id}:keys", max=time())
+    await game_store.zremrangebyscore(f"{game_id}:game_keys", max=time())
+
+
+@game_server_sio.event
+async def disconnect(sid):
+    # remove player from game (pauses game)
+    # tell other players in game that a player has left and the game
+    # will start again once they rejoin
+    async with game_god_client.delete(
+        "http://game_god:8000/remove_player_from_game", json={"sid": sid}
+    ) as response:
+        assert response.status == 200
+    ...
 
 
 VALID_GAME_ACTIONS = {  # value is required payload
@@ -171,15 +227,14 @@ async def game_action(sid, payload):
 
     async with game_god_client.put(
         "http://game_god:8000/game_action",
-        json={**payload, "sid": sid, "game_id": await get_game_id(sid)},
+        json={"game_id": await get_game_id(sid), "sid": sid, **payload},
     ) as response:
         assert response.status == 200
         # await cast_game_click(timestamp)
 
 
 game_server = socketio.ASGIApp(
-    socketio_server=game_server_sio,
-    other_asgi_app=game_server_fast,
+    socketio_server=game_server_sio, other_asgi_app=game_server_fast
 )
 
 

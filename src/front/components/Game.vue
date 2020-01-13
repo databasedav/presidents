@@ -1,5 +1,21 @@
 <template>
   <v-container>
+    <v-overlay
+      :value="this.paused"
+    >
+      <v-row justify="center">
+        <v-col cols="8">
+          <v-alert :value="true" type="warning">
+            the game has been paused since someone left; it will resume once their spot is filled
+            <!-- <v-btn
+              @click="leave_game"
+            >
+            </v-btn> -->
+          </v-alert>
+        </v-col>
+      </v-row>
+    </v-overlay>
+    
     <v-row dense>
       <v-col cols="12">
         <AlertSnackbar 
@@ -80,8 +96,6 @@ import OtherPlayerBox from "./OtherPlayerBox.vue";
 
 import { create_server_module, EVENTS } from "../utils";
 
-import io from "socket.io-client";
-
 export default {
   name: "Game",
 
@@ -119,7 +133,6 @@ export default {
           this.$store.dispatch('join_game', {game_id: game_id, testing: this.testing, testing_username: 'abcd'[this.testing_sid_index-1]})
         }
       },
-      immediate: true
     }
   },
 
@@ -192,7 +205,16 @@ export default {
 
     spot () {
       return this.$store.state[this.namespace].spot;
+    },
+
+    paused () {
+      return this.$store.state[this.namespace].paused;
     }
+  },
+
+  beforeRouteLeave (to, from , next) {
+    this.$store.dispatch(`${this.namespace}/disconnect_socket`)
+    next()
   }
 };
 </script>

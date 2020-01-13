@@ -36,6 +36,7 @@ const EVENTS = [
   "set_names",
   "set_on_turn",
   "set_pass_unlocked",
+  "set_paused",
   "set_spot",
   "set_takes",
   "set_time",

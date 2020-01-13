@@ -87,13 +87,15 @@ class Game:
         self._timers: List = [None for _ in range_4]
         self._turn_time: float = turn_time
         # these turn time lists are used for both playing and giving
-        self._turn_times: List[float] = [0 for _ in range_4]
+        self._turn_times: List[float] = [0 for _ in range_4]  # remaining
         self._turn_time_use_starts: List[datetime] = [None for _ in range_4]
         self._reserve_time: float = reserve_time
+        # remaining
         self._reserve_times: List[float] = [reserve_time for _ in range_4]
         self._reserve_time_use_starts: List[datetime] = [None for _ in range_4]
         self._trading_timer = None
         self._trading_time = trading_time
+        self._trading_time_remaining = trading_time
         self._trading_time_start: datetime = None
         self._giving_time = giving_time
         self._paused_timers = list()
@@ -188,6 +190,10 @@ class Game:
     @property
     def is_full(self) -> bool:
         return not bool(self._open_spots)
+    
+    @property
+    def is_paused(self) -> bool:
+        return self._paused_timers
 
     @property
     def _num_unfinished_players(self) -> int:
@@ -207,7 +213,7 @@ class Game:
         assert self.is_empty, "game must be empty to set up testing base"
         for spot in range(4):
             self._add_player_to_spot(f"player{spot}", spot)
-        self._start_round(setup=True, deck=deck)
+        self.start_round(setup=True, deck=deck)
 
     def _get_game_to_trading(self) -> None:
         assert self._current_player is not None
@@ -244,7 +250,7 @@ class Game:
     def _add_player_to_spot(self, name: str, spot: int) -> None:
         assert self._names[spot] is None, f"player already in spot {spot}"
         self._open_spots.remove(spot)
-        self._set_name(spot=spot, name=name)
+        self._set_name(spot, name)
         self.num_players += 1
 
     def add_player(self, name: str, **kwargs) -> None:
@@ -253,8 +259,8 @@ class Game:
         )
 
     def remove_player(self, spot: int) -> None:
-        self._set_name(spot, None)
         self._open_spots.add(spot)
+        self._set_name(spot, None)
         self.num_players -= 1
 
     def _make_shuffled_deck(self) -> np.ndarray:
@@ -279,7 +285,7 @@ class Game:
         assert self.num_players == 4, "four players required to start round"
         self._deal_cards(deck=deck)
 
-    def _start_round(
+    def start_round(
         self,
         *,
         setup: bool,
@@ -291,7 +297,7 @@ class Game:
         self._num_consecutive_rounds += 1
         self._make_and_set_turn_manager(testing)
         for spot in range(4):
-            self._set_time("reserve", self._reserve_time, spot, False)
+            self._set_time("reserve", self._reserve_time, spot)
         self._message(f"🏁 round {self._num_consecutive_rounds} has begun")
         self._next_player()
 
@@ -306,7 +312,7 @@ class Game:
         """
         Stores remaining time for turns (includes playing time, reserve
         time, and giving time) and for trading; does not start the timer
-        by default. If spot must be given if setting turn times.
+        by default. Spot must be given if setting turn times.
         """
         assert which in ["turn", "reserve", "trading"]
         if which == "turn":
@@ -317,16 +323,20 @@ class Game:
             self._reserve_times[spot] = seconds
         elif which == "trading":
             assert spot is None
-            self._trading_time = seconds
+            self._trading_time_remaining = seconds
 
         if start:
             self._start_timer(which, spot)
 
     def _start_timer(self, which: str, spot: int = None) -> None:
+        """
+        Uses the remaining time.
+        """
+        now = datetime.utcnow()
         assert which in ["turn", "reserve", "trading"]
         if which == "turn":
             assert spot is not None
-            self._turn_time_use_starts[spot] = datetime.utcnow()
+            self._turn_time_use_starts[spot] = now
             self._timers[spot] = self._timer(
                 self._turn_times[spot],
                 self._handle_playing_timeout
@@ -336,15 +346,14 @@ class Game:
             )
         elif which == "reserve":
             assert spot is not None
-            self._reserve_time_use_starts[spot] = datetime.utcnow()
+            self._reserve_time_use_starts[spot] = now
             self._timers[spot] = self._timer(
                 self._reserve_times[spot], self._handle_playing_timeout, spot
             )
         elif which == "trading":
-            assert spot is None
-            self._trading_time_start = datetime.utcnow()
+            self._trading_time_start = now
             self._trading_timer = self._timer(
-                self._trading_time, self._handle_trading_timeout
+                self._trading_time_remaining, self._handle_trading_timeout
             )
 
     def _set_timer_state(*args):
@@ -417,27 +426,29 @@ class Game:
         now: datetime = datetime.utcnow()
         if not self.trading:
             spot: int = self._current_player
-            assert self._timers[spot]
+            # assert self._timers[spot]
             # both turn and reserve timers stored in timers
             self._timers[spot].cancel()
             self._timers[spot] = None
 
             if not self._is_using_reserve_time(spot):
-                self._turn_time_use_starts[spot] = None
                 time_used = (
                     now - self._turn_time_use_starts[spot]
                 ).total_seconds()
-                self._set_time("turn", self._turn_times[spot] - time_used)
+                self._turn_time_use_starts[spot] = None
+                self._set_time(
+                    "turn", self._turn_times[spot] - time_used, spot
+                )
                 self._paused_timers.append(
                     lambda: self._start_timer("turn", spot)
                 )
             else:
-                self._reserve_time_use_starts[spot] = None
                 time_used = (
                     now - self._reserve_time_use_starts[spot]
                 ).total_seconds()
+                self._reserve_time_use_starts[spot] = None
                 self._set_time(
-                    "reserve", self._reserve_times[spot] - time_used
+                    "reserve", self._reserve_times[spot] - time_used, spot
                 )
                 self._paused_timers.append(
                     lambda: self._start_timer("reserve", spot)
@@ -446,7 +457,7 @@ class Game:
             self._trading_timer.cancel()
             self._trading_timer = None
             time_used = (now - self._trading_time_start).total_seconds()
-            self._trading_time -= time_used
+            self._trading_time_remaining -= time_used
             self._trading_time_start = None
             self._paused_timers.append(lambda: self._start_timer("trading"))
             # giving timers if currently active
@@ -464,7 +475,7 @@ class Game:
                     lambda: self._start_timer("turn", spot)
                 )
 
-    def _unpause_timers(self) -> None:
+    def _resume_timers(self) -> None:
         for timer in self._paused_timers:
             timer()
         self._paused_timers.clear()
@@ -498,7 +509,7 @@ class Game:
         if not self._no_takes_or_gives:
             self._auto_trade()
         self._set_trading(False, start=False, cancel=False)
-        self._start_round(setup=False)
+        self.start_round(setup=False)
 
     def _auto_play_or_pass(self, spot: int) -> None:
         """

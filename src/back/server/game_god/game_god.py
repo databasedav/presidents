@@ -6,7 +6,14 @@ import uvicorn
 import asyncio
 from starlette.middleware import cors
 
-from ..models import Game, GameAttrs, UsernameSidGame, GameAction
+from ..models import (
+    Game,
+    GameAttrs,
+    UsernameSidGameId,
+    GameAction,
+    Sid,
+    GameId,
+)
 from ...game import EmittingGame
 from ...utils import AsyncTimer, main
 
@@ -44,36 +51,81 @@ async def add_game(payload: GameAttrs):
     game = EmittingGame(sio=sio, timer=AsyncTimer.spawn_after, **game_params)
     game_id = str(game.game_id)
     games[game_id] = game
-    game_dict = {"game_id": game_id, "num_players": 0, **game_params}
-    await game_store.hmset_dict(game_id, game_dict)
+    game_dict = {
+        "game_id": game_id,
+        "num_players": 0,
+        "paused": 0,
+        **game_params,
+    }
+    await asyncio.gather(
+        game_store.hmset_dict(game_id, game_dict),
+        game_store.sadd("game_ids", game_id),
+    )
     return Game(**game_dict)
 
 
 @game_god.put("/add_player_to_game", status_code=200)
-async def add_player_to_game(payload: UsernameSidGame):
+async def add_player_to_game(payload: UsernameSidGameId):
     game_id = payload.game_id
     sid = payload.sid
-    await games[game_id].add_player(sid=sid, name=payload.username)
+    game = games[game_id]
+    await game.add_player(sid=sid, name=payload.username)
+    if game.is_paused:
+        game
+    # above not in gather to confirm player was added
     await asyncio.gather(
         game_store.set(sid, game_id),
         game_store.hincrby(game_id, "num_players"),
     )
 
 
+@game_god.delete("/remove_player_from_game", status_code=200)
+async def remove_player_from_game(payload: Sid):
+    """
+    Pauses game and then removes player.
+    """
+    sid = payload.sid
+    game_id = await game_store.get(sid, encoding="utf-8")
+    game = games[game_id]
+    await asyncio.gather(game.pause(), game.remove_player(sid))
+    # above not in gather to confirm player was removed
+    await asyncio.gather(
+        game_store.hset(game_id, "paused", 1),
+        game_store.delete(sid),  # sid no longer tied to game
+        game_store.hincrby(
+            game_id, "num_players", -1
+        ),  # decrement num players
+    )
+
+
+# TODO: can take a custom deck (e.g. within rules or something like
+#       everyone gets a 2 of spades); maybe this wouldn't go here
+@game_god.put("/start_game", status_code=200)
+async def resume_game(payload: GameId):
+    game = games[payload.game_id]
+    assert game.num_players == 4
+    await game.start_round(setup=True)
+
+
+@game_god.put("/resume_game", status_code=200)
+async def resume_game(payload: GameId):
+    game = games[payload.game_id]
+    assert game.num_players == 4
+    await game.resume()
+
+
 @game_god.put("/game_action", status_code=200)
 async def game_action(payload: GameAction):
     action = payload.action
-    method = getattr(
-        games[payload.game_id], f"{payload.action}_handler"
-    )
+    method = getattr(games[payload.game_id], f"{payload.action}_handler")
     if action == "card_click":
-        await method(game_action.sid, game_action.card)
+        await method(payload.sid, payload.card)
     elif action == "play":
-        await method(game_action.sid, game_action.timestamp)
+        await method(payload.sid, payload.timestamp)
     elif action == "asking_click":
-        await method(game_action.sid, game_action.rank)
+        await method(payload.sid, payload.rank)
     else:
-        await method(game_action.sid)
+        await method(payload.sid)
 
 
 @main

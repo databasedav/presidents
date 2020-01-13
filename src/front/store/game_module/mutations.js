@@ -121,6 +121,11 @@ export default {
     state.pass_unlocked = payload.pass_unlocked;
   },
 
+  set_paused(state, payload) {
+    const paused = payload.paused
+    state.paused = paused
+  },
+
   set_socket(state, payload) {
     state.socket = payload.socket;
   },

@@ -40,6 +40,7 @@ export default new Vuex.Store({
         const socket = io('/', {  // first arg is the namespace
           path: '/game_server/socket.io',
           forceNew: true,
+          reconnection: false,
           transportOptions: {
             polling: {
               extraHeaders: {
@@ -72,15 +73,14 @@ export default new Vuex.Store({
           })
 
           if (!payload.testing) {
-            router.push('presidents')
+            router.push({ name: 'presidents', params: { game_id } })
           }
         })
-      }).catch(err => {
       })
     },
 
-    refresh_games ({state}, payload) {
-      axios.get('http://0.0.0.0')
+    refresh_games ({ state }, payload) {
+      axios.get('/game_server/get_games').then(response => {state.games = response.data.games})
     }
   }
 });

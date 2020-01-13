@@ -1,5 +1,5 @@
 <template>
-  <Game :rnsp="this.rnsp"></Game>
+  <Game :game_id="game_id"></Game>
 </template>
 
 <script>
@@ -13,22 +13,16 @@ export default {
   },
 
   props: {
-    rnsp: String
+    game_id: String
   },
 
-  created() {
-    this.$store.dispatch("plugin_server", {
-      rnsp: this.rnsp
-    });
-  },
-
-  beforeRouteLeave(to, from, next) {
-    const answer = window.confirm("do you really want to leave?");
-    if (answer) {
-      next();
-    } else {
-      next(false);
-    }
-  }
+  // beforeRouteLeave(to, from, next) {
+  //   const answer = window.confirm("do you really want to leave?");
+  //   if (answer) {
+  //     next();
+  //   } else {
+  //     next(false);
+  //   }
+  // }
 };
 </script>

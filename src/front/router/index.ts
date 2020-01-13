@@ -5,6 +5,7 @@ import Login from "../views/Login.vue"
 import GameBrowser from "../views/GameBrowser.vue";
 import Presidents from "../views/Presidents.vue";
 import Tester from "../views/Tester.vue";
+import Game from "../components/Game.vue"
 
 
 Vue.use(VueRouter)
@@ -28,7 +29,7 @@ const routes = [
   {
     path: "/presidents",
     name: "presidents",
-    component: Presidents,
+    component: Game,
     props: true
   },
   {
