@@ -70,6 +70,7 @@ class EmittingGame(Game):
             EmittingChamber(self._sio) for _ in range(4)
         ]
         self._spot_sid_bidict: bidict = bidict()
+        self._dot_colors = ['red' for _ in range(4)]
         # self._hand_play_agent = server.server.agents["hand_play_agent"]
         self.num_spectators: int = 0  # TODO
 
@@ -98,7 +99,8 @@ class EmittingGame(Game):
         self._spot_sid_bidict.inv[sid] = spot
         self._chambers[spot].set_sid(sid)
 
-        # if 
+        if self.is_paused:
+            await self.emit_full_state(sid)
 
         # TODO TODO: THIS SHOULD NOT BE HERE. (JUST FOR TESTING)
         # TODO: add pre game chatting screen with timer to start game
@@ -291,11 +293,28 @@ class EmittingGame(Game):
             )
 
     async def emit_full_state(self, sid: str):
+        """
+        NOTE: these are all raw emits and their logic must be updated
+              manually
+        """
         spot: int = self._get_spot(sid)
-        chamber = self._chambers[spot]
-        await asyncio.gather(
-            *[self._emit('add_card', {'card': card}) for card in chamber]
-        )
+        events = list()
+        events.extend([self._emit('add_card', {'card': card}, room=sid) for card in self._chambers[spot]])
+        events.append(self._emit("set_spot", {"spot": spot}, room=sid))
+        events.append(self._emit("set_names", {"names": ["" if name is None else name for name in self._names]}, room=sid))
+        for spot in range(4):
+            events.extend([
+                self._emit('set_dot_color', {'spot': spot, 'dot_color': self._dot_colors[spot]}, room=sid),
+                self._emit('set_cards_remaining', {"spot": spot, 'cards_remaining': self._chambers[spot].num_cards}, room=sid),
+                self._emit('set_time', {'spot': spot, 'which': 'turn', 'time': self._turn_times[spot] * 1000, 'start': False}, room=sid),
+                self._emit('set_time', {'spot': spot, 'which': 'reserve', 'time': self._reserve_times[spot] * 1000, 'start': False}, room=sid)
+            ])
+        if self._hand_in_play is not base_hand:
+            events.append(self._emit('set_hand_in_play', {'hand_in_play': self._hand_in_play.to_list(), 'hand_in_play_desc': self._hand_in_play.id_desc}, room=sid))
+        if self.is_paused:
+            events.append(self._emit('set_paused', {'paused': True}, room=sid))
+
+        await asyncio.gather(*events)
 
     # card management related methods
 
@@ -665,17 +684,6 @@ class EmittingGame(Game):
 
     def _get_spot(self, sid: str) -> int:
         return self._spot_sid_bidict.inv[sid]
-    
-    # TODO: this is gna need some brain power
-    def _get_dot_color(self, spot: int):
-        if spot in self._positions:
-            return 'purple'  # finished
-        elif ...:
-            return 'green'  # has not passed on current hand
-        elif ...:
-            return 'yellow'  # has passed on current hand
-        elif ...:
-            return 'blue'  # played the current hand
 
     # setters
 
@@ -735,6 +743,7 @@ class EmittingGame(Game):
         await self._emit_to_players(
             "set_dot_color", {"spot": spot, "dot_color": dot_color}
         )
+        self._dot_colors[spot] = dot_color
 
     # emitters
 

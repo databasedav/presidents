@@ -139,37 +139,26 @@ export default {
   },
 
   set_time(state, payload) {
+    var time
+    if (payload.timestamp) {
+      time = Math.max(0, payload.time - (Date.now() / 1000 - payload.timestamp)) || 0
+    } else {
+      time = payload.time || 0
+    }
     switch (payload.which) {
       case "turn":
-        state.turn_times.splice(
-          payload.spot,
-          1,
-          Math.max(0, payload.time - (Date.now() / 1000 - payload.timestamp)) ||
-            0
-        );
+        state.turn_times.splice(payload.spot, 1, time);
         state.turn_time_states.splice(payload.spot, 1, payload.start);
         break;
       case "reserve":
-        state.reserve_times.splice(
-          payload.spot,
-          1,
-          Math.max(0, payload.time - (Date.now() / 1000 - payload.timestamp)) ||
-            0
-        );
+        state.reserve_times.splice(payload.spot, 1, time);
         state.reserve_time_states.splice(payload.spot, 1, payload.start);
         break;
       case "trading":
         // using reserve time var for trading time and just changing
         // UI icon
         for (let spot = 0; spot < 4; spot += 1) {
-          state.reserve_times.splice(
-            spot,
-            1,
-            Math.max(
-              0,
-              payload.time - (Date.now() / 1000 - payload.timestamp)
-            ) || 0
-          );
+          state.reserve_times.splice(spot, 1, time);
           state.reserve_time_states.splice(spot, 1, payload.start);
         }
         break;

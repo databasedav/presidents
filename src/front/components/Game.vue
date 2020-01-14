@@ -6,11 +6,7 @@
       <v-row justify="center">
         <v-col cols="8">
           <v-alert :value="true" type="warning">
-            the game has been paused since someone left; it will resume once their spot is filled
-            <!-- <v-btn
-              @click="leave_game"
-            >
-            </v-btn> -->
+            the game has been paused since someone left; it will resume once their spot is filled (players: {{ num_players }}/4)
           </v-alert>
         </v-col>
       </v-row>
@@ -209,11 +205,16 @@ export default {
 
     paused () {
       return this.$store.state[this.namespace].paused;
+    },
+
+    num_players () {
+      return this.$store.state[this.namespace].names.filter(Boolean).length;
     }
   },
 
   beforeRouteLeave (to, from , next) {
     this.$store.dispatch(`${this.namespace}/disconnect_socket`)
+    this.$store.unregisterModule(this.namespace)
     next()
   }
 };

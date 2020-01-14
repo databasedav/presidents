@@ -1,13 +1,16 @@
 <template>
   <v-container>
     <v-row justify="center">
+      presidents
+    </v-row>
+    <v-row justify="center">
       <v-col cols="6">
         <v-text-field
           label="username"
           v-model="username"
           clearable
           counter
-          maxlength="10"
+          maxlength="5"
           color="grey"
         ></v-text-field>
       </v-col>
@@ -15,7 +18,7 @@
     <v-row justify="center">
       <v-btn
         color="success"
-        :disabled="!username"
+        :disabled="!username || username.length > 5"
         @click="send_to_game_browser"
       >
         browse games

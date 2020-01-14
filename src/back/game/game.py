@@ -193,7 +193,7 @@ class Game:
     
     @property
     def is_paused(self) -> bool:
-        return self._paused_timers
+        return bool(self._paused_timers)
 
     @property
     def _num_unfinished_players(self) -> int:

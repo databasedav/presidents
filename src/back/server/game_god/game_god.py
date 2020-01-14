@@ -82,12 +82,14 @@ async def add_player_to_game(payload: UsernameSidGameId):
 @game_god.delete("/remove_player_from_game", status_code=200)
 async def remove_player_from_game(payload: Sid):
     """
-    Pauses game and then removes player.
+    Pauses game if not already paused and then removes player.
     """
     sid = payload.sid
     game_id = await game_store.get(sid, encoding="utf-8")
     game = games[game_id]
-    await asyncio.gather(game.pause(), game.remove_player(sid))
+    if not int(await game_store.hget(game_id, 'paused')):
+        await game.pause()
+    await game.remove_player(sid)
     # above not in gather to confirm player was removed
     await asyncio.gather(
         game_store.hset(game_id, "paused", 1),
@@ -109,9 +111,11 @@ async def resume_game(payload: GameId):
 
 @game_god.put("/resume_game", status_code=200)
 async def resume_game(payload: GameId):
-    game = games[payload.game_id]
+    game_id = payload.game_id
+    game = games[game_id]
     assert game.num_players == 4
     await game.resume()
+    await game_store.hset(game_id, "paused", 0)
 
 
 @game_god.put("/game_action", status_code=200)
