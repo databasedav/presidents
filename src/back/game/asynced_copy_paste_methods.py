@@ -217,8 +217,7 @@ async def _handle_playing_timeout(self, spot: int) -> None:
     """
     Handles turn time and reserve time timing out.
     """
-    # was using turn time
-    if not self._is_using_reserve_time(spot):
+    if not self._is_using_reserve_time(spot):  # was using turn time
         await self._stop_timer("turn", spot, cancel=False)
         reserve_time: float = self._reserve_times[spot]
         if reserve_time:
@@ -449,9 +448,7 @@ async def _pause_timers(self) -> None:
             await self._set_time(
                 "turn", self._turn_times[spot] - time_used, spot
             )
-            self._paused_timers.append(
-                lambda: self._start_timer("turn", spot)
-            )
+            self._paused_timers.append(self._start_timer("turn", spot))
         else:
             time_used = (
                 now - self._reserve_time_use_starts[spot]
@@ -460,30 +457,28 @@ async def _pause_timers(self) -> None:
             await self._set_time(
                 "reserve", self._reserve_times[spot] - time_used, spot
             )
-            self._paused_timers.append(
-                lambda: self._start_timer("reserve", spot)
-            )
+            self._paused_timers.append(self._start_timer("reserve", spot))
     else:  # elif self.trading
         self._trading_timer.cancel()
         self._trading_timer = None
         time_used = (now - self._trading_time_start).total_seconds()
-        self._trading_time_remaining -= time_used
+        await self._set_time("trading", self._trading_time_remaining - time_used)
         self._trading_time_start = None
-        self._paused_timers.append(lambda: self._start_timer("trading"))
-        # giving timers if currently active
+        self._paused_timers.append(self._start_timer("trading"))
+
+        # giving timers
         for spot in self._get_asshole_and_vice_asshole():
-            if not self._timers[spot]:
+            if not self._timers[spot]:  # no active giving timer
                 continue
             self._timers[spot].cancel()
             self._timers[spot] = None
             time_used = (
                 now - self._turn_time_use_starts[spot]
             ).total_seconds()
-            self._turn_times[spot] -= time_used
+            # turn time objects are used for for giving times
+            await self._set_time("turn", self._turn_times[spot] - time_used, spot)
             self._turn_time_use_starts[spot] = None
-            self._paused_timers.append(
-                lambda: self._start_timer("turn", spot)
-            )
+            self._paused_timers.append(self._start_timer("turn", spot))
 
 async def _post_pass_handler(self) -> None:
     # all remaining players passed on a winning hand
@@ -577,7 +572,6 @@ async def _stop_timer(
         if cancel and self._trading_timer is not None:
             self._trading_timer.cancel()
         self._trading_timer = None
-        time_used = (now - self._trading_time_start).total_seconds()
         await self._set_time("trading", self._trading_time)
         self._trading_time_start = None
 

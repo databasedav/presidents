@@ -90,8 +90,6 @@ import PlayerStrip from "./PlayerStrip.vue";
 import OtherPlayerBox from "./OtherPlayerBox.vue";
 // import StoredHandBox from './StoredHandBox.vue'
 
-import { create_server_module, EVENTS } from "../utils";
-
 export default {
   name: "Game",
 
@@ -212,7 +210,7 @@ export default {
     }
   },
 
-  beforeRouteLeave (to, from , next) {
+  beforeRouteLeave (to, from, next) {
     this.$store.dispatch(`${this.namespace}/disconnect_socket`)
     this.$store.unregisterModule(this.namespace)
     next()

@@ -84,6 +84,8 @@ class EmittingGame(Game):
 
     def set_sio(self, sio) -> None:
         self._sio = sio
+        for spot in range(4):
+            self._chambers[spot].set_sio(sio)
 
     async def _add_player_to_spot(
         self, sid: str, name: str, spot: int
@@ -93,13 +95,16 @@ class EmittingGame(Game):
               manages sids and set name must be awaited
         """
         assert self._names[spot] is None, f"player already in spot {spot}"
+        
+        self._spot_sid_bidict.inv[sid] = spot
+        self._chambers[spot].set_sid(sid)
+        
         self._open_spots.remove(spot)
         await self._set_name(spot=spot, name=name)
         self.num_players += 1
-        self._spot_sid_bidict.inv[sid] = spot
-        self._chambers[spot].set_sid(sid)
+        
 
-        if self.is_paused:
+        if self.is_paused:  # player was added to a game that already started
             await self.emit_full_state(sid)
 
         # TODO TODO: THIS SHOULD NOT BE HERE. (JUST FOR TESTING)
@@ -123,7 +128,7 @@ class EmittingGame(Game):
         self._chambers[spot].set_sid(None)
 
     async def _deal_cards(
-        self, *, deck: Optional[List[Iterable[int]]] = None
+        self, *, deck: List[Iterable[int]] = None
     ) -> None:
         """
         Deals cards to all players.
@@ -258,7 +263,8 @@ class EmittingGame(Game):
         )
 
     async def _resume_timers(self) -> None:
-        await asyncio.gather(*[timer() for timer in self._paused_timers])
+        await asyncio.gather(*self._paused_timers)
+        self._paused_timers.clear()
 
     async def _player_finish(self, spot: int) -> None:
         assert self._chambers[
@@ -309,10 +315,22 @@ class EmittingGame(Game):
                 self._emit('set_time', {'spot': spot, 'which': 'turn', 'time': self._turn_times[spot] * 1000, 'start': False}, room=sid),
                 self._emit('set_time', {'spot': spot, 'which': 'reserve', 'time': self._reserve_times[spot] * 1000, 'start': False}, room=sid)
             ])
-        if self._hand_in_play is not base_hand:
+        if self._hand_in_play and self._hand_in_play is not base_hand:
             events.append(self._emit('set_hand_in_play', {'hand_in_play': self._hand_in_play.to_list(), 'hand_in_play_desc': self._hand_in_play.id_desc}, room=sid))
         if self.is_paused:
             events.append(self._emit('set_paused', {'paused': True}, room=sid))
+        if self.trading:
+            spot: int = self._get_spot(sid)
+            events.extend([
+                self._emit('set_trading', {'trading': True}, room=sid),
+                self._emit('set_time', {'which': 'trading', 'time': self._trading_time_remaining * 1000, 'start': False}, room=sid),
+            ])
+            if self._is_asker(spot):
+                events.append(self._emit("set_asker", {"asker": True}, room=sid) )
+            else:
+                events.append(self._emit("set_giver", {"giver": True}, room=sid))
+                if self._giving_options[spot]:
+                    events.append(self._emit("set_giving_options", {"options": list(self._giving_options[spot]), "highlight": True}, room=sid))
 
         await asyncio.gather(*events)
 

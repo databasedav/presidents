@@ -21,13 +21,13 @@ class EmittingChamber(Chamber):
     to be debugged without needing an active HTTP request.
     """
 
-    def __init__(self, server: Server, cards: np.ndarray = None) -> None:
+    def __init__(self, sio, cards: np.ndarray = None) -> None:
         super().__init__(cards)
-        self._server: Server = server
+        self._sio = sio
         self._sid: str = None
 
     async def _emit(self, *args, **kwargs):
-        await self._server.emit(*args, room=self._sid, **kwargs)
+        await self._sio.emit(*args, room=self._sid, **kwargs)
 
     async def reset(self) -> None:
         await self._emit("clear_cards", {})
@@ -36,6 +36,11 @@ class EmittingChamber(Chamber):
         # TODO: deal with hands being removed, i.e. the asshole's stored
         #       hands must be removed
         super().reset()
+    
+    def set_sio(self, sio) -> None:
+        self._sio = sio
+        for hand_node in self._hands.iter_nodes():
+            hand_node.set_sio(sio)
 
     def set_sid(self, sid: Optional[str]) -> None:
         self._sid = sid
@@ -95,7 +100,7 @@ class EmittingChamber(Chamber):
                 "id_desc": hand.id_desc,
             },
         )
-        self._add_hand_helper(hand, EmittingHandNode, self._server)
+        self._add_hand_helper(hand, EmittingHandNode, self._sio)
 
     async def select_card(self, card: int, check: bool = True) -> None:
         super().select_card(card, check)
@@ -139,9 +144,9 @@ class EmittingChamber(Chamber):
 
 class EmittingHandNode(HandNode):
     def __init__(
-        self, hand_pointer_nodes: List[HandPointerNode], server
+        self, hand_pointer_nodes: List[HandPointerNode], sio
     ) -> None:
-        self._server: Server = server
+        self._sio = sio
         self._id = None  # TODO: random number or string (which one is better?)
         self._sid: str = None
 
@@ -149,7 +154,10 @@ class EmittingHandNode(HandNode):
         return "EmittingHandNode"  # TODO
 
     def _emit(self, *args, **kwargs) -> None:
-        self._server.emit(*args, {"id": self._sid}, room=self._sid, **kwargs)
+        self._sio.emit(*args, {"id": self._sid}, room=self._sid, **kwargs)
+
+    def set_sio(self, sio) -> None:
+        self._sio = sio
 
     def set_sid(self, sid: str) -> None:
         self._sid = sid

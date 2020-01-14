@@ -106,7 +106,7 @@ for method in ASYNCED_COPY_PASTE_METHODS:
                 )
                 # this is for the paused timers; unpausing uses
                 # asyncio.gather on the lambda's return values
-                .replace("lambda: await", "lambda:")
+                .replace("self._paused_timers.append(await ", "self._paused_timers.append(")
             )
     with open(ASYNCED_COPY_PASTE_METHODS_FILE_PATH, "a") as file:
         print(textwrap.dedent(method_str), file=file)

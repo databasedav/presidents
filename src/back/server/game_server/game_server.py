@@ -110,8 +110,9 @@ async def request_game_key(payload: GameIdUsername):
         raise HTTPException(
             status_code=409, detail="game is full; refresh and try again"
         )
+    
+    # game is not full; respond with key
     game_key = token_urlsafe()
-    # game key is valid for 10 seconds
     await asyncio.gather(
         prune_expired_keys(game_id),
         # add a game key

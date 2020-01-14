@@ -70,8 +70,6 @@ async def add_player_to_game(payload: UsernameSidGameId):
     sid = payload.sid
     game = games[game_id]
     await game.add_player(sid=sid, name=payload.username)
-    if game.is_paused:
-        game
     # above not in gather to confirm player was added
     await asyncio.gather(
         game_store.set(sid, game_id),
@@ -94,16 +92,15 @@ async def remove_player_from_game(payload: Sid):
     await asyncio.gather(
         game_store.hset(game_id, "paused", 1),
         game_store.delete(sid),  # sid no longer tied to game
-        game_store.hincrby(
-            game_id, "num_players", -1
-        ),  # decrement num players
+        # decrement num players
+        game_store.hincrby(game_id, "num_players", -1),
     )
 
 
 # TODO: can take a custom deck (e.g. within rules or something like
-#       everyone gets a 2 of spades); maybe this wouldn't go here
+#       everyone gets a 2 of spades); maybe this wouldn't go here...
 @game_god.put("/start_game", status_code=200)
-async def resume_game(payload: GameId):
+async def start_game(payload: GameId):
     game = games[payload.game_id]
     assert game.num_players == 4
     await game.start_round(setup=True)

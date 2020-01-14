@@ -67,7 +67,7 @@ export default new Vuex.Store({
           commit(`${namespace}/set_socket`, {socket: socket})
           // register presidents event listeners
           EVENTS.forEach(event => {
-            socket.on(event, (payload: any) => {
+            socket.on(event, payload => {
               commit(`${namespace}/${event}`, payload)
             })
           })
