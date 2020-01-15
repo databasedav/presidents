@@ -56,9 +56,10 @@ from ..data.stream.records import HandPlay
 # TODO: add UI elements for takes and gives remaining
 # TODO: go through all gathers and consider whether doing things
 #       concurrently won't break something
-# TODO: whenever concurrently emitting same event to multipl spots,
+# TODO: whenever concurrently emitting same event to multiple spots,
 #       randomly decide order, e.g. not just
 #       "for sid in spot_sid_bidict.values()"  or "for spot in range(4)"
+# TODO: fix idling on phone bug
 
 
 class EmittingGame(Game):
