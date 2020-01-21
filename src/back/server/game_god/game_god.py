@@ -85,7 +85,7 @@ async def remove_player_from_game(payload: Sid):
     sid = payload.sid
     game_id = await game_store.get(sid, encoding="utf-8")
     game = games[game_id]
-    if not int(await game_store.hget(game_id, 'paused')):
+    if not int(await game_store.hget(game_id, "paused")):
         await game.pause()
     await game.remove_player(sid)
     # above not in gather to confirm player was removed

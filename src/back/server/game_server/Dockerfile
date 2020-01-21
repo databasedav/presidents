@@ -1,8 +1,8 @@
-from python:3.7-buster
-copy src/back /src/back
-copy Pipfile Pipfile
-copy Pipfile.lock Pipfile.lock
-run pip install pipenv
+from nikolaik/python-nodejs:python3.7-nodejs13
+copy . /presidents
+workdir /presidents
 # https://stackoverflow.com/a/55610857
 run pipenv install --deploy --ignore-pipfile --dev
-cmd pipenv run uvicorn --host 0.0.0.0 --reload src.back.server.game_server.game_server:game_server
+run yarn install
+run yarn build
+cmd pipenv run uvicorn --host 0.0.0.0 --port 8000 --reload src.back.server.game_server.game_server:game_server

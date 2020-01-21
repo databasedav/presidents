@@ -79,37 +79,40 @@ patterns = [
 ]
 
 # reset
-open(ASYNCED_COPY_PASTE_METHODS_FILE_PATH, "w").close()
-with open(ASYNCED_COPY_PASTE_METHODS_FILE_PATH, "a") as file:
-    print(
-        """from typing import List, Iterable, Union
-from datetime import datetime
+# open(ASYNCED_COPY_PASTE_METHODS_FILE_PATH, "w").close()
+# with open(ASYNCED_COPY_PASTE_METHODS_FILE_PATH, "a") as file:
+#     print(
+#         """from typing import List, Iterable, Union
+# from datetime import datetime
 
-from .utils import rank_articler
-from .game import base_hand, PresidentsError
-from .chamber import Chamber, CardNotInChamberError
-from .hand import Hand, DuplicateCardError, FullHandError, NotPlayableOnError
-    """,
-        file=file,
-    )
+# from .utils import rank_articler
+# from .game import base_hand, PresidentsError
+# from .chamber import Chamber, CardNotInChamberError
+# from .hand import Hand, DuplicateCardError, FullHandError, NotPlayableOnError
+#     """,
+#         file=file,
+#     )
 
-for method in ASYNCED_COPY_PASTE_METHODS:
-    method_str = inspect.getsource(eval(f"Game.{method}")).lstrip()
-    method_str = "    async " + method_str
-    # prepend await to all async overwritten methods
-    for pattern in patterns:
-        match = pattern.search(method_str)
-        if match:
-            method_str = (
-                pattern.sub(f"await {match.group(0)}", method_str).replace(
-                    "\\", ""
-                )
-                # this is for the paused timers; unpausing uses
-                # asyncio.gather on the lambda's return values
-                .replace("self._paused_timers.append(await ", "self._paused_timers.append(")
-            )
-    with open(ASYNCED_COPY_PASTE_METHODS_FILE_PATH, "a") as file:
-        print(textwrap.dedent(method_str), file=file)
+# for method in ASYNCED_COPY_PASTE_METHODS:
+#     method_str = inspect.getsource(eval(f"Game.{method}")).lstrip()
+#     method_str = "    async " + method_str
+#     # prepend await to all async overwritten methods
+#     for pattern in patterns:
+#         match = pattern.search(method_str)
+#         if match:
+#             method_str = (
+#                 pattern.sub(f"await {match.group(0)}", method_str).replace(
+#                     "\\", ""
+#                 )
+#                 # this is for the paused timers; unpausing uses
+#                 # asyncio.gather on the lambda's return values
+#                 .replace(
+#                     "self._paused_timers.append(await ",
+#                     "self._paused_timers.append(",
+#                 )
+#             )
+#     with open(ASYNCED_COPY_PASTE_METHODS_FILE_PATH, "a") as file:
+#         print(textwrap.dedent(method_str), file=file)
 
 importlib.invalidate_caches()
 a = importlib.import_module(

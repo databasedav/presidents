@@ -2,10 +2,10 @@ from faust import Record
 from datetime import datetime
 
 
-class GameClick(Record):
+class GameAction(Record, validation=True):
     game_id: str
     user_id: str
-    timestamp: str
+    timestamp: datetime
     action: str
 
 

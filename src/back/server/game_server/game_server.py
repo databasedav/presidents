@@ -1,16 +1,22 @@
+import aiohttp
 import asyncio
+import fastapi
+import logging
+import uvicorn
 import aioredis
 import socketio
-import fastapi
-import uvicorn
-import aiohttp
-import logging
+import pkg_resources
+
 from time import time
+from uuid import uuid4
 from typing import List
-from fastapi import HTTPException
 from datetime import datetime
+from fastapi import HTTPException
 from secrets import token_urlsafe
+from starlette.responses import HTMLResponse
+from starlette.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
+
 
 from ...utils import main
 from ..models import (
@@ -23,14 +29,18 @@ from ..models import (
     GameList,
     GameAction,
 )
+from ...data.stream import game_action_agent
+from ...data.stream.records import GameAction
 
 
-KEY_TTL = 10  # time to live in seconds
+GAME_KEY_TTL = 10  # time to live in seconds
 
 
 logger = logging.getLogger(__name__)
 
+
 game_server_fast = fastapi.FastAPI()
+
 # TODO: i don't need all of these
 game_server_fast.add_middleware(
     CORSMiddleware,
@@ -39,10 +49,15 @@ game_server_fast.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 game_server_sio = socketio.AsyncServer(
     async_mode="asgi",
     client_manager=socketio.AsyncRedisManager("redis://socketio_pubsub"),
     cors_allowed_origins="*",
+)
+
+game_server = socketio.ASGIApp(
+    socketio_server=game_server_sio, other_asgi_app=game_server_fast
 )
 
 # the game store holds keys corresponding to the following:
@@ -52,30 +67,43 @@ game_server_sio = socketio.AsyncServer(
 #     expirations
 #   - game key to username (remove after auth)
 #   - sid to game id
-#   - list of game_ids
+#   - set of game_ids
 game_store = None
-game_god_client = aiohttp.ClientSession()
 
+# a single client suffices
+game_god_client = None
+
+# simple cache for sid to game id; these are always available in the
+# game store; TODO: handle leaving games and preventing cache from
+# getting too large
 sid_game_id_dict = dict()
 
 
-async def get_game_id(sid: str):
-    try:
-        return sid_game_id_dict[sid]
-    except KeyError:
-        game_id = await game_store.get(sid, encoding="utf-8")
-        sid_game_id_dict[sid] = game_id
-    return game_id
+# https://github.com/tiangolo/fastapi/issues/130#issuecomment-491379252
+game_server_fast.mount(
+    "/assets",
+    StaticFiles(
+        directory=pkg_resources.resource_filename(__name__, "static/assets")
+    ),
+)
 
 
 @game_server_fast.on_event("startup")
 async def on_startup():
-    global game_store
+    global game_store, game_god_client
     while not game_store:
         try:
             game_store = await aioredis.create_redis_pool("redis://game_store")
         except ConnectionRefusedError:
             await asyncio.sleep(0.5)
+    game_god_client = aiohttp.ClientSession()
+
+
+@game_server_fast.get("/")
+def root():
+    return HTMLResponse(
+        pkg_resources.resource_string(__name__, "static/index.html")
+    )
 
 
 # TODO: requires auth
@@ -110,13 +138,13 @@ async def request_game_key(payload: GameIdUsername):
         raise HTTPException(
             status_code=409, detail="game is full; refresh and try again"
         )
-    
+
     # game is not full; respond with key
     game_key = token_urlsafe()
     await asyncio.gather(
         prune_expired_keys(game_id),
         # add a game key
-        game_store.zadd(f"{game_id}:game_keys", time() + KEY_TTL, game_key),
+        game_store.zadd(f"{game_id}:game_keys", time() + GAME_KEY_TTL, game_key),
         # only a specific user can use the key
         game_store.set(game_key, payload.username),
     )
@@ -192,14 +220,10 @@ async def prune_expired_keys(game_id: str):
 
 @game_server_sio.event
 async def disconnect(sid):
-    # remove player from game (pauses game)
-    # tell other players in game that a player has left and the game
-    # will start again once they rejoin
     async with game_god_client.delete(
         "http://game_god:8000/remove_player_from_game", json={"sid": sid}
     ) as response:
         assert response.status == 200
-    ...
 
 
 VALID_GAME_ACTIONS = {  # value is required payload
@@ -231,14 +255,52 @@ async def game_action(sid, payload):
         json={"game_id": await get_game_id(sid), "sid": sid, **payload},
     ) as response:
         assert response.status == 200
-        # await cast_game_click(timestamp)
+        await cast_game_action(sid, timestamp, db_action(**payload))
 
 
-game_server = socketio.ASGIApp(
-    socketio_server=game_server_sio, other_asgi_app=game_server_fast
-)
+async def get_game_id(sid: str):
+    try:
+        return sid_game_id_dict[sid]
+    except KeyError:
+        game_id = await game_store.get(sid, encoding="utf-8")
+        sid_game_id_dict[sid] = game_id
+        return game_id
+
+
+def db_action(action, *, card: int = None, rank: int = None):
+    """
+    translates action to db action; particularly, card clicks to card
+    number and asking clicks to negative rank
+    """
+    if action == 'card_click':
+        return card
+    elif action == 'asking_click':
+        return -rank
+    else:
+        return action
+
+
+async def cast_game_action(
+        self, sid: str, timestamp: datetime, action: str
+    ) -> None:
+        await game_action_agent.cast(
+            GameAction(
+                game_id=str(uuid4()),
+                user_id=str(uuid4()),
+                timestamp=timestamp,
+                action=action,
+            )
+        )
+        # self._game_click_agent.cast(
+        #     GameClick(
+        #         game_id=self.game.id,
+        #         user_id=self.game.get_user_id(sid),
+        #         timestamp=timestamp,
+        #         action=action,
+        #     )
+        # )
 
 
 @main
 def run():
-    uvicorn.run(game_server, host="0.0.0.0")
+    uvicorn.run(game_server, host="0.0.0.0", port=8000)

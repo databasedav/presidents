@@ -26,21 +26,20 @@
 #         self.agents = setup_presidents_faust_app(faust_app)[2]
 
 import faust
-from .records import GameClick
+from .records import GameAction
 
-# handles consuming various presidents data streams
+# handles consuming all presidents data streams
+presidents_processor = faust.App(
+    'presidents',
+    broker='kafka://localhost:9092'
+)
 
-# app = faust.App(
-#     'presidents',
-#     broker='aiokafka://localhost:9092'
-# )
+game_action_topic = presidents_processor.topic(
+    'game_action',
+    value_type=GameAction
+)
 
-# game_click_topic = app.topic(
-#     'game_click',
-#     value_type=GameClick
-# )
-
-# @app.agent(game_click_topic)
-# async def game_click_agent(game_clicks):
-#     async for game_click in game_clicks:
-#         print(game_click)
+@presidents_processor.agent(game_action_topic)
+async def game_action_agent(game_actions):
+    async for game_action in game_actions:
+        print(game_action)

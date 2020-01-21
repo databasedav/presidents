@@ -36,7 +36,7 @@ class EmittingChamber(Chamber):
         # TODO: deal with hands being removed, i.e. the asshole's stored
         #       hands must be removed
         super().reset()
-    
+
     def set_sio(self, sio) -> None:
         self._sio = sio
         for hand_node in self._hands.iter_nodes():
@@ -143,9 +143,7 @@ class EmittingChamber(Chamber):
 
 
 class EmittingHandNode(HandNode):
-    def __init__(
-        self, hand_pointer_nodes: List[HandPointerNode], sio
-    ) -> None:
+    def __init__(self, hand_pointer_nodes: List[HandPointerNode], sio) -> None:
         self._sio = sio
         self._id = None  # TODO: random number or string (which one is better?)
         self._sid: str = None

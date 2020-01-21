@@ -22,6 +22,7 @@ fastapi = "*"
 faust = {extras = ["debug", "fast", "uvloop"],version = "*"}
 robinhood-aiokafka = "*"
 uvicorn = "*"
+aiofiles = "*"
 
 [requires]
 python_version = "3.7"

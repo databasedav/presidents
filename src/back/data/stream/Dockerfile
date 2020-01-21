@@ -4,4 +4,4 @@ workdir /presidents
 run pip install pipenv
 # https://stackoverflow.com/a/55610857
 run pipenv install --deploy --ignore-pipfile --dev
-cmd pipenv run uvicorn --host 0.0.0.0 --port 8000 --reload src.back.server.game_god.game_god:game_god
+cmd pipenv run faust -A src.back.data.stream:presidents_processor worker -l info

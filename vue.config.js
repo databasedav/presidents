@@ -4,17 +4,20 @@ module.exports = {
   ],
   devServer: {
     proxy: {
-      "/game_server": {
+      "/api/**": {
         target: "http://0.0.0.0:8001",
-        pathRewrite: {"^/game_server" : ""},
+        pathRewrite: { '^/api': '' },
         changeOrigin: true
       },
-      "/game_server/socket.io": {
+      "/api/socket.io": {
         target: "http://0.0.0.0:8001",
-        pathRewrite: {"^/game_server" : ""},
+        pathRewrite: { '^/api': '' },
         ws: true,
         changeOrigin: true
       }
     },
   },
+  publicPath: 'src/front',
+  outputDir: 'src/back/server/game_server/static',
+  assetsDir: 'assets'
 }

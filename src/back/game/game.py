@@ -190,7 +190,7 @@ class Game:
     @property
     def is_full(self) -> bool:
         return not bool(self._open_spots)
-    
+
     @property
     def is_paused(self) -> bool:
         return bool(self._paused_timers)
@@ -466,7 +466,9 @@ class Game:
                     now - self._turn_time_use_starts[spot]
                 ).total_seconds()
                 # turn time objects are used for for giving times
-                self._set_time("turn", self._turn_times[spot] - time_used, spot)
+                self._set_time(
+                    "turn", self._turn_times[spot] - time_used, spot
+                )
                 self._turn_time_use_starts[spot] = None
                 self._paused_timers.append(self._start_timer("turn", spot))
 

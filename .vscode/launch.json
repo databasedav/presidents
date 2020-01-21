@@ -1,0 +1,83 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "presidents test server",
+            "type": "python",
+            "request": "launch",
+            "module": "src.back.tests.testing_server",
+            "console": "externalTerminal",
+            // "justMyCode": false
+        },
+        {
+            "name": "same hand played demo",
+            "type": "python",
+            "request": "launch",
+            "module": "src.back.same_hand_played_demo",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "pytest server browser",
+            "type": "python",
+            "request": "launch",
+            "args": [
+                "${workspaceFolder}/src/back/tests/test_server_browser.py"
+            ],
+            "module": "pytest", //"src.back.tests.test_server_browser",
+            "console": "integratedTerminal"
+        },
+        {
+            "type": "firefox",
+            "request": "launch",
+            "name": "vuejs: firefox",
+            "url": "http://127.0.0.1:8080",
+            "webRoot": "${workspaceFolder}/src",
+            "pathMappings": [{ "url": "webpack:///src/", "path": "${webRoot}/" }],
+            "reAttach": true
+        },
+        {
+            "name": "docker game god",
+            "type": "python",
+            "request": "launch",
+            "pythonPath": "/root/.local/share/virtualenvs/-x-v5uFv0/bin/python",
+            "module": "src.back.server.game_god.game_god",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "docker game server",
+            "type": "python",
+            "request": "launch",
+            "pythonPath": "/root/.local/share/virtualenvs/-x-v5uFv0/bin/python",
+            "module": "src.back.server.game_server.game_server",
+            "console": "integratedTerminal"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "client testing",
+            "configurations": [
+                "presidents test server",
+                "pytest server browser"
+            ]
+        },
+        {
+            "name": "server client",
+            "configurations": [
+                "presidents test server",
+                "vuejs: firefox"
+            ]
+        }
+    ]
+}

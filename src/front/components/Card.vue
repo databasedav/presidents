@@ -67,15 +67,11 @@ export default {
 </script>
 
 <style scoped>
-/* TODO: border should not increase width of cards */
 .v-btn.card {
   min-width: 0;
   margin: 5px;
   font-size: 20px;
   text-align: center;
   border-radius: 5px;
-  /* box-sizing: border-box !important; */
-  /* background-color: #e0e0e0 !important; */
-  /* border-color: #18ffff !important; */
 }
 </style>

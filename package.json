@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "serve": "vue-cli-service serve ./src/front/main.ts",
-    "build": "vue-cli-service build"
+    "serve": "vue-cli-service serve ./src/front/main.js",
+    "build": "vue-cli-service build --dest ./src/back/server/game_server/static ./src/front/main.js"
   },
   "dependencies": {
     "@chenfengyuan/vue-countdown": "^1.1.4",
