@@ -3,7 +3,7 @@ from typing import Callable, Dict, List, Optional, Set, Union, Iterable
 from bidict import bidict
 from socketio import AsyncServer
 
-import asyncio
+from asyncio import gather
 import inspect
 import re
 from time import time
@@ -131,7 +131,7 @@ class EmittingGame(Game):
         """
         Deals cards to all players.
         """
-        await asyncio.gather(
+        await gather(
             *[
                 self._deal_cards_indiv(spot, sid, cards)
                 for (spot, sid), cards in zip(
@@ -154,7 +154,7 @@ class EmittingGame(Game):
         # this isn't in the gather because the cards remaining event is
         # emitted before all the cards have been async added
         await chamber.add_cards(cards)
-        await asyncio.gather(
+        await gather(
             self._emit("set_spot", {"spot": spot}, room=sid),
             self._emit_to_players(
                 "set_cards_remaining",
@@ -172,14 +172,14 @@ class EmittingGame(Game):
         testing: bool = False,
     ) -> None:
         """
-        NOTE: logic copy/pasted from base; must update manually
+        NOTE: logic copy/pasted from base; must update manually;
               for a gather loop
         """
         if setup:
             await self._setup_round(deck=deck)
         self._num_consecutive_rounds += 1
         self._make_and_set_turn_manager(testing)
-        await asyncio.gather(
+        await gather(
             *[
                 self._set_time("reserve", self._reserve_time, spot)
                 for spot in range(4)
@@ -199,14 +199,14 @@ class EmittingGame(Game):
             pass
         # TODO this mypy error
         self._current_player = spot = next(self._turn_manager)
-        await asyncio.gather(
+        await gather(
             self._set_time("turn", self._turn_time, spot, True),
             self._message(f"🎲 it's {self._names[spot]}'s turn"),
             self._emit_set_on_turn_handler(spot),
         )
 
     async def _emit_set_on_turn_handler(self, spot: int) -> None:
-        await asyncio.gather(
+        await gather(
             self._emit(
                 "set_on_turn", {"on_turn": True}, room=self._get_sid(spot)
             ),
@@ -249,19 +249,19 @@ class EmittingGame(Game):
         await self._emit_to_players("set_timer_state", payload)
 
     async def pause(self) -> None:
-        await asyncio.gather(
+        await gather(
             self._pause_timers(),
             self._emit_to_players("set_paused", {"paused": True}),
         )
 
     async def resume(self) -> None:
-        await asyncio.gather(
+        await gather(
             self._emit_to_players("set_paused", {"paused": False}),
             self._resume_timers(),
         )
 
     async def _resume_timers(self) -> None:
-        await asyncio.gather(*self._paused_timers)
+        await gather(*self._paused_timers)
         self._paused_timers.clear()
 
     async def _player_finish(self, spot: int) -> None:
@@ -273,13 +273,13 @@ class EmittingGame(Game):
         self._turn_manager.remove(self._current_player)
         num_unfinished_players = self._num_unfinished_players
         if num_unfinished_players == 3:
-            await asyncio.gather(
+            await gather(
                 self._set_president(spot),
                 self._message(f"🏆 {self._names[spot]} is president 🥇"),
                 self._next_player(),
             )
         elif num_unfinished_players == 2:
-            await asyncio.gather(
+            await gather(
                 self._set_vice_president(spot),
                 self._message(f"🏆 {self._names[spot]} is vice president 🥈"),
                 self._next_player(),
@@ -289,7 +289,7 @@ class EmittingGame(Game):
             self._current_player = next(self._turn_manager)
             await self._set_asshole(self._current_player)
             self._positions.append(self._current_player)
-            await asyncio.gather(
+            await gather(
                 self._message(
                     f"🏆 {self._names[spot]} is vice asshole 🥉 and {self._names[self._current_player]} is asshole 💩"
                 ),
@@ -408,7 +408,7 @@ class EmittingGame(Game):
                         )
                     )
 
-        await asyncio.gather(*events)
+        await gather(*events)
 
     # card management related methods
 
@@ -416,6 +416,7 @@ class EmittingGame(Game):
         spot: int = self._get_spot(sid)
         try:
             await self.add_or_remove_card(spot, card)
+            # await cast_game_action(...)
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
 
@@ -452,7 +453,7 @@ class EmittingGame(Game):
         # this is outside the gather because the num_cards was being
         # evaluated before the chamber after removed the cards
         await chamber.remove_cards(hand)
-        await asyncio.gather(
+        await gather(
             # TODO
             # self._hand_play_agent.cast(
             #     HandPlay(
@@ -528,7 +529,7 @@ class EmittingGame(Game):
         """
         assert self._pass_unlocked[spot], "pass called without unlocking"
         self._num_consecutive_passes += 1
-        await asyncio.gather(
+        await gather(
             self._stop_timer(
                 "turn" if not self._is_using_reserve_time(spot) else "reserve",
                 spot,
@@ -564,7 +565,7 @@ class EmittingGame(Game):
         await self._emit_to_players("set_trading", {"trading": trading})
         range_4 = range(4)
         if trading:
-            await asyncio.gather(
+            await gather(
                 *[self._set_dot_color(spot, "red") for spot in range_4],
                 self._emit(
                     "set_on_turn",
@@ -682,11 +683,11 @@ class EmittingGame(Game):
         giver_chamber: Chamber = self._chambers[spot]
         receiver_spot: int = self._get_opposing_position_spot(spot)
         receiver_chamber: Chamber = self._chambers[receiver_spot]
-        await asyncio.gather(
+        await gather(
             giver_chamber.remove_card(card), receiver_chamber.add_card(card)
         )
         # separate gathers because chamber must update num_cards
-        await asyncio.gather(
+        await gather(
             *[
                 self._emit_to_players(
                     "set_cards_remaining",
@@ -704,7 +705,7 @@ class EmittingGame(Game):
             self._add_to_given(spot, card)
             await self._decrement_gives(spot, auto_trading=auto_trading)
         elif self._is_giver(spot):
-            await asyncio.gather(
+            await gather(
                 self._clear_giving_options(spot),
                 self._decrement_takes(
                     receiver_spot, auto_trading=auto_trading
@@ -753,7 +754,7 @@ class EmittingGame(Game):
         await self.lock(self._get_spot(sid))
 
     async def _unlock(self, spot: int) -> None:
-        await asyncio.gather(
+        await gather(
             self._emit(
                 "set_unlocked", {"unlocked": True}, room=self._get_sid(spot)
             ),
@@ -804,7 +805,7 @@ class EmittingGame(Game):
     async def _set_asker(
         self, spot: int, asker: bool, takes_and_gives: int
     ) -> None:
-        await asyncio.gather(
+        await gather(
             self._set_takes(spot, takes_and_gives),
             self._set_gives(spot, takes_and_gives),
             self._emit(
@@ -856,14 +857,14 @@ class EmittingGame(Game):
         """
         maybe_skip_sid = kwargs.get("skip_sid")
         if not maybe_skip_sid:
-            await asyncio.gather(
+            await gather(
                 *[
                     self._emit(*args, room=sid, **kwargs)
                     for sid in self._spot_sid_bidict.values()
                 ]
             )
         elif isinstance(maybe_skip_sid, str):
-            await asyncio.gather(
+            await gather(
                 *[
                     self._emit(*args, room=sid, **kwargs)
                     for sid in self._spot_sid_bidict.values()
@@ -871,7 +872,7 @@ class EmittingGame(Game):
                 ]
             )
         elif isinstance(maybe_skip_sid, list):
-            await asyncio.gather(
+            await gather(
                 *[
                     self._emit(*args, room=sid, **kwargs)
                     for sid in self._spot_sid_bidict.values()

@@ -1,6 +1,6 @@
 import inspect
 import sys
-import asyncio
+from asyncio import sleep, create_task
 from typing import Callable
 
 
@@ -25,10 +25,10 @@ class AsyncTimer:
         """
 
         async def task():
-            await asyncio.sleep(seconds)
+            await sleep(seconds)
             await callback(*args, **kwargs)
 
-        return asyncio.create_task(task())
+        return create_task(task())
 
 
 def main(fn):

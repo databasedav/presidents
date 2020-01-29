@@ -27,7 +27,7 @@ export default {
   },
 
   created () {
-    axios.post('http://0.0.0.0:8001/create_game', {
+    axios.post('/create_game', {
       name: 'test',
       turn_time: .2,
       reserve_time: 0,

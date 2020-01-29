@@ -2,6 +2,7 @@ version: '3.7'
 services:
   game_store:
     image: "redis:6.0-rc-buster"
+    command: sh -c "rm -f /data/dump.rdb && redis-server"
     ports:
       - target: 6379
         published: 6379
@@ -9,6 +10,7 @@ services:
   
   socketio_pubsub:
     image: "redis:6.0-rc-buster"
+    command: sh -c "rm -f /data/dump.rdb && redis-server"
     ports:
       - target: 6379
         published: 6380
@@ -27,22 +29,23 @@ services:
       - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
       - ALLOW_PLAINTEXT_LISTENER=yes
       # # https://rmoff.net/2018/08/02/kafka-listeners-explained/
-      # - KAFKA_CFG_LISTENERS=stream_processor://data_stream:9092
-      # - KAFKA_CFG_ADVERTISED_LISTENERS=stream_processor://data_stream:9092
-      # - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=stream_processor:PLAINTEXT
-      # - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=stream_processor
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://data_stream:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://data_stream:9092
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
     ports:
       - target: 9092
         published: 9092
 
-  # stream_processor:
-  #   build:
-  #     context: ./
-  #     dockerfile: ./src/back/data/stream/Dockerfile
-  #   depends_on:
-  #     - data_stream
-  #   volumes:
-  #     - /src/back:/src/back
+  stream_processor:
+    build:
+      context: ./
+      dockerfile: ./src/back/data/stream/Dockerfile
+    depends_on:
+      - data_stream
+    volumes:
+      - ./src/back:/presidents/src/back
+    restart: always
 
   game_server:
     build:
@@ -52,10 +55,10 @@ services:
       - game_store
       - socketio_pubsub
     ports:
-      - target: 8000
+      - target: 80
         published: 8000
     volumes:
-      - ./src/back:/src/back
+      - ./src/back:/presidents/src/back
     restart: always
     
   
@@ -67,11 +70,9 @@ services:
       - game_store
       - socketio_pubsub
     ports:
-      - target: 8000
+      - target: 80
         published: 8001
     volumes:
-      - ./src/back:/src/back
+      - ./src/back:/presidents/src/back
     restart: always
-    stdin_open: true
-    tty: true
     

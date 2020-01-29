@@ -45,7 +45,7 @@
     </v-row>
 
     <v-row justify="center" dense>
-      <v-col cols="9">
+      <v-col cols="6">
         <PlayerStrip
           :namespace="this.namespace"
           :spot="this.spot"
@@ -115,13 +115,18 @@ export default {
 
   data () {
     return {
+      // TODO: this is here because watcher fires twice for some reason
+      //       remove and find out why;
+      //       also watcher should not be used to fire this?
+      joined: false
     };
   },
 
   watch: {
     game_id: {
       handler: function (game_id) {
-        if (game_id) {
+        if (!this.joined && game_id) {
+          this.joined = true
           this.$store.dispatch('join_game', {game_id: game_id, testing: this.testing, testing_username: 'abcd'[this.testing_sid_index-1]})
         }
       },

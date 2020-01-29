@@ -6,7 +6,7 @@ from socketio import AsyncServer
 from typing import Dict, List, Any, Optional, Iterable
 import numpy as np
 
-import asyncio
+from asyncio import gather
 
 # from ..server.server import Server
 
@@ -54,9 +54,7 @@ class EmittingChamber(Chamber):
     async def add_cards(self, cards) -> None:
         self._check_cards_not_in(cards)
         # already checked
-        await asyncio.gather(
-            *[self.add_card(card, check=False) for card in cards]
-        )
+        await gather(*[self.add_card(card, check=False) for card in cards])
 
     async def remove_card(
         self,
@@ -73,7 +71,7 @@ class EmittingChamber(Chamber):
     async def remove_cards(self, cards) -> None:
         self._check_cards_in(cards)
         # already checked
-        await asyncio.gather(
+        await gather(
             *[
                 self.remove_card(
                     card, check=False, update_current_hand_str=False
@@ -122,7 +120,7 @@ class EmittingChamber(Chamber):
 
     async def deselect_cards(self, cards: Iterable[int]) -> None:
         self._check_cards_in(cards)
-        await asyncio.gather(
+        await gather(
             *[
                 self.deselect_card(
                     card, check=False, update_current_hand_str=False

@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from uuid import UUID
-from typing import List
+from typing import List, Optional
 import datetime
 
 
@@ -32,11 +32,11 @@ class Game(GameAttrs):
     game_id: str
     num_players: int = None
     players: List[Username] = None
-    paused: int = 0  # redis doesn't support bools
+    fresh: int = 1  # redis doesn't support bools
 
 
 class GameList(BaseModel):
-    games: List[Game]
+    games: List[Optional[Game]]
 
 
 class GameKey(BaseModel):
@@ -55,3 +55,14 @@ class GameAction(BaseModel):
     card: int = None  # for card clicks
     rank: int = None  # for asking clicks
     timestamp: datetime.datetime = None
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class UsernamePasswordReenterPassword(BaseModel):
+    username: str
+    password: str
+    reenter_password: str

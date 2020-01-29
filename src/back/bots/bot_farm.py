@@ -40,7 +40,7 @@ class ClientBotFarm:
         self._client.register_namespace(self._server_browser_client)
         # server browser namespace is taken from the event handlers
         await self._client.connect(f"http://{host}:{port}")
-        await asyncio.gather(
+        await gather(
             *[
                 client.connect(
                     f"http://{host}:{port}",
@@ -273,7 +273,7 @@ class ClientBot(Bot, AsyncClientNamespace):
 
     async def _turn_up(self):
         if self._selected_cards:
-            await asyncio.gather(
+            await gather(
                 *[self._click_card(card) for card in self._selected_cards]
             )
         if 1 in self._cards:
@@ -307,7 +307,7 @@ class ClientBot(Bot, AsyncClientNamespace):
 
     async def _emit(self, *args, **kwargs):
         await super().emit(*args, **kwargs)
-        await asyncio.sleep(0.2)
+        await sleep(0.2)
 
 
 # TODO: orchestrator for client bots that auto rejoins them to reset

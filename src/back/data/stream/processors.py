@@ -36,7 +36,7 @@ def get_hand_play_processor(hand_player_sids_table):
             ].value()
             hand_player_sids.append(hand_play.sid)
             print(f"{hand_play.hand_hash}: {len(hand_player_sids)}")
-            # # await asyncio.gather(
+            # # await gather(
             # #     *[
             # #         external_sio.emit(
             # #             "increment_same_hand_players", {}, room=sid

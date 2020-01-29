@@ -1,13 +1,5 @@
 version: '3'
 services:
-  game_store:
-    image: redis:6.0-rc-buster
-    restart: always
-  
-  socketio_pubsub:
-    image: redis:6.0-rc-buster
-    restart: always
-
   game_server:
     image: senavi/presidents_game_server:latest
     ports:
@@ -16,4 +8,12 @@ services:
   
   game_god:
     image: senavi/presidents_game_god:latest
+    restart: always
+
+  game_store:
+    image: redis:6.0-rc-buster
+    restart: always
+  
+  socketio_pubsub:
+    image: redis:6.0-rc-buster
     restart: always

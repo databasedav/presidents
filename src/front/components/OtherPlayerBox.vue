@@ -1,6 +1,6 @@
 <template>
   <v-container>
-    <v-row justify="center" dense>
+    <v-row justify="center">
       <v-col cols="6">
         <PlayerStrip
           :namespace="this.namespace"
@@ -9,7 +9,7 @@
       </v-col>
     </v-row>
 
-    <v-row justify="center" dense>
+    <v-row justify="center">
       <v-col cols="6">
         <PlayerStrip
           :namespace="this.namespace"

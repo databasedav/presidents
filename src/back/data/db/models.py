@@ -1,4 +1,4 @@
-from aiocassandra import AioModel
+from aiocqlengine.models import AioModel
 from cassandra.cqlengine.columns import (
     Boolean,
     DateTime,
@@ -17,7 +17,11 @@ DateTime.truncate_microseconds = True
 class User(AioModel):
     __table_name__ = "user"
     __keyspace__ = "presidents"
-    user_id = UUID(primary_key=True, partition_key=True, required=True)
+    username = Text(primary_key=True, partition_key=True, required=True)
+    password = Text(required=True)  # hashed
+    # stores all user preferences like unselecting cards on store hand,
+    # etc.
+    options = Map(key_type=Text, value_type=Text)
 
 
 class GameClicks(AioModel):

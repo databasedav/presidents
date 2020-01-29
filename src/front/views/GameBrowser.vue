@@ -50,6 +50,9 @@
         </v-dialog>
       </v-toolbar>
     </template>
+    <template v-slot:item.fresh="{ item }">
+      {{ item.fresh ? 'yes' : 'no' }}
+    </template>
     <template v-slot:item.join_button="{ item }">
       <v-btn
         color="success"
@@ -85,6 +88,11 @@ export default {
           text: "# players",
           align: "center",
           value: "num_players"
+        },
+        {
+          text: "fresh",
+          align: "center",
+          value: "fresh"
         },
         {
           text: "",

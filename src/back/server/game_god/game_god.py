@@ -1,9 +1,10 @@
+import asyncio
 import fastapi
-import socketio
-import aioredis
 import logging
 import uvicorn
-import asyncio
+import aioredis
+import socketio
+from asyncio import gather
 from starlette.middleware import cors
 
 from ..models import (
@@ -38,11 +39,9 @@ game_store = None
 @game_god.on_event("startup")
 async def on_startup():
     global game_store
-    while not game_store:
-        try:
-            game_store = await aioredis.create_redis_pool("redis://game_store")
-        except ConnectionRefusedError:
-            await asyncio.sleep(0.5)
+    # TODO: azure docker compose doesn't support depends so sets 5
+    #       connection timeout
+    game_store = await aioredis.create_redis_pool("redis://game_store", timeout=300)
 
 
 @game_god.post("/add_game", response_model=Game, status_code=201)
@@ -54,25 +53,34 @@ async def add_game(payload: GameAttrs):
     game_dict = {
         "game_id": game_id,
         "num_players": 0,
-        "paused": 0,
+        "fresh": 1,
         **game_params,
     }
-    await asyncio.gather(
+    await gather(
         game_store.hmset_dict(game_id, game_dict),
         game_store.sadd("game_ids", game_id),
     )
-    return Game(**game_dict)
+    return game_dict
+
+
+async def remove_game(game_id):
+    # TODO: incomplete
+    await gather(
+        game_store.delete(game_id), game_store.srem("game_ids", game_id)
+    )
 
 
 @game_god.put("/add_player_to_game", status_code=200)
 async def add_player_to_game(payload: UsernameSidGameId):
     game_id = payload.game_id
-    sid = payload.sid
     game = games[game_id]
+    username = payload.username
+    assert not game.in_players(username), 'cannot join game multiple times'
+    sid = payload.sid
     await game.add_player(sid=sid, name=payload.username)
     # above not in gather to confirm player was added
-    await asyncio.gather(
-        game_store.set(sid, game_id),
+    await gather(
+        game_store.hset(sid, "game_id", game_id),
         game_store.hincrby(game_id, "num_players"),
     )
 
@@ -85,15 +93,19 @@ async def remove_player_from_game(payload: Sid):
     sid = payload.sid
     game_id = await game_store.get(sid, encoding="utf-8")
     game = games[game_id]
-    if not int(await game_store.hget(game_id, "paused")):
+    if game.is_started and not game.is_paused:
         await game.pause()
+        # not gathered to confirm game was paused
+        # TODO: have game api methods return bool for success
+        await game_store.hset(game_id, "paused", 1)
     await game.remove_player(sid)
     # above not in gather to confirm player was removed
-    await asyncio.gather(
-        game_store.hset(game_id, "paused", 1),
+    await gather(
         game_store.delete(sid),  # sid no longer tied to game
-        # decrement num players
-        game_store.hincrby(game_id, "num_players", -1),
+        # remove game if no players remain; otherwise update num players
+        remove_game(game_id)
+        if game.num_players == 0
+        else game_store.hincrby(game_id, "num_players", -1),
     )
 
 
@@ -101,9 +113,11 @@ async def remove_player_from_game(payload: Sid):
 #       everyone gets a 2 of spades); maybe this wouldn't go here...
 @game_god.put("/start_game", status_code=200)
 async def start_game(payload: GameId):
-    game = games[payload.game_id]
+    game_id = payload.game_id
+    game = games[game_id]
     assert game.num_players == 4
     await game.start_round(setup=True)
+    await game_store.hset(game_id, "fresh", "0")
 
 
 @game_god.put("/resume_game", status_code=200)
@@ -112,13 +126,12 @@ async def resume_game(payload: GameId):
     game = games[game_id]
     assert game.num_players == 4
     await game.resume()
-    await game_store.hset(game_id, "paused", 0)
 
 
 @game_god.put("/game_action", status_code=200)
 async def game_action(payload: GameAction):
     action = payload.action
-    method = getattr(games[payload.game_id], f"{payload.action}_handler")
+    method = getattr(games[payload.game_id], f"{action}_handler")
     if action == "card_click":
         await method(payload.sid, payload.card)
     elif action == "play":

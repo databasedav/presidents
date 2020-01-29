@@ -196,6 +196,10 @@ class Game:
         return bool(self._paused_timers)
 
     @property
+    def is_started(self) -> bool:
+        return bool(self._num_consecutive_rounds)
+
+    @property
     def _num_unfinished_players(self) -> int:
         assert self._turn_manager is not None
         return self._turn_manager._num_unfinished_players
@@ -1265,6 +1269,8 @@ class Game:
         """
         return self._reserve_time_use_starts[spot] is not None
 
+    def in_players(self, name: str):
+        return name in self._names
 
 # fmt: off
 class BaseHand:

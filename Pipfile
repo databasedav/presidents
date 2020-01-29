@@ -23,6 +23,11 @@ faust = {extras = ["debug", "fast", "uvloop"],version = "*"}
 robinhood-aiokafka = "*"
 uvicorn = "*"
 aiofiles = "*"
+aiocqlengine = "*"
+pyjwt = "*"
+argon2-cffi = "*"
+passlib = "*"
+requests = "*"
 
 [requires]
 python_version = "3.7"

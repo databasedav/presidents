@@ -55,12 +55,12 @@ names = ["a", "b", "c", "d"]
 
 @pytest.mark.asyncio
 async def test_lil_baby_game():
-    await asyncio.sleep(1.5)
+    await sleep(1.5)
     clients = [Client() for _ in range(4)]
     client_bots = [ClientBot("/server=12345") for _ in range(4)]
     for client, client_bot in zip(clients, client_bots):
         client.register_namespace(client_bot)
-    await asyncio.gather(
+    await gather(
         *[
             client.connect(
                 f"http://{HOST}:{PORT}",
@@ -69,14 +69,14 @@ async def test_lil_baby_game():
             for client in clients
         ]
     )
-    await asyncio.sleep(0.05)
+    await sleep(0.05)
     await clients[0].emit(
         "add_server",
         {"name": "test", "server_id": "12345"},
         namespace="/server_browser=us-west",
     )
-    await asyncio.sleep(0.5)
-    await asyncio.gather(
+    await sleep(0.5)
+    await gather(
         *[
             client.emit(
                 "join_server",
@@ -86,7 +86,7 @@ async def test_lil_baby_game():
             for i, client in enumerate(clients)
         ]
     )
-    await asyncio.sleep(10000)
+    await sleep(10000)
 
 
 # if __name__ == '__main__':

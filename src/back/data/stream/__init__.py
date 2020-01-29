@@ -30,14 +30,13 @@ from .records import GameAction
 
 # handles consuming all presidents data streams
 presidents_processor = faust.App(
-    'presidents',
-    broker='kafka://localhost:9092'
+    "presidents", broker="kafka://data_stream:9092"
 )
 
 game_action_topic = presidents_processor.topic(
-    'game_action',
-    value_type=GameAction
+    "game_action", value_type=GameAction
 )
+
 
 @presidents_processor.agent(game_action_topic)
 async def game_action_agent(game_actions):
