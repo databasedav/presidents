@@ -17,11 +17,25 @@ DateTime.truncate_microseconds = True
 class User(AioModel):
     __table_name__ = "user"
     __keyspace__ = "presidents"
-    username = Text(primary_key=True, partition_key=True, required=True)
+    user_id = UUID(primary_key=True, partition_key=True, required=True)
+    username = Text(required=True)
+    previous_usernames = List(value_type=Text)
     password = Text(required=True)  # hashed
+    created = DateTime(required=True)
     # stores all user preferences like unselecting cards on store hand,
     # etc.
-    options = Map(key_type=Text, value_type=Text)
+    settings = Map(key_type=Text, value_type=Text)
+
+
+class Username(AioModel):
+    """
+    Maintaining this table trivializes name changes.
+    """
+
+    __table_name__ = "username"
+    __keyspace__ = "presidents"
+    username = Text(primary_key=True, partition_key=True, required=True)
+    user_id = UUID(required=True)
 
 
 class GameClicks(AioModel):

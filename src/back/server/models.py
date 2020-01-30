@@ -66,3 +66,7 @@ class UsernamePasswordReenterPassword(BaseModel):
     username: str
     password: str
     reenter_password: str
+
+
+class Alert(BaseModel):
+    alert: str

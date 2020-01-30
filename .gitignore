@@ -24,7 +24,6 @@ __pycache__
 .cache
 .pkl
 .mypy_cache
-.devcontainer
 
 playground.py
 playground.ipynb

@@ -41,7 +41,9 @@ async def on_startup():
     global game_store
     # TODO: azure docker compose doesn't support depends so sets 5
     #       connection timeout
-    game_store = await aioredis.create_redis_pool("redis://game_store", timeout=300)
+    game_store = await aioredis.create_redis_pool(
+        "redis://game_store", timeout=300
+    )
 
 
 @game_god.post("/add_game", response_model=Game, status_code=201)
@@ -75,7 +77,7 @@ async def add_player_to_game(payload: UsernameSidGameId):
     game_id = payload.game_id
     game = games[game_id]
     username = payload.username
-    assert not game.in_players(username), 'cannot join game multiple times'
+    assert not game.in_players(username), "cannot join game multiple times"
     sid = payload.sid
     await game.add_player(sid=sid, name=payload.username)
     # above not in gather to confirm player was added

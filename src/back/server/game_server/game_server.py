@@ -1,3 +1,4 @@
+import re
 import aiohttp
 import fastapi
 import logging
@@ -22,7 +23,11 @@ from starlette.staticfiles import StaticFiles
 from cassandra.cqlengine.query import DoesNotExist
 from starlette.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
-from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_406_NOT_ACCEPTABLE, HTTP_409_CONFLICT
+from starlette.status import (
+    HTTP_401_UNAUTHORIZED,
+    HTTP_406_NOT_ACCEPTABLE,
+    HTTP_409_CONFLICT,
+)
 
 from ...utils import main
 from ..models import (
@@ -36,10 +41,11 @@ from ..models import (
     GameAction,
     Token,
     GameId,
-    UsernamePasswordReenterPassword
+    UsernamePasswordReenterPassword,
+    Alert
 )
 from ...data.db import session
-from ...data.db.models import User
+from ...data.db.models import User, Username
 from ...data.stream import game_action_agent
 from ...data.stream.records import GameAction
 from ..secrets import SECRET
@@ -99,24 +105,27 @@ sid_game_id_dict = dict()
 sid_username_dict = dict()
 
 
-# In [62]: %timeit cc.hash(str(uuid4()))                                                                      
+# In [62]: %timeit cc.hash(str(uuid4()))
 # 101 ms ± 1.1 ms per loop (mean ± std. dev. of 7 runs, 10 loops each)
 # TODO benchmark this on azure
 password_context = passlib.context.CryptContext(
-    schemes=['argon2'],
+    schemes=["argon2"],
     argon2__time_cost=2,
     argon2__memory_cost=256000,
     argon2__parallelism=8,
     argon2__hash_len=16,
-    argon2__salt_len=16
+    argon2__salt_len=16,
 )
 
 # TODO: reject common passwords
 # TODO: rehash and update db if hash is using deprecated scheme
 
+
 async def authenticate_user(username: str, password: str):
     try:
-        if password_context.verify(password, (await User.async_get(username=username)).password):
+        if password_context.verify(
+            password, (await User.async_get(username=username)).password
+        ):
             return True
         else:
             raise HTTPException(
@@ -138,11 +147,14 @@ try:
     game_server_fast.mount(
         "/assets",
         StaticFiles(
-            directory=pkg_resources.resource_filename(__name__, "static/assets")
+            directory=pkg_resources.resource_filename(
+                __name__, "static/assets"
+            )
         ),
     )
-except RuntimeError:  # development 
+except RuntimeError:  # development
     pass
+
 
 @game_server_fast.on_event("startup")
 async def on_startup():
@@ -150,12 +162,16 @@ async def on_startup():
 
     # TODO: azure docker compose doesn't support depends so sets 5
     #       connection timeout
-    game_store = await aioredis.create_redis_pool("redis://game_store", timeout=300)
+    game_store = await aioredis.create_redis_pool(
+        "redis://game_store", timeout=300
+    )
 
     # here because requires event loop
     game_god_client = aiohttp.ClientSession()
 
     # here because requires event loop
+    # from cassandra.cqlengine import management
+    # management.sync_table(User)
     aiocassandra.aiosession(session)
 
 
@@ -170,42 +186,69 @@ def root():
 async def login_for_access_token(
     payload: OAuth2PasswordRequestForm = Depends()
 ):
-    if authenticate_user(payload.username, payload.password):
+    username = payload.username
+    if authenticate_user(username, payload.password):
         return {
-            "access_token": create_access_token(user.username),
+            "access_token": create_access_token(username),
             "token_type": "bearer",
         }
 
-# TODO: username rules (1-20 chars, only numbers, letters, underscores), password rules
-# TODO: maintain user id so username can be easily changed
-@game_server_fast.post('/register')
+
+# TODO: password rules (can't be weak)
+@game_server_fast.post("/register", response_model=Alert, status_code=201)
 async def register(payload: UsernamePasswordReenterPassword):
     username = payload.username
     password = payload.password
     try:
-        await User.async_get(username=username)
+        await Username.async_get(username=username)
         # username already exists
         raise HTTPException(
-            status_code=HTTP_409_CONFLICT,
-            detail="username taken",
+            status_code=HTTP_409_CONFLICT, detail="username taken"
         )
-
     except DoesNotExist:
-        # frontend prevents this but hax
+        # frontend enforces username and password rules (NOTE: these
+        # must be updated manually) but hax
+        if (
+            not 1 <= len(username) <= 20
+            # letters, numbers, underscores only
+            or not re.match(r"^[a-zA-Z0-9_]+$", username)
+            or re.match(r"^[0-9]+$", username)  # no all numbers
+            or re.match(r"^_+$", username)  # no all underscores
+        ):
+            raise HTTPException(
+                status_code=HTTP_409_CONFLICT, detail="invalid username"
+            )
+        if not 8 <= len(password) <= 40:
+            raise HTTPException(
+                status_code=HTTP_409_CONFLICT, detail="invalid password"
+            )
         if password != payload.reenter_password:
             raise HTTPException(
                 status_code=HTTP_409_CONFLICT,
-                detail='must reenter same password',
+                detail="must re enter same password",
             )
-        else:
-            await User.async_create(username=username, password=password_context.hash(password))
+
+        await add_user(username, password)
+        return {'alert': 'account created'}
+
+async def add_user(username: str, password: str):
+    user_id = uuid4()
+    await gather(
+        User.async_create(
+            user_id=user_id,
+            username=username,
+            password=password_context.hash(password),
+            created=datetime.utcnow(),
+        ),
+        Username.async_create(username=username, user_id=user_id),
+    )
 
 
 def create_access_token(
     username: str, ttl_delta: timedelta = timedelta(hours=AUTH_KEY_TTL_HOURS)
 ):
     return encode(
-        {"sub": username, "exp": utcnow() + ttl_delta},
+        {"sub": username, "exp": datetime.utcnow() + ttl_delta},
         SECRET,
         algorithm=AUTH_KEY_CRYPTO_ALG,
     )
@@ -213,20 +256,32 @@ def create_access_token(
 
 def token_to_username(token: str, exception):
     try:
-        username: str = decode(token, SECRET, algorithms=AUTH_KEY_CRYPTO_ALG).get("sub")
+        username: str = decode(
+            token, SECRET, algorithms=AUTH_KEY_CRYPTO_ALG
+        ).get("sub")
         if username is None:
             raise exception()  # exception is lazily generated
         return username
     except PyJWTError:
         raise exception()
 
+
 async def authenticated_user(token: str = Depends(oauth2_scheme)):
-    return token_to_username(token, lambda: HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="requires authentication", headers={"WWW-Authenticate": "Bearer"}))
+    return token_to_username(
+        token,
+        lambda: HTTPException(
+            status_code=HTTP_401_UNAUTHORIZED,
+            detail="requires authentication",
+            headers={"WWW-Authenticate": "Bearer"},
+        ),
+    )
 
 
 # TODO: requires auth
 @game_server_fast.post("/create_game", response_model=Game, status_code=201)
-async def add_game(payload: GameAttrs, username: str = Depends(authenticated_user)):
+async def add_game(
+    payload: GameAttrs, username: str = Depends(authenticated_user)
+):
     async with game_god_client.post(
         "http://game_god/add_game", json=payload.dict()
     ) as response:
@@ -239,14 +294,18 @@ async def add_game(payload: GameAttrs, username: str = Depends(authenticated_use
 # TODO: jwt token contains username; can remove username arg after
 #       can remove above model after as well
 @game_server_fast.put("/join_game", response_model=GameKey, status_code=200)
-async def request_game_key(payload: GameId, username: str = Depends(authenticated_user)):
+async def request_game_key(
+    payload: GameId, username: str = Depends(authenticated_user)
+):
     """
     Simply returns to the client a key to join the specified game if
     there is space in the game at the time of their request to join.
     """
     game_id = payload.game_id
     if not await game_store.exists(game_id):
-        raise HTTPException(status_code=HTTP_406_NOT_ACCEPTABLE, detail="game does not exist")
+        raise HTTPException(
+            status_code=HTTP_406_NOT_ACCEPTABLE, detail="game does not exist"
+        )
     # if the number of valid distributed keys fills the game, tell the
     # client that the game is full and they should refresh and try again
     if (
@@ -255,7 +314,8 @@ async def request_game_key(payload: GameId, username: str = Depends(authenticate
         >= 4
     ):
         raise HTTPException(
-            status_code=HTTP_409_CONFLICT, detail="game is full; refresh and try again"
+            status_code=HTTP_409_CONFLICT,
+            detail="game is full; refresh and try again",
         )
 
     # game is not full; respond with key
@@ -289,11 +349,16 @@ async def get_games(username: str = Depends(authenticated_user)):
 @game_server_sio.event
 async def connect(sid, environ):
     now = time()
-    username = token_to_username(environ.get('HTTP_TOKEN'), lambda: ConnectionRefusedError('requires authentication'))
+    username = token_to_username(
+        environ.get("HTTP_TOKEN"),
+        lambda: ConnectionRefusedError("requires authentication"),
+    )
     game_id = environ.get("HTTP_GAME_ID")
     game_key = environ.get("HTTP_GAME_KEY")
     if not game_id or not game_key:
-        raise ConnectionRefusedError("connecting requires game id and game key")
+        raise ConnectionRefusedError(
+            "connecting requires game id and game key"
+        )
     elif game_key.encode() not in await game_store.zrevrangebyscore(
         f"{game_id}:game_keys", min=now
     ):
@@ -303,11 +368,7 @@ async def connect(sid, environ):
 
     async with game_god_client.put(
         "http://game_god/add_player_to_game",
-        json={
-            "username": username,
-            "sid": sid,
-            "game_id": game_id,
-        },
+        json={"username": username, "sid": sid, "game_id": game_id},
     ) as response:
         # consume key even if player could not be added
         await gather(

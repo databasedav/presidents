@@ -22,6 +22,14 @@ export default new Vuex.Store({
   },
 
   actions: {
+    login ({ state }, payload) {
+      
+    },
+
+    register ({}, payload) {
+      
+    },
+
     create_game ({ dispatch }, payload) {
       axios.post('/create_game', {  // TODO: fix api routes
         name: payload.name

@@ -1272,6 +1272,7 @@ class Game:
     def in_players(self, name: str):
         return name in self._names
 
+
 # fmt: off
 class BaseHand:
     pass
