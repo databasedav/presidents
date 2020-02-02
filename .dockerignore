@@ -29,7 +29,7 @@ playground.py
 playground.ipynb
 *.lock
 .pytest_cache
-config.py
+# config.py
 test.ipynb
 idea.txt
-secrets.py
+# secrets.py

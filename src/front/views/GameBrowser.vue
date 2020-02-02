@@ -3,7 +3,7 @@
     :headers="headers"
     :items="games"
     class="elevation-1"
-    mobile-breakpoint=""
+    :mobile-breakpoint="0"
   >
     <template v-slot:top>
       <v-toolbar flat color="black">
@@ -14,7 +14,11 @@
           vertical
         ></v-divider>
         <v-spacer></v-spacer>
-        <v-btn color="success" @click="refresh">
+        <v-btn
+          color="success"
+          :loading="refresh_loading"
+          @click="refresh"
+        >
           refresh
         </v-btn>
         <v-dialog v-model="dialog" max-width="500px">
@@ -30,7 +34,12 @@
               <v-container>
                 <v-row justify="center">
                   <v-col cols="10">
-                    <v-text-field v-model="name" label="game name" clearable counter maxlength="20"></v-text-field>
+                    <v-text-field
+                      v-model="name"
+                      label="game name"
+                      clearable
+                      counter="20"
+                    ></v-text-field>
                   </v-col>
                 </v-row>
                 <v-row justify="center">
@@ -72,6 +81,9 @@
 
 <script>
 import { mapState } from "vuex";
+import axios from 'axios'
+import io from 'socket.io-client'
+import { create_game_module, EVENTS } from "../utils"
 
 export default {
   data () {
@@ -102,7 +114,8 @@ export default {
         }
       ],
       name: "",
-      loading: false
+      loading: false,
+      refresh_loading: false
     };
   },
 
@@ -115,28 +128,78 @@ export default {
   },
 
   methods: {
-    refresh () {
-      this.$store.dispatch('refresh_games');
+    close () {
+      this.loading = false
+      this.name = ""
+      this.dialog = false
     },
 
-    close () {
-      this.loading = false;
-      this.name = "";
-      this.dialog = false;
+    refresh () {
+      const self = this
+      axios.get('/get_games', {
+        headers: {
+          Authorization: `Bearer ${sessionStorage.token}`
+        }
+      }).then(response => {
+        self.$store.state.games = response.data.games
+      })
     },
 
     create_game () {
-      this.loading = true;
-      this.$store.dispatch('create_game', {
-        name: this.name
-      });
+      this.loading = true
+      const self = this
+      axios.post('/create_game', {name: self.name}, {
+        headers: {
+          Authorization: `Bearer ${sessionStorage.token}`
+        }
+      }).then(response => {
+        self.loading = false
+        // adding a server auto joins it
+        self.join_game(response.data.game_id)
+      }).catch(error => {
+        console.log(error.response)
+      })
     },
 
     join_game (game_id) {
-      this.$store.dispatch('join_game', {
-        game_id: game_id,
-        username: this.username,
-      });
+      const self = this
+      // TODO: join game loading
+      axios.put('/join_game', {game_id: game_id}, {
+        headers: {
+          Authorization: `Bearer ${sessionStorage.token}`
+        }
+      }).then(response => {
+        const socket = io('/', {  // first arg is the namespace
+          path: '/socket.io',
+          forceNew: true,
+          reconnection: false,  // TODO: users should be prompted to reconnect on server crash
+          transportOptions: {
+            polling: {
+              extraHeaders: {
+                Authorization: `Bearer ${sessionStorage.token}`,
+                game_id: game_id,
+                game_key: response.data.game_key
+              }
+            }
+          }
+        })
+        // if connection is succesful
+        socket.once('connect', _ => {
+          // game id is used as vuex namespace
+          self.$store.registerModule(game_id, create_game_module())
+          const commit = self.$store.commit
+          commit(`${game_id}/set_socket`, {socket: socket})
+          EVENTS.forEach(event => {
+            socket.on(event, payload => {
+              commit(`${game_id}/${event}`, payload)
+            })
+          })
+
+          self.$router.push({ name: 'presidents', params: { game_id } })
+        })
+      }).catch(error => {
+        console.log(error.response ? error.response : error)
+      })
     }
   }
 };

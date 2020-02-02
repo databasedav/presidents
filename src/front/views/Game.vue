@@ -1,12 +1,12 @@
 <template>
   <v-container>
     <v-overlay
-      :value="this.paused"
+      :value="this.overlay"
     >
       <v-row justify="center">
         <v-col cols="8">
           <v-alert :value="true" type="warning">
-            the game has been paused since someone left; it will resume once their spot is filled (players: {{ num_players }}/4)
+            {{ overlay_message }}
           </v-alert>
         </v-col>
       </v-row>
@@ -210,6 +210,18 @@ export default {
 
     num_players () {
       return this.$store.state[this.namespace].names.filter(Boolean).length;
+    },
+
+    waiting_for_players () {
+      return !this.paused && this.num_players < 4
+    },
+
+    overlay () {
+      return this.paused || this.waiting_for_players
+    },
+
+    overlay_message () {
+      return this.paused ? `the game has been paused since someone left; it will resume once their spot is filled (players: ${this.num_players}/4)` : `waiting for players (players: ${this.num_players}/4)`
     }
   },
 

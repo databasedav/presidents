@@ -1,19 +1,19 @@
 version: '3'
 services:
   game_server:
-    image: senavi/presidents_game_server:latest
+    image: presidents.azurecr.io/presidents_game_server:latest
     ports:
-      - "80:8000"
+      - target: 8000
     restart: always
   
   game_god:
-    image: senavi/presidents_game_god:latest
+    image: presidents.azurecr.io/presidents_game_god:latest
     restart: always
 
   game_store:
-    image: redis:6.0-rc-buster
+    image: presidents.azurecr.io/redis:latest
     restart: always
   
   socketio_pubsub:
-    image: redis:6.0-rc-buster
+    image: presidents.azurecr.io/redis:latest
     restart: always

@@ -10,7 +10,7 @@ from starlette.middleware import cors
 from ..models import (
     Game,
     GameAttrs,
-    UsernameSidGameId,
+    AddPlayerInfo,
     GameAction,
     Sid,
     GameId,
@@ -68,21 +68,22 @@ async def add_game(payload: GameAttrs):
 async def remove_game(game_id):
     # TODO: incomplete
     await gather(
-        game_store.delete(game_id), game_store.srem("game_ids", game_id)
+        game_store.delete(game_id),
+        game_store.srem("game_ids", game_id)
     )
 
 
 @game_god.put("/add_player_to_game", status_code=200)
-async def add_player_to_game(payload: UsernameSidGameId):
+async def add_player_to_game(payload: AddPlayerInfo):
     game_id = payload.game_id
     game = games[game_id]
-    username = payload.username
-    assert not game.in_players(username), "cannot join game multiple times"
+    user_id = payload.user_id
+    assert not game.in_players(user_id), "cannot join game multiple times"
     sid = payload.sid
-    await game.add_player(sid=sid, name=payload.username)
+    await game.add_player(name=payload.username, sid=sid, user_id=user_id)
     # above not in gather to confirm player was added
     await gather(
-        game_store.hset(sid, "game_id", game_id),
+        game_store.set(sid, game_id),
         game_store.hincrby(game_id, "num_players"),
     )
 
@@ -97,9 +98,6 @@ async def remove_player_from_game(payload: Sid):
     game = games[game_id]
     if game.is_started and not game.is_paused:
         await game.pause()
-        # not gathered to confirm game was paused
-        # TODO: have game api methods return bool for success
-        await game_store.hset(game_id, "paused", 1)
     await game.remove_player(sid)
     # above not in gather to confirm player was removed
     await gather(

@@ -24,7 +24,11 @@ class GameId(BaseModel):
     game_id: str
 
 
-class UsernameSidGameId(Username, Sid, GameId):
+class UserId(BaseModel):
+    user_id: str
+
+
+class AddPlayerInfo(GameId, UserId, Sid, Username):
     pass
 
 

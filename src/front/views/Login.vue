@@ -9,6 +9,13 @@
       :timeout="1500"
     >
       {{ this.alert }}
+      <v-btn
+        color="pink"
+        text
+        @click="snackbar = false"
+      >
+        Close
+      </v-btn>
     </v-snackbar>
     <v-row justify="center">
         <v-tabs
@@ -21,33 +28,34 @@
           <v-tab-item class='pa-6'>
             <v-form ref="login_form">
               <v-text-field
-                v-model="this.username"
+                v-model="username"
                 label="username"
                 :rules="[required]"
                 counter
                 clearable
                 outlined
                 shaped
-                @change="this.login_disabled = !this.$refs.login_form.validate()"
+                @input="_ => password && login_validate()"
               ></v-text-field>
               <v-text-field
-                v-model="this.password"
+                v-model="password"
                 label="password"
                 :rules="[required]"
-                :append-icon="this.show_login_password ? 'mdi-eye' : 'mdi-eye-off'"
-                :type="this.show_login_password ? 'text' : 'password'"
+                :append-icon="show_login_password ? 'mdi-eye' : 'mdi-eye-off'"
+                :type="show_login_password ? 'text' : 'password'"
                 counter
                 clearable
                 outlined
                 shaped
-                @click:append="this.show_login_password = !this.show_login_password"
-                @change="this.login_disabled = !this.$refs.login_form.validate()"
+                @click:append="show_login_password = !show_login_password"
+                @input="_ => username && login_validate()"
               ></v-text-field>
               <v-row justify="center">
                 <v-btn
                   color="success"
-                  :disabled="this.login_disabled"
-                  @click="this.login"
+                  :disabled="login_disabled"
+                  :loading="login_loading"
+                  @click="login"
                   height="45"
                   width="100"
                 >
@@ -62,47 +70,48 @@
           <v-tab-item class='pa-6'>
             <v-form ref="register_form">
               <v-text-field
-                v-model="this.username"
+                v-model="username"
                 label="username"
-                :rules="this.username_rules"
+                :rules="username_rules"
                 clearable
                 outlined
                 shaped
                 counter='20'
-                @change="this.register_disabled = !this.$refs.register_form.validate()"
+                @input="_ => password && reenter_password && register_validate()"
               ></v-text-field>
               <v-text-field
-                v-model="this.password"
+                v-model="password"
                 label="password"
-                :rules="this.password_rules"
+                :rules="password_rules"
                 icon
-                :append-icon="this.show_register_password ? 'mdi-eye' : 'mdi-eye-off'"
-                :type="this.show_register_password ? 'text' : 'password'"
+                :append-icon="show_register_password ? 'mdi-eye' : 'mdi-eye-off'"
+                :type="show_register_password ? 'text' : 'password'"
                 clearable
                 outlined
                 shaped
                 counter='40'
-                @click:append="this.show_register_password = !this.show_register_password"
-                @change="this.register_disabled = !this.$refs.register_form.validate()"
+                @click:append="show_register_password = !show_register_password"
+                @input="_ => username && reenter_password && register_validate()"
               ></v-text-field>
               <v-text-field
-                v-model="this.reenter_password"
+                v-model="reenter_password"
                 label="re enter password"
-                :rules="this.reenter_password_rules"
-                :append-icon="this.show_register_reenter_password ? 'mdi-eye' : 'mdi-eye-off'"
-                :type="this.show_register_reenter_password ? 'text' : 'password'"
+                :rules="reenter_password_rules"
+                :append-icon="show_register_reenter_password ? 'mdi-eye' : 'mdi-eye-off'"
+                :type="show_register_reenter_password ? 'text' : 'password'"
                 counter
                 clearable
                 outlined
                 shaped
-                @click:append="this.show_register_reenter_password = !this.show_register_reenter_password"
-                @change="this.register_disabled = !this.$refs.register_form.validate()"
+                @click:append="show_register_reenter_password = !show_register_reenter_password"
+                @input="_ => username && password && register_validate()"
               ></v-text-field>
               <v-row justify="center">
                 <v-btn
                   color="success"
-                  :disabled="this.register_disabled"
-                  @click="this.register"
+                  :disabled="register_disabled"
+                  :loading="register_loading"
+                  @click="register"
                   height="45"
                   width="100"
                 >
@@ -137,6 +146,7 @@ export default {
       required,
       username_rules: [
         required,
+        // TODO: length requirements not working
         // length requirement
         x => 1 <= x.length <= 20 || 'must be between 1 and 20 characters',
         // letters, numbers, and underscores only
@@ -151,47 +161,62 @@ export default {
         // length requirement
         x => 8 <= x.length <= 40 || 'must be between 8 and 40 characters',
       ],
-      login_disabled: false,
-      register_disabled: false,
+      reenter_password_rules: [
+        required,
+        x => x === this.password || 'passwords must match'
+      ],
+      login_disabled: true,
+      register_disabled: true,
+      login_loading: false,
+      register_loading: false,
       snackbar: false,
       alert: ''
     }
   },
 
-  computed: {
-    // this one is computed because it involved data
-    // TODO: this isn't working
-    reenter_password_rules () {
-      return [
-        this.required,
-        // x => undefined === this.password || 'passwords must match'
-      ]
-    }
-  },
-
   methods: {
+    login_validate () {
+      this.login_disabled = !this.$refs.login_form.validate()
+    },
+
+    register_validate () {
+      this.register_disabled = !this.$refs.register_form.validate()
+    },
+
     login () {
-      axios.post('/token', {
-        username: payload.username,
-        password: payload.password
-      }).then(response => {
+      var form_data = new FormData()
+      form_data.set('username', this.username)
+      form_data.set('password', this.password)
+      const self = this
+      this.login_loading = true
+      axios.post('/token', form_data).then(response => {
+        sessionStorage.token = response.data.access_token
+        self.$store.username = self.username
         router.push({ name: 'game browser' })
       }).catch(error => {
-        console.log(error)
+        self.alert = error.response.data.detail
+        self.snackbar = true
+      }).finally(_ => {
+        self.login_loading = false
       })
     },
 
     register () {
-      self = this
+      // TODO: snap to 
+      const self = this
+      this.register_loading = true
       axios.post('/register', {
         username: self.username,
         password: self.password,
         reenter_password: self.reenter_password
       }).then(response => {
         self.alert = response.data.alert
+        self.login_validate()
       }).catch(error => {
-        self.alert = error.response.data
-        console.log(error.response)
+        self.alert = error.response.data.detail
+      }).finally(_ => {
+        self.register_loading = false
+        self.snackbar = true
       })
     }
   },

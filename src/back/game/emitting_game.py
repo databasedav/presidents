@@ -29,7 +29,6 @@ from datetime import datetime
 
 from ..data.stream.records import HandPlay
 
-# from ..server.server import Server  # TODO: pls fix this omg
 # from ..data.stream.agents import hand_play_agent
 
 # TODO: decide what to do for the removal of asking options; and whether
@@ -71,6 +70,7 @@ class EmittingGame(Game):
             EmittingChamber(self._sio) for _ in range(4)
         ]
         self._spot_sid_bidict: bidict = bidict()
+        self._user_ids: List[str] = [None for _ in range(4)]
         self._dot_colors = ["red" for _ in range(4)]
         # self._hand_play_agent = server.server.agents["hand_play_agent"]
         self.num_spectators: int = 0  # TODO
@@ -89,16 +89,17 @@ class EmittingGame(Game):
             self._chambers[spot].set_sio(sio)
 
     async def _add_player_to_spot(
-        self, sid: str, name: str, spot: int
+        self, name: str, spot: int, sid: str, user_id: str
     ) -> None:
         """
         NOTE: logic copy/pasted from base; must update manually
-              manages sids and set name must be awaited
+              manages sids, user ids, and set name must be awaited
         """
         assert self._names[spot] is None, f"player already in spot {spot}"
 
-        self._spot_sid_bidict.inv[sid] = spot
+        self._spot_sid_bidict[spot] = sid
         self._chambers[spot].set_sid(sid)
+        self._user_ids[spot] = user_id
 
         self._open_spots.remove(spot)
         await self._set_name(spot=spot, name=name)
@@ -126,6 +127,7 @@ class EmittingGame(Game):
         self.num_players -= 1
         self._spot_sid_bidict.pop(spot)
         self._chambers[spot].set_sid(None)
+        self._user_ids[spot] = None
 
     async def _deal_cards(self, *, deck: List[Iterable[int]] = None) -> None:
         """
@@ -550,14 +552,10 @@ class EmittingGame(Game):
         self,
         trading: bool,
         *,
-        stop: bool = True,
-        start: bool = True,
         cancel: bool = True,
     ) -> None:
         """
         NOTE: logic copy/pasted from base; must update manually
-        stop: whether to stop timer
-        start: whether to start game after setting trading to False
         cancel: whether to cancel the trading timer; this should be
                 False when the handling trading timeout 
         """
@@ -614,8 +612,7 @@ class EmittingGame(Game):
 
             # game related attributes
             self._positions.clear()
-            if start:
-                await self.start_round(setup=False)
+            await self.start_round(setup=False)
 
     async def asking_click_handler(self, sid: str, rank: int) -> None:
         spot: int = self._get_spot(sid)
@@ -693,6 +690,8 @@ class EmittingGame(Game):
                     "set_cards_remaining",
                     {"spot": spot, "cards_remaining": chamber.num_cards},
                 )
+                # list comprehensions evaluate in new frame so orig spot
+                # is not overwritten here
                 for spot, chamber in zip(
                     [spot, receiver_spot], [giver_chamber, receiver_chamber]
                 )

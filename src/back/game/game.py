@@ -504,12 +504,11 @@ class Game:
     def _handle_trading_timeout(self) -> None:
         # TODO:
         # account for the number of cards the askers have remaining to
-        # give and then silently do all the operations that snatch and
+        # give and then SILENTLY do all the operations that snatch and
         # exchange the appropriate cards from the appropriate players
         if not self._no_takes_or_gives:
             self._auto_trade()
-        self._set_trading(False, start=False, cancel=False)
-        self.start_round(setup=False)
+        self._set_trading(False, cancel=False)
 
     def _auto_play_or_pass(self, spot: int) -> None:
         """
@@ -546,7 +545,11 @@ class Game:
             except PresidentsError:
                 pass
 
-    def _auto_give(self, spot) -> None:
+    def _auto_give(self, spot, *, auto_trading=False) -> None:
+        """
+        This is only used for givers; when takers auto give in auto
+        trade, 
+        """
         chamber: Chamber = self._chambers[spot]
         currently_selected_cards: List[int] = chamber.hand.to_list()
         if currently_selected_cards:
@@ -554,7 +557,7 @@ class Game:
 
         self.add_or_remove_card(spot, min(self._giving_options[spot]))
         self.maybe_unlock_give(spot)
-        self.give_card(spot)
+        self.give_card(spot, auto_trading=auto_trading)
 
         # reselect giver's selected cards
         for card in currently_selected_cards:  # could be empty list
@@ -593,6 +596,7 @@ class Game:
                 except CardNotInChamberError:
                     pass
 
+            # TODO: reuse more of auto give below
             # deselect to-be-asked's selected cards if exists
             if self._has_takes(spot):
                 asked_spot: int = self._get_opposing_position_spot(spot)
@@ -603,6 +607,10 @@ class Game:
             else:
                 continue
 
+            if self._is_waiting(spot):
+                self._stop_timer('turn', asked_spot)
+                self._auto_give(asked_spot, auto_trading=True)
+
             for _ in range(self._takes[spot]):
                 # iterate through ranks, highest to lowest, asking if
                 # has not already been asked
@@ -612,7 +620,6 @@ class Game:
 
                     self.maybe_set_selected_asking_option(spot, value)
                     self.maybe_unlock_ask(spot)
-                    # requires auto trading argument that
                     self.ask_for_card(spot)
                     if not self._is_waiting(spot):  # asked doesn't have rank
                         continue
@@ -904,6 +911,8 @@ class Game:
             self._selected_asking_options: List[Optional[int]] = [
                 None for _ in range(4)
             ]
+            # NOTE: only added to already asked if giver has no cards of
+            #       the asked rank, i.e. not added after a single ask
             self._already_asked: List[Set[int]] = [set() for _ in range(4)]
             self._giving_options: List[Optional[Set[int]]] = [
                 set() for _ in range(4)
@@ -1269,8 +1278,8 @@ class Game:
         """
         return self._reserve_time_use_starts[spot] is not None
 
-    def in_players(self, name: str):
-        return name in self._names
+    def in_players(self, user_id: str):
+        return user_id in self._user_ids
 
 
 # fmt: off

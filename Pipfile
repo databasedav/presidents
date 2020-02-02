@@ -28,6 +28,7 @@ pyjwt = "*"
 argon2-cffi = "*"
 passlib = "*"
 requests = "*"
+python-multipart = "*"
 
 [requires]
 python_version = "3.7"

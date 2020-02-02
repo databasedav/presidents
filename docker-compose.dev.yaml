@@ -60,8 +60,7 @@ services:
     volumes:
       - ./src/back:/presidents/src/back
     restart: always
-    
-  
+
   game_god:
     build:
       context: ./
@@ -75,4 +74,3 @@ services:
     volumes:
       - ./src/back:/presidents/src/back
     restart: always
-    
