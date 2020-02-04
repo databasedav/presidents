@@ -608,7 +608,7 @@ class Game:
                 continue
 
             if self._is_waiting(spot):
-                self._stop_timer('turn', asked_spot)
+                self._stop_timer("turn", asked_spot)
                 self._auto_give(asked_spot, auto_trading=True)
 
             for _ in range(self._takes[spot]):

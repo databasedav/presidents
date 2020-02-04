@@ -414,7 +414,7 @@ class EmittingGame(Game):
 
     # card management related methods
 
-    async def card_click_handler(self, sid: str, card: int) -> None:
+    async def card_handler(self, sid: str, card: int) -> None:
         spot: int = self._get_spot(sid)
         try:
             await self.add_or_remove_card(spot, card)
@@ -549,10 +549,7 @@ class EmittingGame(Game):
     # trading related methods
 
     async def _set_trading(
-        self,
-        trading: bool,
-        *,
-        cancel: bool = True,
+        self, trading: bool, *, cancel: bool = True
     ) -> None:
         """
         NOTE: logic copy/pasted from base; must update manually
@@ -614,7 +611,7 @@ class EmittingGame(Game):
             self._positions.clear()
             await self.start_round(setup=False)
 
-    async def asking_click_handler(self, sid: str, rank: int) -> None:
+    async def rank_handler(self, sid: str, rank: int) -> None:
         spot: int = self._get_spot(sid)
         try:
             await self.maybe_set_selected_asking_option(spot, rank)

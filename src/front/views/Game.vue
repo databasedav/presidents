@@ -136,57 +136,55 @@ export default {
   methods: {
     card_click (card) {
       this.$store.dispatch(`${this.namespace}/emit_game_action`, {
-        action: 'card_click',
-        card: card
+        action: card
       })
     },
 
     unlock () {
       this.$store.dispatch(`${this.namespace}/emit_game_action`, {
-        action: 'unlock'
+        action: -15
       });
     },
 
     lock () {
       this.$store.dispatch(`${this.namespace}/emit_game_action`, {
-        action: 'lock'
+        action: -19
       });
     },
 
     play () {
       this.$store.dispatch(`${this.namespace}/emit_game_action`, {
-        action: 'play'
+        action: -17
       });
     },
 
     unlock_pass () {
       this.$store.dispatch(`${this.namespace}/emit_game_action`, {
-        action: 'unlock_pass'
+        action: -14
       });
     },
 
     pass () {
       this.$store.dispatch(`${this.namespace}/emit_game_action`, {
-        action: 'pass'
+        action: -18
       });
     },
 
     ask () {
       this.$store.dispatch(`${this.namespace}/emit_game_action`, {
-        action: 'ask'
+        action: -22
       });
     },
 
     give () {
       this.$store.dispatch(`${this.namespace}/emit_game_action`, {
-        action: 'give'
+        action: -20
       });
     },
 
     asking_click (rank) {
       this.$store.dispatch(`${this.namespace}/emit_game_action`, {
-        action: 'asking_click',
-        rank: rank
+        action: -rank
       });
     }
   },

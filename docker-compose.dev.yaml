@@ -37,25 +37,15 @@ services:
       - target: 9092
         published: 9092
 
-  stream_processor:
-    build:
-      context: ./
-      dockerfile: ./src/back/data/stream/Dockerfile
-    depends_on:
-      - data_stream
-    volumes:
-      - ./src/back:/presidents/src/back
-    restart: always
-
   game_server:
     build:
       context: ./  # runs the Dockerfile as if from workspace dir
-      dockerfile: ./src/back/server/game_server/Dockerfile
+      dockerfile: ./src/back/services/game_server/Dockerfile
     depends_on:
       - game_store
       - socketio_pubsub
     ports:
-      - target: 80
+      - target: 8000
         published: 8000
     volumes:
       - ./src/back:/presidents/src/back
@@ -64,12 +54,12 @@ services:
   game_god:
     build:
       context: ./
-      dockerfile: ./src/back/server/game_god/Dockerfile
+      dockerfile: ./src/back/services/game_god/Dockerfile
     depends_on:
       - game_store
       - socketio_pubsub
     ports:
-      - target: 80
+      - target: 8000
         published: 8001
     volumes:
       - ./src/back:/presidents/src/back

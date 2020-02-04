@@ -29,6 +29,7 @@ argon2-cffi = "*"
 passlib = "*"
 requests = "*"
 python-multipart = "*"
+protobuf = "*"
 
 [requires]
 python_version = "3.7"

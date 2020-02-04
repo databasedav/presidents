@@ -30,14 +30,13 @@ from starlette.status import (
 )
 
 from ...utils import main
-from ..models import (
+from ..utils.models import (
     Game,
     GameAttrs,
     GameIdUsername,
     GameKey,
     Username,
     GameList,
-    GameAction,
     Token,
     GameId,
     UsernamePasswordReenterPassword,
@@ -45,13 +44,14 @@ from ..models import (
 )
 from ...data.db import session
 from ...data.db.models import User, Username
-from ...data.stream import game_action_agent
-from ...data.stream.records import GameAction
+from ..game_god import game_action_processor, GameAction
+
 try:
-    from ..secrets import SECRET
+    from .secrets import SECRET
 except:
     import os
-    SECRET = os.getenv('TOKEN_SECRET')
+
+    SECRET = os.getenv("TOKEN_SECRET")
 
 # TODO: cache exceptions?
 # TODO: asap: set max messages on the frontend, fix the auto scroll
@@ -157,23 +157,23 @@ async def on_startup():
 
     # TODO: azure docker compose doesn't support depends so sets 5
     #       connection timeout
-    logger.info('connecting to redis')
+    logger.info("connecting to redis")
     game_store = await aioredis.create_redis_pool(
         "redis://game_store", timeout=300
     )
-    logger.info('connected to redis')
+    logger.info("connected to redis")
 
     # here because requires event loop
-    logger.info('connecting to game god')
+    logger.info("connecting to game god")
     game_god_client = aiohttp.ClientSession()
-    logger.info('connected to game god')
+    logger.info("connected to game god")
 
     # here because requires event loop
     # from cassandra.cqlengine import management
     # management.sync_table(User)
-    logger.info('upgrading cqlengine')
+    logger.info("upgrading cqlengine")
     aiocassandra.aiosession(session)
-    logger.info('upgraded cqlengine')
+    logger.info("upgraded cqlengine")
 
 
 @game_server_fast.get("/")
@@ -283,7 +283,7 @@ async def create_access_token(
     return encode(
         {
             "sub": await get_user_id(username),
-            'username': username,
+            "username": username,
             "exp": datetime.utcnow() + ttl_delta,
         },
         SECRET,
@@ -303,7 +303,7 @@ def token_to_user_id_username(token: str) -> Tuple[str, str]:
                 detail="requires authentication",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        return user_id, decoded_token.get('username')
+        return user_id, decoded_token.get("username")
     except PyJWTError:
         raise HTTPException(
             status_code=HTTP_401_UNAUTHORIZED,
@@ -317,14 +317,19 @@ async def authenticated_user(token: str = Depends(oauth2_scheme)):
     return token_to_user_id_username(token)[0]
 
 
+from ..game_god import Prayer, ear
+
+
 @game_server_fast.post(
     "/create_game",
-    # dependencies=[Depends(authenticated_user)],
+    dependencies=[Depends(authenticated_user)],
     response_model=Game,
     status_code=201,
 )
 async def add_game(payload: GameAttrs):
     # TODO: game table
+    # return await ear.ask(Prayer(prayer='add_game', prayer_kwargs={'turn_time': 30, 'reserve_time': 60, 'trading_time': 120, 'giving_time': 10}))
+
     async with game_god_client.post(
         "http://game_god/add_game", json=payload.dict()
     ) as response:
@@ -393,8 +398,8 @@ async def connect(sid, environ):
     now = time()
     auth = environ.get("HTTP_AUTHORIZATION")
     if not auth:
-        raise ConnectionRefusedError("requires authentication")\
-    # 7 chars in 'Bearer '
+        raise ConnectionRefusedError("requires authentication")
+        # 7 chars in 'Bearer '
     user_id, username = token_to_user_id_username(auth[7:])
     game_id = environ.get("HTTP_GAME_ID")
     game_key = environ.get("HTTP_GAME_KEY")
@@ -409,7 +414,12 @@ async def connect(sid, environ):
 
     async with game_god_client.put(
         "http://game_god/add_player_to_game",
-        json={"game_id": game_id, "user_id": user_id, "sid": sid, 'username': username},
+        json={
+            "game_id": game_id,
+            "user_id": user_id,
+            "sid": sid,
+            "username": username,
+        },
     ) as response:
         # consume key even if player could not be added
         await gather(
@@ -450,38 +460,6 @@ async def disconnect(sid):
         assert response.status == 200
 
 
-VALID_GAME_ACTIONS = {  # value is required payload
-    "card_click": "card",
-    "unlock": None,
-    "lock": None,
-    "play": None,
-    "unlock_pass": None,
-    "pass": None,
-    "ask": None,
-    "give": None,
-    "asking_click": "rank",
-}
-
-
-@game_server_sio.event
-async def game_action(sid, payload):
-    timestamp = datetime.utcnow()
-
-    # action and payload validation
-    action = payload["action"]
-    assert action in VALID_GAME_ACTIONS
-    required_payload = VALID_GAME_ACTIONS[action]
-    if required_payload:
-        assert required_payload in payload
-
-    async with game_god_client.put(
-        "http://game_god/game_action",
-        json={"game_id": await get_game_id(sid), "sid": sid, **payload},
-    ) as response:
-        assert response.status == 200
-        # await cast_game_action(sid, timestamp, db_action(**payload))
-
-
 async def get_game_id(sid: str):
     try:
         return sid_game_id_dict[sid]
@@ -491,36 +469,17 @@ async def get_game_id(sid: str):
         return game_id
 
 
-def db_action(action, *, card: int = None, rank: int = None):
-    """
-    translates action to db action; particularly, card clicks to card
-    number and asking clicks to negative rank
-    """
-    if action == "card_click":
-        return card
-    elif action == "asking_click":
-        return -rank
-    else:
-        return action
-
-
-async def cast_game_action(sid: str, timestamp: datetime, action: str) -> None:
-    await game_action_agent.cast(
+@game_server_sio.event
+async def game_action(sid, payload):
+    timestamp = datetime.utcnow()
+    await game_action_processor.cast(
         GameAction(
-            game_id=str(uuid4()),
-            user_id=str(uuid4()),
+            game_id=await get_game_id(sid),
+            action=payload["action"],
             timestamp=timestamp,
-            action=action,
+            sid=sid,
         )
     )
-    # self._game_click_agent.cast(
-    #     GameClick(
-    #         game_id=self.game.id,
-    #         user_id=self.game.get_user_id(sid),
-    #         timestamp=timestamp,
-    #         action=action,
-    #     )
-    # )
 
 
 @main

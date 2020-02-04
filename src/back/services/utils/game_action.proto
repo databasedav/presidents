@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+message GameAction {
+    string game_id = 1;
+    sfixed32 action = 2;
+    google.protobuf.Timestamp timestamp = 3;
+    string sid = 4;
+    string user_id = 5;
+}
