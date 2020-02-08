@@ -92,19 +92,15 @@ game_server = socketio.ASGIApp(
 #     game browser)
 #   - game id keys to sorted set used to manage game specific keys and
 #     expirations
-#   - game key to username (remove after auth)
 #   - sid to game id
 #   - set of game_ids
+#   - game_id to sids
 game_store = None
-
-# a single client suffices
-game_god_client = None
 
 # simple cache for sid to game id; these are always available in the
 # game store; TODO: handle leaving games and preventing cache from
 # getting too large
 sid_game_id_dict = dict()
-sid_username_dict = dict()
 
 
 # In [62]: %timeit cc.hash(str(uuid4()))
@@ -182,11 +178,12 @@ async def login_for_access_token(
 ):
     username = payload.username
     if await authenticate_user(username, payload.password):
-        logger.info(f'logged in user {username}')
+        logger.info(f"logged in user {username}")
         return {
             "access_token": await create_access_token(username),
             "token_type": "bearer",
         }
+
 
 # TODO: process database accesses through stream
 async def get_user_id(username: str):
@@ -200,12 +197,16 @@ async def get_password(*, user_id: str = None, username: str = None):
     if user_id:
         return (await User.async_get(user_id=user_id)).password
     if username:
-        return (await User.async_get(user_id=await get_user_id(username))).password
+        return (
+            await User.async_get(user_id=await get_user_id(username))
+        ).password
 
 
 async def authenticate_user(username: str, password: str):
     try:
-        if password_context.verify(password, await get_password(username=username)):
+        if password_context.verify(
+            password, await get_password(username=username)
+        ):
             return True
         else:
             raise HTTPException(
@@ -326,12 +327,12 @@ from ..game_god import Prayer, ear
 async def add_game(payload: GameAttrs):
     # TODO: rate limit
     # TODO: populate game table
-    logger.info('praying for game creation')
+    logger.info("praying for game creation")
     game_dict = await ear.ask(
         value=Prayer(prayer="add_game", prayer_kwargs=payload.dict())
     )
     if not game_dict:
-        return Alert(alert='failed to create game; try again')
+        return Alert(alert="failed to create game; try again")
     else:
         return Game(**game_dict)
 

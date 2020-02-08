@@ -65,7 +65,7 @@ async def on_started():
     # TODO: azure docker compose doesn't support depends so timeout
     logger.info('connecting to redis')
     game_store = await aioredis.create_redis_pool(
-        "redis://game_store", timeout=300
+        "redis://game_store", timeout=120
     )
     logger.info('connected to redis')
 
@@ -172,6 +172,7 @@ async def add_player(*, game_id: str, user_id: str, sid: str, username: str):
         await gather(
             game_store.set(sid, game_id),
             game_store.hincrby(game_id, "num_players"),
+            game_store.sadd(f'{game_id}:sids', sid)
         )
         logger.info(f'added user {user_id} to game {game_id} with sid {sid} and username {username}')
         return 1
