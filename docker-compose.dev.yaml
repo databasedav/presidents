@@ -20,6 +20,7 @@ services:
     image: bitnami/zookeeper:latest
     environment:
       - ALLOW_ANONYMOUS_LOGIN=yes
+    restart: always
 
   data_stream:
     image: bitnami/kafka:latest
@@ -36,20 +37,21 @@ services:
     ports:
       - target: 9092
         published: 9092
+    restart: always
 
   game_server:
     build:
       context: ./  # runs the Dockerfile as if from workspace dir
       dockerfile: ./src/back/services/game_server/Dockerfile
     depends_on:
-      - game_store
-      - socketio_pubsub
+      - game_god
     ports:
       - target: 8000
         published: 8000
     volumes:
       - ./src/back:/presidents/src/back
     restart: always
+    
 
   game_god:
     build:
@@ -58,6 +60,7 @@ services:
     depends_on:
       - game_store
       - socketio_pubsub
+      - data_stream
     ports:
       - target: 8000
         published: 8001

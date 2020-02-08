@@ -4,7 +4,7 @@ module.exports = {
   ],
   devServer: {
     proxy: {
-      ...['/token', 'register', "/create_game", "/join_game", '/get_games'].reduce((acc, ctx) => ({...acc, [ctx]: {target: 'http://0.0.0.0:8000', changeOrigin: true}}), {}),
+      ...['/token', '/register', "/create_game", "/join_game", '/get_games'].reduce((acc, ctx) => ({...acc, [ctx]: {target: 'http://0.0.0.0:8000', changeOrigin: true}}), {}),
       "/socket.io": {
         ws: true,
         target: "http://0.0.0.0:8000",
@@ -12,6 +12,6 @@ module.exports = {
       }
     },
   },
-  outputDir: 'src/back/server/game_server/static',
+  outputDir: 'src/back/services/game_server/static',
   assetsDir: 'assets'
 }

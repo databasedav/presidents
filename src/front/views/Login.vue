@@ -14,7 +14,7 @@
         text
         @click="snackbar = false"
       >
-        Close
+        close
       </v-btn>
     </v-snackbar>
     <v-row justify="center">
@@ -210,13 +210,19 @@ export default {
         password: self.password,
         reenter_password: self.reenter_password
       }).then(response => {
-        self.alert = response.data.alert
+        self.alert = response.data.alert  // success
+        self.snackbar = true
         self.login_validate()
       }).catch(error => {
-        self.alert = error.response.data.detail
+        if (error.response) {
+          console.log(error.response)
+          self.alert = error.response.data.detail  // failure
+          self.snackbar = true
+        } else {
+          console.log(error.response)
+        }
       }).finally(_ => {
         self.register_loading = false
-        self.snackbar = true
       })
     }
   },

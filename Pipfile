@@ -19,8 +19,6 @@ bidict = "*"
 aioredis = "*"
 uvloop = "*"
 fastapi = "*"
-faust = {extras = ["debug", "fast", "uvloop"],version = "*"}
-robinhood-aiokafka = "*"
 uvicorn = "*"
 aiofiles = "*"
 aiocqlengine = "*"
@@ -30,6 +28,9 @@ passlib = "*"
 requests = "*"
 python-multipart = "*"
 protobuf = "*"
+robinhood-aiokafka = "*"
+faust = {extras=['fast'], version="*"}
+
 
 [requires]
-python_version = "3.7"
+python_version = "3.8"

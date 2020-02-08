@@ -1,19 +1,45 @@
-version: '3'
+version: '3.7'
 services:
   game_server:
     image: presidents.azurecr.io/presidents_game_server:latest
     ports:
-      - target: 8000
+      - "80:8000"
     restart: always
+    depends_on:  # ignored in current azure docker compose
+      - game_god
+    command: ./wait-for-it.sh data_stream:9092 -t 120 -- pipenv run uvicorn --host 0.0.0.0 --port 8000 --reload src.back.services.game_server:game_server
   
   game_god:
     image: presidents.azurecr.io/presidents_game_god:latest
     restart: always
+    depends_on:
+      - game_store
+      - socketio_pubsub
+      - data_stream
+    command: ./wait-for-it.sh data_stream:9092 -t 120 -- pipenv run faust -A src.back.services.game_god:game_god -L uvloop --color -l debug worker
 
   game_store:
-    image: presidents.azurecr.io/redis:latest
+    image: redis:6.0-rc-buster
     restart: always
   
   socketio_pubsub:
-    image: presidents.azurecr.io/redis:latest
+    image: redis:6.0-rc-buster
+    restart: always
+
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    restart: always
+
+  data_stream:
+    image: bitnami/kafka:latest
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      # https://rmoff.net/2018/08/02/kafka-listeners-explained/
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://data_stream:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://data_stream:9092
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
     restart: always

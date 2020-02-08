@@ -66,13 +66,13 @@ class EmittingGame(Game):
         super().__init__(**kwargs)
         # TODO: server stuff (including emitting should be entirely handled by the Server, which is an AsyncNamespace)
         self._sio = sio
+        self.name = name
         self._chambers: List[EmittingChamber] = [
             EmittingChamber(self._sio) for _ in range(4)
         ]
         self._spot_sid_bidict: bidict = bidict()
         self._user_ids: List[str] = [None for _ in range(4)]
         self._dot_colors = ["red" for _ in range(4)]
-        # self._hand_play_agent = server.server.agents["hand_play_agent"]
         self.num_spectators: int = 0  # TODO
 
     # properties
@@ -434,11 +434,9 @@ class EmittingGame(Game):
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
 
-    async def play_handler(self, sid: str, timestamp: datetime) -> None:
+    async def play_handler(self, sid: str) -> None:
         try:
-            await self.maybe_play_current_hand(
-                self._get_spot(sid), sid=sid, timestamp=timestamp
-            )
+            await self.maybe_play_current_hand(self._get_spot(sid), sid=sid)
         except PresidentsError as e:
             await self._emit_alert(str(e), sid)
 
@@ -457,7 +455,7 @@ class EmittingGame(Game):
         await chamber.remove_cards(hand)
         await gather(
             # TODO
-            # self._hand_play_agent.cast(
+            # self._hand_play_processor.cast(
             #     HandPlay(
             #         hand_hash=hash(hand),
             #         sid=kwargs.get("sid", self._get_sid(spot)),

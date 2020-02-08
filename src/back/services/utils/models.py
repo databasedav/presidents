@@ -8,7 +8,7 @@ class GameAttrs(BaseModel):
     name: str
     turn_time: float = 30
     reserve_time: float = 60
-    trading_time: float = 60
+    trading_time: float = 120
     giving_time: float = 10
 
 

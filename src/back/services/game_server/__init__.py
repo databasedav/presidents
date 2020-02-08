@@ -164,13 +164,6 @@ async def on_startup():
     logger.info("connected to redis")
 
     # here because requires event loop
-    logger.info("connecting to game god")
-    game_god_client = aiohttp.ClientSession()
-    logger.info("connected to game god")
-
-    # here because requires event loop
-    # from cassandra.cqlengine import management
-    # management.sync_table(User)
     logger.info("upgrading cqlengine")
     aiocassandra.aiosession(session)
     logger.info("upgraded cqlengine")
@@ -189,12 +182,13 @@ async def login_for_access_token(
 ):
     username = payload.username
     if await authenticate_user(username, payload.password):
+        logger.info(f'logged in user {username}')
         return {
             "access_token": await create_access_token(username),
             "token_type": "bearer",
         }
 
-
+# TODO: process database accesses through stream
 async def get_user_id(username: str):
     """
     returns user id uuid as str
@@ -202,13 +196,16 @@ async def get_user_id(username: str):
     return str((await Username.async_get(username=username)).user_id)
 
 
-async def get_password(username: str):
-    return (await User.async_get(user_id=await get_user_id(username))).password
+async def get_password(*, user_id: str = None, username: str = None):
+    if user_id:
+        return (await User.async_get(user_id=user_id)).password
+    if username:
+        return (await User.async_get(user_id=await get_user_id(username))).password
 
 
 async def authenticate_user(username: str, password: str):
     try:
-        if password_context.verify(password, await get_password(username)):
+        if password_context.verify(password, await get_password(username=username)):
             return True
         else:
             raise HTTPException(
@@ -327,19 +324,18 @@ from ..game_god import Prayer, ear
     status_code=201,
 )
 async def add_game(payload: GameAttrs):
-    # TODO: game table
-    # return await ear.ask(Prayer(prayer='add_game', prayer_kwargs={'turn_time': 30, 'reserve_time': 60, 'trading_time': 120, 'giving_time': 10}))
+    # TODO: rate limit
+    # TODO: populate game table
+    logger.info('praying for game creation')
+    game_dict = await ear.ask(
+        value=Prayer(prayer="add_game", prayer_kwargs=payload.dict())
+    )
+    if not game_dict:
+        return Alert(alert='failed to create game; try again')
+    else:
+        return Game(**game_dict)
 
-    async with game_god_client.post(
-        "http://game_god/add_game", json=payload.dict()
-    ) as response:
-        assert response.status == 201
-        return await response.json()
 
-
-# TODO: requires auth
-# TODO: jwt token contains username; can remove username arg after
-#       can remove above model after as well
 @game_server_fast.put("/join_game", response_model=GameKey, status_code=200)
 async def request_game_key(
     payload: GameId, user_id: str = Depends(authenticated_user)
@@ -412,40 +408,45 @@ async def connect(sid, environ):
         raise ConnectionRefusedError("invalid game key")
     # else key is valid
 
-    async with game_god_client.put(
-        "http://game_god/add_player_to_game",
-        json={
-            "game_id": game_id,
-            "user_id": user_id,
-            "sid": sid,
-            "username": username,
-        },
-    ) as response:
-        # consume key even if player could not be added
-        await gather(
-            game_store.zrem(f"{game_id}:game_keys", game_key),
-            game_store.delete(game_key),
-            prune_expired_game_keys(game_id),
-        )
+    player_added = await ear.ask(
+        key=game_id,
+        value=Prayer(
+            prayer="add_player",
+            prayer_kwargs={
+                "game_id": game_id,
+                "user_id": user_id,
+                "sid": sid,
+                "username": username,
+            },
+        ),
+    )
+    # consume key even if player could not be added
+    await gather(
+        game_store.zrem(f"{game_id}:game_keys", game_key),
+        game_store.delete(game_key),
+        prune_expired_game_keys(game_id),
+    )
 
-        if response.status != 200:
-            raise ConnectionRefusedError(
-                "could not add player to game; try again"
-            )
-        else:
-            if int(await game_store.hget(game_id, "num_players")) == 4:
-                # game is paused
-                if not int(await game_store.hget(game_id, "fresh")):
-                    async with game_god_client.put(
-                        "http://game_god/resume_game",
-                        json={"game_id": game_id},
-                    ) as response:
-                        assert response.status == 200
-                else:
-                    async with game_god_client.put(
-                        "http://game_god/start_game", json={"game_id": game_id}
-                    ) as response:
-                        assert response.status == 200
+    if not player_added:
+        raise ConnectionRefusedError("could not add player to game; try again")
+    else:
+        if int(await game_store.hget(game_id, "num_players")) == 4:
+            # game is paused
+            if not int(await game_store.hget(game_id, "fresh")):
+                assert await ear.ask(
+                    key=game_id,
+                    value=Prayer(
+                        prayer="resume_game",
+                        prayer_kwargs={"game_id": game_id},
+                    ),
+                )
+            else:
+                assert await ear.ask(
+                    key=game_id,
+                    value=Prayer(
+                        prayer="start_game", prayer_kwargs={"game_id": game_id}
+                    ),
+                )
 
 
 async def prune_expired_game_keys(game_id: str):
@@ -454,10 +455,10 @@ async def prune_expired_game_keys(game_id: str):
 
 @game_server_sio.event
 async def disconnect(sid):
-    async with game_god_client.delete(
-        "http://game_god/remove_player_from_game", json={"sid": sid}
-    ) as response:
-        assert response.status == 200
+    assert await ear.ask(
+        key=await get_game_id(sid),
+        value=Prayer(prayer="remove_player", prayer_kwargs={"sid": sid}),
+    )
 
 
 async def get_game_id(sid: str):
@@ -472,13 +473,15 @@ async def get_game_id(sid: str):
 @game_server_sio.event
 async def game_action(sid, payload):
     timestamp = datetime.utcnow()
+    game_id = await get_game_id(sid)
     await game_action_processor.cast(
-        GameAction(
-            game_id=await get_game_id(sid),
+        key=game_id,
+        value=GameAction(
+            game_id=game_id,
             action=payload["action"],
             timestamp=timestamp,
             sid=sid,
-        )
+        ),
     )
 
 
