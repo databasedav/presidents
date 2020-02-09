@@ -7,4 +7,4 @@ run pipenv install --deploy --ignore-pipfile --dev
 # copy conn.py /root/.local/share/virtualenvs/presidents--b5bDiWI/lib/python3.8/site-packages/aiokafka/conn.py
 run yarn install
 run yarn build
-cmd pipenv run uvicorn --host 0.0.0.0 --port 8000 --reload src.back.services.game_server:game_server
+cmd pipenv run uvicorn --host 0.0.0.0 --port 80 --reload src.back.services.game_server:game_server

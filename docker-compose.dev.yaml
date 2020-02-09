@@ -1,21 +1,5 @@
 version: '3.7'
 services:
-  game_store:
-    image: "redis:6.0-rc-buster"
-    command: sh -c "rm -f /data/dump.rdb && redis-server"
-    ports:
-      - target: 6379
-        published: 6379
-    restart: always
-  
-  socketio_pubsub:
-    image: "redis:6.0-rc-buster"
-    command: sh -c "rm -f /data/dump.rdb && redis-server"
-    ports:
-      - target: 6379
-        published: 6380
-    restart: always
-
   zookeeper:
     image: bitnami/zookeeper:latest
     environment:
@@ -38,31 +22,72 @@ services:
       - target: 9092
         published: 9092
     restart: always
-
-  game_server:
-    build:
-      context: ./  # runs the Dockerfile as if from workspace dir
-      dockerfile: ./src/back/services/game_server/Dockerfile
-    depends_on:
-      - game_god
+  
+  game_store:
+    image: "redis:6.0-rc-buster"
+    command: sh -c "rm -f /data/dump.rdb && redis-server"
     ports:
-      - target: 8000
-        published: 8000
-    volumes:
-      - ./src/back:/presidents/src/back
+      - target: 6379
+        published: 6379
     restart: always
-    
+  
+  socketio_pubsub:
+    image: "redis:6.0-rc-buster"
+    command: sh -c "rm -f /data/dump.rdb && redis-server"
+    ports:
+      - target: 6379
+        published: 6380
+    restart: always
 
   game_god:
     build:
-      context: ./
+      context: ./  # runs the Dockerfile as if from workspace dir
       dockerfile: ./src/back/services/game_god/Dockerfile
     depends_on:
       - game_store
       - socketio_pubsub
       - data_stream
     ports:
-      - target: 8000
+      - target: 6066
+        published: 6066
+    volumes:
+      - ./src/back:/presidents/src/back
+    restart: always
+
+  game_server:
+    build:
+      context: ./
+      dockerfile: ./src/back/services/game_server/Dockerfile
+    depends_on:
+      - game_god
+    ports:
+      - target: 80
+        published: 8000
+    volumes:
+      - ./src/back:/presidents/src/back
+    restart: always
+
+  hand_play_pinger:
+    build:
+      context: ./
+      dockerfile: ./src/back/services/hand_play_pinger/Dockerfile
+    depends_on:
+      - game_server
+    ports:
+      - target: 6066
+        published: 6067
+    volumes:
+      - ./src/back:/presidents/src/back
+    restart: always
+
+  bot_farm:
+    build:
+      context: ./
+      dockerfile: ./src/back/services/bot_farm/Dockerfile
+    depends_on:
+      - hand_play_pinger
+    ports:
+      - target: 80
         published: 8001
     volumes:
       - ./src/back:/presidents/src/back

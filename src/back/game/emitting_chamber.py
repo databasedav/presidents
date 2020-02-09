@@ -86,8 +86,7 @@ class EmittingChamber(Chamber):
         Emits hand storage and uses EmittingHandNodes instead of
         HandNodes.
         """
-        # TODO: POLL: should the cards be deselected after creating a hand?
-        #       this behavior should be controllable
+        # TODO: this behavior should be controllable as a player setting
         self._hand_check()
         await self.deselect_cards(hand)
         await self._emit(
@@ -98,7 +97,7 @@ class EmittingChamber(Chamber):
                 "id_desc": hand.id_desc,
             },
         )
-        self._add_hand_helper(hand, EmittingHandNode, self._sio)
+        self._add_hand_helper(hand, EmittingHandNode, sio=self._sio)
 
     async def select_card(self, card: int, check: bool = True) -> None:
         super().select_card(card, check)
@@ -141,7 +140,8 @@ class EmittingChamber(Chamber):
 
 
 class EmittingHandNode(HandNode):
-    def __init__(self, hand_pointer_nodes: List[HandPointerNode], sio) -> None:
+    def __init__(self, hand, hand_pointer_nodes: List[HandPointerNode], *, sio) -> None:
+        super().__init__(hand, hand_pointer_nodes)
         self._sio = sio
         self._id = None  # TODO: random number or string (which one is better?)
         self._sid: str = None

@@ -45,13 +45,7 @@ from ..utils.models import (
 from ...data.db import session
 from ...data.db.models import User, Username
 from ..game_god import game_action_processor, GameAction
-
-try:
-    from .secrets import SECRET
-except:
-    import os
-
-    SECRET = os.getenv("TOKEN_SECRET")
+from ..secrets import JWT_SECRET, BOT_KEY
 
 # TODO: cache exceptions?
 # TODO: asap: set max messages on the frontend, fix the auto scroll
@@ -393,20 +387,19 @@ async def get_games(user_id: str = Depends(authenticated_user)):
 @game_server_sio.event
 async def connect(sid, environ):
     now = time()
-    auth = environ.get("HTTP_AUTHORIZATION")
-    if not auth:
-        raise ConnectionRefusedError("requires authentication")
+    user_id, username = None, None
+    # so bots can join games without authentication
+    if (bot_key := environ.get('HTTP_BOT_KEY')) and bot_key == BOT_KEY:
+        pass
+    elif auth := environ.get("HTTP_AUTHORIZATION"):
         # 7 chars in 'Bearer '
-    user_id, username = token_to_user_id_username(auth[7:])
-    game_id = environ.get("HTTP_GAME_ID")
-    game_key = environ.get("HTTP_GAME_KEY")
-
-    if not game_id or not game_key:
-        raise ConnectionRefusedError("requires game id and game key")
-    elif game_key.encode() not in await game_store.zrevrangebyscore(
-        f"{game_id}:game_keys", min=now
-    ):
-        raise ConnectionRefusedError("invalid game key")
+        user_id, username = token_to_user_id_username(auth[7:])
+    else:
+        raise ConnectionRefusedError("requires authentication")
+    if not (game_id := environ.get("HTTP_GAME_ID")):
+        raise ConnectionRefusedError('requires game id')
+    if not bot_key and not (game_key := environ.get('HTTP_GAME_KEY')) or game_key.encode() not in await game_store.zrevrangebyscore(f"{game_id}:game_keys", min=now):
+        raise ConnectionRefusedError('requires game key' if not game_key else "invalid game key")
     # else key is valid
 
     player_added = await ear.ask(
@@ -415,9 +408,9 @@ async def connect(sid, environ):
             prayer="add_player",
             prayer_kwargs={
                 "game_id": game_id,
-                "user_id": user_id,
+                "user_id": user_id or str(uuid4()),
                 "sid": sid,
-                "username": username,
+                "username": username or 'bot',
             },
         ),
     )

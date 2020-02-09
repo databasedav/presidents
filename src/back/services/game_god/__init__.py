@@ -16,7 +16,7 @@ from typing import Any, Dict, Optional
 from faust.models.fields import StringField
 from google.protobuf.timestamp_pb2 import Timestamp
 
-from ..secrets import EVENTHUB_HOST, EVENTHUB_USERNAME, EVENTHUB_PASSWORD
+# from ..secrets import EVENTHUB_HOST, EVENTHUB_USERNAME, EVENTHUB_PASSWORD
 from ...game import EmittingGame
 from ..utils import GAME_ACTION_DICT
 from ...utils import AsyncTimer, main

@@ -60,7 +60,7 @@ class Hand:
     def __init__(
         self,
         cards: np.ndarray[np.uint8] = None,
-        identity: int = None,
+        id_: int = None,
         head: int = None,
     ) -> None:
         if cards is None:  # default constructor; empty hand
@@ -72,7 +72,7 @@ class Hand:
         # .copy classmethod constructor; should not be used manually
         elif head is not None:
             self._cards = cards.copy()
-            self._id = identity  # type: ignore
+            self._id = id_  # type: ignore
             self._head = head
         # testing constructor (i.e. Hand([...])); auto identifies
         # list requirements: length <= 5, ints between 0 and 52

@@ -454,14 +454,13 @@ class EmittingGame(Game):
         # evaluated before the chamber after removed the cards
         await chamber.remove_cards(hand)
         await gather(
-            # TODO
-            # self._hand_play_processor.cast(
-            #     HandPlay(
-            #         hand_hash=hash(hand),
-            #         sid=kwargs.get("sid", self._get_sid(spot)),
-            #         timestamp=kwargs.get("timestamp"),
-            #     )
-            # ),
+            hand_play_processor.cast(
+                HandPlay(
+                    hand_hash=hash(hand),
+                    sid=kwargs.get("sid", self._get_sid(spot)),
+                    timestamp=kwargs.get("timestamp"),
+                )
+            ),
             self._set_hand_in_play(hand),
             self._message(f"▶️ {self._names[spot]} played {str(hand)}"),
             self.lock(spot),
