@@ -39,12 +39,12 @@ class EmittingChamber(Chamber):
 
     def set_sio(self, sio) -> None:
         self._sio = sio
-        for hand_node in self._hands.iter_nodes():
+        for hand_node in self._hand_nodes:
             hand_node.set_sio(sio)
 
     def set_sid(self, sid: Optional[str]) -> None:
         self._sid = sid
-        for hand_node in self._hands.iter_nodes():
+        for hand_node in self._hand_nodes:
             hand_node.set_sid(sid)
 
     async def add_card(self, card: int, **kwargs) -> None:
@@ -140,7 +140,9 @@ class EmittingChamber(Chamber):
 
 
 class EmittingHandNode(HandNode):
-    def __init__(self, hand, hand_pointer_nodes: List[HandPointerNode], *, sio) -> None:
+    def __init__(
+        self, hand, hand_pointer_nodes: List[HandPointerNode], *, sio
+    ) -> None:
         super().__init__(hand, hand_pointer_nodes)
         self._sio = sio
         self._id = None  # TODO: random number or string (which one is better?)

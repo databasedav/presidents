@@ -29,9 +29,7 @@ import faust
 from .records import GameAction
 
 # handles consuming all presidents data streams
-presidents_processor = faust.App(
-    "presidents", broker="kafka://data_stream:9092"
-)
+presidents_processor = faust.App("presidents", broker="kafka://kafka:9092")
 
 game_action_topic = presidents_processor.topic(
     "game_action", value_type=GameAction

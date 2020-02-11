@@ -6,15 +6,16 @@ from asyncio import gather
 from ..utils import AsyncTimer
 from functools import reduce
 from operator import iconcat
+import logging
 
 TTL = 1
+
+logger = logging.getLogger(__name__)
 
 # consumes hand plays and increments "same hand just played" counts on
 # appropriate games
 hand_play_pinger = faust.App(
-    "hand_play_pinger",
-    broker="kafka://data_stream:9092",
-    stream_wait_empty=False,
+    "hand_play_pinger", broker="kafka://kafka:9092", stream_wait_empty=False,
 )
 
 game_store = None
@@ -36,8 +37,10 @@ async def cleanup_game_id_hand_hash(game_id: str, hand_hash: int):
     await gather(
         # delete from game hash if the hand hash hasn't been overwritten
         # else the game is in this hand hash's exclude set
-        game_store.hdel(game_id, 'hand_hash') if hand_hash == await game_store.hget('game_id', 'hand_hash') else game_store.srem(f'{hand_hash}:exclude', game_id),
-        game_store.lpop(hand_hash)
+        game_store.hdel(game_id, "hand_hash")
+        if hand_hash == await game_store.hget("game_id", "hand_hash")
+        else game_store.srem(f"{hand_hash}:exclude", game_id),
+        game_store.lpop(hand_hash),
     )
 
 
@@ -61,8 +64,8 @@ async def hand_play_processor(hand_plays):
         hand_hash = hand_play.hand_hash
         # if game id still in another hand hash's list, it should be
         # excluded from future pings for that hand
-        if old_hand_hash := await game_store.hget(game_id, 'hand_hash'):
-            await game_store.sadd(f'{old_hand_hash}:exclude', game_id)
+        if old_hand_hash := await game_store.hget(game_id, "hand_hash"):
+            await game_store.sadd(f"{old_hand_hash}:exclude", game_id)
 
         aws = list()
         # get game ids where same hand was just played, inc. exclusions
@@ -93,6 +96,6 @@ async def hand_play_processor(hand_plays):
                 )
         # game id is newest game to play hand
         aws.append(game_store.rpush(hand_hash, og_game_id))
-        await gather(*aws) # execute everything concurrently
+        await gather(*aws)  # execute everything concurrently
         # makes sure game id and hand hash are unlinked after a sec
         expire_game_id_hand_hash(og_game_id, hand_hash)

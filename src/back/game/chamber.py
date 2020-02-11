@@ -11,7 +11,8 @@ from .utils import IterNodesDLList, id_desc_dict
 
 # TODO: make high quality representation of what is going on
 
-COMBOS = ['double', 'triple', 'fullhouse', 'straight', 'bomb']
+COMBOS = ["double", "triple", "fullhouse", "straight", "bomb"]
+
 
 class Chamber:
     """
@@ -45,10 +46,26 @@ class Chamber:
         self.fullhouses: HandNodeDLList = HandNodeDLList()
         self.straights: HandNodeDLList = HandNodeDLList()
         self.bombs: HandNodeDLList = HandNodeDLList()
-    
+
+    @property
+    def _hand_nodes(self):
+        hand_nodes = list()
+        for combo in COMBOS:
+            hand_nodes.extend(list(getattr(self, f"{combo}s")))
+        return hand_nodes
+
     @property
     def _num_hands(self):
-        return sum(getattr(self, f'_{desc}').size for desc in ['doubles', 'triples', 'fullhouses', 'straights', 'bombs'])
+        return sum(
+            getattr(self, f"_{desc}").size
+            for desc in [
+                "doubles",
+                "triples",
+                "fullhouses",
+                "straights",
+                "bombs",
+            ]
+        )
 
     def __contains__(self, card_or_hand: Union[int, Collection[int]]) -> bool:
         # card
@@ -103,7 +120,7 @@ class Chamber:
         self._cards.fill(None)
         self.num_cards = 0
         for combo in COMBOS:
-            getattr(self, f'{combo}s').clear()
+            getattr(self, f"{combo}s").clear()
 
     # check argument should not be used outside of this class; is there
     # any way to enforce this? TODO
@@ -175,10 +192,10 @@ class Chamber:
         hand = hand if isinstance(hand, Hand) else Hand(hand)
         # TODO: this should be a permitted presidents error
         if not hand.is_valid:
-            raise HandNotStorableError(f'hand {str(hand)} cannot be stored')
+            raise HandNotStorableError(f"hand {str(hand)} cannot be stored")
         # TODO: this should be an unpermitted presidents error
         if hand in self:
-            raise HandAlreadyStoredError(f'hand {str(hand)} already stored')
+            raise HandAlreadyStoredError(f"hand {str(hand)} already stored")
         return hand
 
     def add_hand(self, hand: Collection[int]) -> None:
@@ -195,7 +212,9 @@ class Chamber:
         in.
         """
         hand_pointer_nodes: List[HandPointerNode] = list()
-        hand_node: HandNode = hand_node_class(hand, hand_pointer_nodes, **hnc_kwargs)
+        hand_node: HandNode = hand_node_class(
+            hand, hand_pointer_nodes, **hnc_kwargs
+        )
         for card in hand:
             hand_pointer_node: HandPointerNode = HandPointerNode(hand_node)
             # appending pointer to list of HandPointerNodes living on
@@ -203,7 +222,7 @@ class Chamber:
             hand_pointer_nodes.append(hand_pointer_node)
             # appending node to HandPointerDLList
             self._cards[card].appendnode(hand_pointer_node)
-        getattr(self, f'{id_desc_dict[hand_node._id]}s').add(hand_node)
+        getattr(self, f"{id_desc_dict[hand_node._id]}s").add(hand_node)
 
     def select_card(self, card: int, check: bool = True) -> None:
         if check:
@@ -291,6 +310,7 @@ class HandPointerNode(dllistnode):
     Wrapper for dllistnode that allows the value of the node to be a
     pointer to another node.
     """
+
     def __init__(self, hand_node: HandNode) -> None:
         super().__init__(None)
         self.value: HandNode = hand_node
@@ -305,6 +325,7 @@ class HandNodeDLList(IterNodesDLList):
     right to left for constant time insertions made by bots who
     construct combos from lowest to greatest cards.
     """
+
     def __init__(self, id_: int = None):
         self._id = id_
 
@@ -334,7 +355,10 @@ class HandNode(dllistnode):
     cards in the hand; increments/decrements the number of cards
     selected in each hand as they are selected in the chamber.
     """
-    def __init__(self, hand: Hand, hand_pointer_nodes: List[HandPointerNode]) -> None:
+
+    def __init__(
+        self, hand: Hand, hand_pointer_nodes: List[HandPointerNode]
+    ) -> None:
         super().__init__(hand)  # hand object is the value
         self.hand_pointer_nodes = hand_pointer_nodes
         self._num_cards_selected: int = 0

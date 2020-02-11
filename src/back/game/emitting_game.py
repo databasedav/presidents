@@ -27,10 +27,6 @@ from . import (
 
 from datetime import datetime
 
-from ..data.stream.records import HandPlay
-
-# from ..data.stream.agents import hand_play_agent
-
 # TODO: decide what to do for the removal of asking options; and whether
 #       or not to remove them
 # TODO: spectators should get a completely hidden view of the game being
@@ -62,11 +58,12 @@ from ..data.stream.records import HandPlay
 
 
 class EmittingGame(Game):
-    def __init__(self, sio, name: str, **kwargs):
+    def __init__(self, *, name: str, sio, hand_play_processor, **kwargs):
         super().__init__(**kwargs)
         # TODO: server stuff (including emitting should be entirely handled by the Server, which is an AsyncNamespace)
-        self._sio = sio
         self.name = name
+        self._sio = sio
+        self._hand_play_processor = hand_play_processor
         self._chambers: List[EmittingChamber] = [
             EmittingChamber(self._sio) for _ in range(4)
         ]
@@ -454,13 +451,7 @@ class EmittingGame(Game):
         # evaluated before the chamber after removed the cards
         await chamber.remove_cards(hand)
         await gather(
-            hand_play_processor.cast(
-                HandPlay(
-                    hand_hash=hash(hand),
-                    sid=kwargs.get("sid", self._get_sid(spot)),
-                    timestamp=kwargs.get("timestamp"),
-                )
-            ),
+            self.cast_hand_play(hash(hand)),
             self._set_hand_in_play(hand),
             self._message(f"▶️ {self._names[spot]} played {str(hand)}"),
             self.lock(spot),
@@ -885,6 +876,11 @@ class EmittingGame(Game):
         Emits to players and spectators
         """
         ...
+
+    async def cast_hand_play(self, hand_hash: int):
+        await self._hand_play_processor.cast(
+            HandPlay(game_id=self.game_id, hand_hash=hand_hash)
+        )
 
     # alerting related methods
 

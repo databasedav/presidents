@@ -29,8 +29,8 @@ requests = "*"
 python-multipart = "*"
 protobuf = "*"
 robinhood-aiokafka = "*"
-faust = {extras=['fast'], version="*"}
-
+faust = {extras = ['fast'],version = "*"}
+typing-extensions = "*"
 
 [requires]
 python_version = "3.8"

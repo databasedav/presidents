@@ -31,7 +31,6 @@ logger = logging.getLogger(__name__)
 #     ssl_opts["ca_certs"] = cfg.config["certpath"]
 
 logger.info("connecting to database")
-logger.info(requests.utils.DEFAULT_CA_BUNDLE_PATH)
 session = cassandra.cluster.Cluster(
     contact_points=[CONTACT_POINT],
     port=int(PORT),
