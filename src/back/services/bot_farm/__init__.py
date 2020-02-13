@@ -7,6 +7,7 @@ from socketio import AsyncClient
 from ...game import Chamber, Hand
 from itertools import combinations
 from ..secrets import BOT_KEY
+import asyncio
 from ..game_god import Prayer, ear
 from .bot import Bot
 
@@ -15,19 +16,28 @@ logger = logging.getLogger(__name__)
 
 bot_farm = fastapi.FastAPI()
 game_bot_dict: Dict[str, List[Bot]] = dict()
-game_server_client = None
 
+# Prayer, ear = None, None
 
 @bot_farm.on_event("startup")
 async def on_startup():
-    global game_server_client
+    # from ..game_god import Prayer as p, ear as e
+    # global Prayer, ear
+    # Prayer, ear = p, e
     logger.info("starting bot farm")
-    # game_server_client = aiohttp.ClientSession()
-    await gather(*[add_game_and_populate() for _ in range(1)])
+    game_id = (await add_game())['game_id']
+    # wait for one to finish so agent finishes setting up
+    # TODO: the agent in game server should take of this by blocking
+    #       until connected, etc.
+    await asyncio.wait([add_bot(game_id)])
+    await gather(*[add_bot(game_id) for _ in range(3)])
 
 
 async def add_game_and_populate():
     game_id = (await add_game())["game_id"]
+    # for _ in range(4):
+    #     await add_bot(game_id)
+    #     await asyncio.sleep(2)
     await gather(*[add_bot(game_id) for _ in range(4)])
 
 
@@ -63,6 +73,7 @@ async def add_game(
     #     },
     # ) as response:
     #     assert response.status == 201
+    logger.info(game_dict)
     game_bot_dict[game_dict["game_id"]] = list()
     return game_dict
 

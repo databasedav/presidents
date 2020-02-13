@@ -60,9 +60,17 @@
             "name": "docker game server",
             "type": "python",
             "request": "launch",
-            "pythonPath": "/root/.local/share/virtualenvs/-x-v5uFv0/bin/python",
-            "module": "src.back.server.game_server.game_server",
-            "console": "integratedTerminal"
+            "module": "src.back.services.game_server",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "docker bot farm",
+            "type": "python",
+            "request": "launch",
+            "module": "src.back.services.bot_farm",
+            "console": "integratedTerminal",
+            "justMyCode": false
         }
     ],
     "compounds": [

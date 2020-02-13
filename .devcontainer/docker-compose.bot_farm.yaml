@@ -6,7 +6,7 @@
 version: '3.7'
 services:
   # Update this to the name of the service you want to work with in your docker-compose.yml file
-  game_server:
+  bot_farm:
     # You may want to add a non-root user to your Dockerfile and uncomment the line below
     # to cause all processes to run as this user. Once present, you can also simply
     # use the "remoteUser" property in devcontainer.json if you just want VS Code and
@@ -39,4 +39,5 @@ services:
 
     # Overrides default command so things don't shut down after the process ends.
     command: /bin/sh -c "while sleep 1000; do :; done"
- 
+    
+    

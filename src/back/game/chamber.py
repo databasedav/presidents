@@ -287,6 +287,7 @@ class Chamber:
         for card in cards:
             self._check_card_not_in(card)
 
+    # TODO: store these as attributes
     def _get_min_card(self) -> int:
         for card in self:
             return card

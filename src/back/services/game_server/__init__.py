@@ -44,8 +44,8 @@ from ..utils.models import (
 )
 from ...data.db import session
 from ...data.db.models import User, Username
-from ..game_god import GameAction, game_action_processor, Prayer, ear
 from ..secrets import JWT_SECRET, BOT_KEY
+from ..game_god import GameAction, game_action_processor, Prayer, ear
 
 # TODO: cache exceptions?
 # TODO: asap: set max messages on the frontend, fix the auto scroll
@@ -73,6 +73,7 @@ oauth2_scheme = fastapi.security.OAuth2PasswordBearer(tokenUrl="/token")
 
 game_server_sio = socketio.AsyncServer(
     async_mode="asgi",
+    async_handlers=False,  # would prefer to avoid using this and just have bots wait for response
     client_manager=socketio.AsyncRedisManager("redis://socketio_pubsub"),
     cors_allowed_origins="*",
 )
@@ -139,11 +140,13 @@ except RuntimeError:  # development
 #             "redis://game_store", timeout=300
 #         )
 #         logger.info('connected to redis')
-
+# GameAction, game_action_processor, Prayer, ear = None, None, None, None
 
 @game_server_fast.on_event("startup")
 async def on_startup():
-    global game_store, game_god_client
+    # from ..game_god import GameAction as ga, game_action_processor as gap, Prayer as p, ear as e
+    global game_store #, GameAction, game_action_processor, Prayer, ear
+    # GameAction, game_action_processor, Prayer, ear = ga, gap, p, e
 
     # TODO: azure docker compose doesn't support depends so sets 5
     #       connection timeout
@@ -407,8 +410,7 @@ async def connect(sid, environ):
         )
     # else key is valid
 
-    # player_added = 
-    await ear.ask(
+    player_added = await ear.ask(
         # TODO: generate game id upstream so events are sent to correct agent
         # key=game_id,
         value=Prayer(
@@ -485,8 +487,3 @@ async def game_action(sid, payload):
             sid=sid,
         ),
     )
-
-
-@main
-def run():
-    uvicorn.run(game_server, host="0.0.0.0", port=8000)

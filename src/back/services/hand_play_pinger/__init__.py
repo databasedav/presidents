@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 # consumes hand plays and increments "same hand just played" counts on
 # appropriate games
 hand_play_pinger = faust.App(
-    "hand_play_pinger", broker="kafka://kafka:9092", stream_wait_empty=False,
+    "hand_play_pinger", broker="kafka://kafka:9092",
 )
 
 game_store = None
@@ -51,7 +51,7 @@ expire_game_id_hand_hash = functools.partial(
 
 class HandPlay(faust.Record):
     game_id: str
-    hand_hand: int
+    hand_hash: int
 
 
 hand_play_topic = hand_play_pinger.topic("hand_plays", value_type=HandPlay)
@@ -75,7 +75,7 @@ async def hand_play_processor(hand_plays):
         )
         count = len(game_ids)
         # first set initial count to game that just played the hand
-        for sid in await game_store.isscan(f"{game_id}:sids"):
+        async for sid in game_store.isscan(f"{game_id}:sids"):
             aws.append(
                 sio.emit(
                     "set_same_hand_just_played_count",

@@ -3,7 +3,7 @@ from itertools import combinations
 from asyncio import gather
 
 from ..secrets import BOT_KEY
-from ...game import Chamber
+from ...game import Chamber, Hand
 
 # only listens to events that change the state directly visible to bots
 # includes everything visible in front end game vue
@@ -11,7 +11,7 @@ class Bot:
     def __init__(self):
         self._sio = AsyncClient()
         self.chamber = Chamber()
-        self.hand_in_play = None
+        self.hand_in_play = Hand()
         self.ranks = dict()
         self.num_cards_remaining = [0 for _ in range(4)]
         self.dot_colors = ["red" for _ in range(4)]
@@ -128,7 +128,7 @@ class Bot:
         def set_hand_in_play(payload):
             if not hand_in_play.is_empty:
                 hand_in_play.reset()
-            for card in payload["hand"]:
+            for card in payload["hand_in_play"]:
                 hand_in_play.add(card)
 
         @sio.event
@@ -186,9 +186,12 @@ class Bot:
             self.store_hands()
         hand_in_play = self.hand_in_play
         chamber = self.chamber
-        if hand_in_play.is_empty:
+        # TODO: randomly play bomb if have bomb
+        if 1 in self.chamber:
             await self.cards_unlock_play(chamber._cards[1].last.value)
-        else:
+        elif hand_in_play.is_empty or hand_in_play.is_single:
+            await self.cards_unlock_play([self.chamber._get_max_card()])  # the augie
+        else:  # is multi card hand
             hand = getattr(chamber, f"{hand_in_play.id_desc}s").last.value
             if hand > hand_in_play:
                 await self.cards_unlock_play(hand)
@@ -220,34 +223,34 @@ class Bot:
         self.hands_stored = True
 
     async def ask(self):
-        self._game_action(-22)
+        await self._game_action(-22)
 
     async def card(self, card: int):
-        self._game_action(card)
+        await self._game_action(card)
 
     async def give(self):
-        self._game_action(-20)
+        await self._game_action(-20)
 
     async def lock(self):
-        self._game_action(-19)
+        await self._game_action(-19)
 
     async def play(self):
-        self._game_action(-17)
+        await self._game_action(-17)
 
     async def pass_(self):
-        self._game_action(-18)
+        await self._game_action(-18)
 
     async def rank(self, rank: int):
-        self._game_action(-rank)
+        await self._game_action(-rank)
 
     async def unlock(self):
-        self._game_action(-15)
+        await self._game_action(-15)
 
     async def unlock_pass(self):
-        self._game_action(-14)
+        await self._game_action(-14)
 
     async def _game_action(self, action: int):
-        self._emit("game_action", {"action": action})
+        await self._emit("game_action", {"action": action})
 
     async def _emit(self, *args, **kwargs):
-        self._sio.emit(*args, **kwargs)
+        await self._sio.emit(*args, **kwargs)

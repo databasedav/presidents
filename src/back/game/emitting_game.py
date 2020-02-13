@@ -10,6 +10,7 @@ from time import time
 
 from ..game.hand import NotPlayableOnError
 from ..utils import AsyncTimer
+from ..services.hand_play_pinger import HandPlay
 
 # from ..server.server import Server
 Server = None

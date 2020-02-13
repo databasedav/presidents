@@ -54,7 +54,9 @@ game_store = None
 # )
 
 game_god = faust.App(
-    "game_god", broker="kafka://kafka:9092", stream_wait_empty=False
+    "game_god",
+    broker="kafka://kafka:9092",
+    reply_create_topic=True
 )
 
 
@@ -63,9 +65,9 @@ async def on_started():
     global game_store
     # TODO: azure docker compose doesn't support depends so timeout
     logger.info("connecting to redis")
-    game_store = await aioredis.create_redis_pool(
-        "redis://game_store", timeout=120
-    )
+    task = asyncio.create_task(aioredis.create_redis_pool("redis://game_store", timeout=120))
+    game_store = (await asyncio.wait({task}))[0].pop().result()
+    assert await game_store.ping()
     logger.info("connected to redis")
 
 
