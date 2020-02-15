@@ -120,7 +120,7 @@ class Hand:
 
     def __iter__(self) -> Iterator[np.uint8]:  # TODO: return type for this
         for i in range(self._head + 1, 5):
-            yield self[i]
+            yield int(self[i])
 
     def __str__(self) -> str:
         to_join = [card_names[card] for card in self]
@@ -245,8 +245,14 @@ class Hand:
     def _num_cards(self) -> int:
         return 4 - self._head
 
+    # TODO: remove
     @property
     def id_desc(self) -> str:
+        return id_desc_dict[self._id]
+    
+    # TODO: cache this?
+    @property
+    def id_str(self) -> str:
         return id_desc_dict[self._id]
 
     def reset(self) -> None:
@@ -254,6 +260,7 @@ class Hand:
         self._id = 0
         self._head = 4
 
+    # TODO: remove, __iter__ now converts to int
     def to_list(self) -> List[int]:
         # converts each card to int first for json serializability
         return list(map(int, self.__iter__()))

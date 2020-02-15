@@ -1,9 +1,16 @@
+import logging
+
 from socketio import AsyncClient
 from itertools import combinations
-from asyncio import gather
+from asyncio import gather, sleep
+from random import choice, randrange
 
 from ..secrets import BOT_KEY
 from ...game import Chamber, Hand
+
+logger = logging.getLogger(__name__)
+
+NUM_BOT_SERVERS = 5
 
 # only listens to events that change the state directly visible to bots
 # includes everything visible in front end game vue
@@ -25,10 +32,10 @@ class Bot:
         self.paused = False
         self.hands_stored = False
 
-    async def connect_to_game(self, game_id: str):
+    async def connect_to_game(self, game_id: str, *, bot_game_server=None):
         self._register_event_handlers()
         await self._sio.connect(
-            "http://game_server", {"bot_key": BOT_KEY, "game_id": game_id}
+            f"ws://bot_game_server_{bot_game_server or randrange(1, NUM_BOT_SERVERS)}", {"bot_key": BOT_KEY, "game_id": game_id}
         )
 
     def _register_event_handlers(self):
@@ -122,7 +129,7 @@ class Bot:
 
         @sio.event
         def set_giving_options(payload):
-            giving_options.extend(payload["giving_options"])
+            giving_options.extend(payload["options"])
 
         @sio.event
         def set_hand_in_play(payload):
@@ -183,31 +190,49 @@ class Bot:
 
     async def turn_up(self):
         if not self.hands_stored:
-            self.store_hands()
+            await self.store_hands()
         hand_in_play = self.hand_in_play
         chamber = self.chamber
         # TODO: randomly play bomb if have bomb
         if 1 in self.chamber:
-            await self.cards_unlock_play(chamber._cards[1].last.value)
-        elif hand_in_play.is_empty or hand_in_play.is_single:
-            await self.cards_unlock_play([self.chamber._get_max_card()])  # the augie
+            await self.cards_unlock_play(chamber._cards[1].last.value.value if chamber._cards[1].last else [1])
+            return
+        elif hand_in_play.is_empty:
+            hand_nodes = list(self.chamber._hand_nodes)
+            await self.cards_unlock_play(choice(hand_nodes).hand if hand_nodes else [self.chamber._get_max_card()])
+            return
+        elif hand_in_play.is_single:
+            hand = Hand([self.chamber._get_random_card()])
         else:  # is multi card hand
-            hand = getattr(chamber, f"{hand_in_play.id_desc}s").last.value
-            if hand > hand_in_play:
-                await self.cards_unlock_play(hand)
+            if hand_node := getattr(chamber, f"{hand_in_play.id_str}s").last:
+                hand = hand_node.value
             else:
                 await self.unlock_pass_pass()
+                return
+        if hand > hand_in_play:
+            await self.cards_unlock_play(hand)
+        else:
+            await self.unlock_pass_pass()
+
+    def _on_success_callback_constructor(self, func, *args, **kwargs):
+        async def callback(success):
+            if success:
+                await func(*args, **kwargs)
+            else:
+                logger.error(f'game action {action} failed')
+        return callback
 
     async def cards_unlock_play(self, cards):
         # removes cards in hand first if there are any
-        await gather(
-            *[self.card(card) for card in self.chamber.hand.to_list() + cards],
-            self.unlock(),
-            self.play(),
-        )
+        cards_to_click = list(self.chamber.hand) + list(cards)
+        await gather(*[self.card(card) for card in cards_to_click[:-1]])
+        # TODO: replace this mess with a chaining syntax
+        await self.card(cards_to_click[-1], self._on_success_callback_constructor(
+            self.unlock, self._on_success_callback_constructor(self.play)
+        ))
 
     async def unlock_pass_pass(self):
-        await gather(self.unlock_pass(), self.pass_())
+        await self.unlock_pass(self._on_success_callback_constructor(self.pass_))
 
     async def store_hands(self):
         """
@@ -225,8 +250,8 @@ class Bot:
     async def ask(self):
         await self._game_action(-22)
 
-    async def card(self, card: int):
-        await self._game_action(card)
+    async def card(self, card: int, callback=None):
+        await self._game_action(card, callback)
 
     async def give(self):
         await self._game_action(-20)
@@ -243,14 +268,14 @@ class Bot:
     async def rank(self, rank: int):
         await self._game_action(-rank)
 
-    async def unlock(self):
-        await self._game_action(-15)
+    async def unlock(self, callback):
+        await self._game_action(-15, callback)
 
-    async def unlock_pass(self):
-        await self._game_action(-14)
+    async def unlock_pass(self, callback):
+        await self._game_action(-14, callback)
 
-    async def _game_action(self, action: int):
-        await self._emit("game_action", {"action": action})
+    async def _game_action(self, action: int, callback=None):
+        await self._emit("game_action", {"action": action}, callback=callback)
 
     async def _emit(self, *args, **kwargs):
         await self._sio.emit(*args, **kwargs)

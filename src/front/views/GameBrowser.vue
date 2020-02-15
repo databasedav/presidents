@@ -122,7 +122,6 @@ export default {
         {
           text: "name",
           align: "center",
-          sortable: false,
           value: "name"
         },
         {

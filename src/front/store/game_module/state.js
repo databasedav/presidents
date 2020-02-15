@@ -43,6 +43,8 @@ export default _ => {
     reserve_time_states: Array(4).fill(false),
     stored_hand_lists: new Map(),
     stored_hand_selected: new Map(),
-    paused: false
+    paused: false,
+    hand_just_played: false,
+    hand_just_played_count: 0,
   };
 };

@@ -51,7 +51,7 @@ services:
       - target: 6066
         published: 6066
     volumes:
-      - ./src/back:/presidents/src/back
+      - ./src/back/services/game_god:/presidents/src/back/services/game_god
     restart: always
 
   game_server:
@@ -64,7 +64,47 @@ services:
       - target: 80
         published: 8000
     volumes:
-      - ./src/back:/presidents/src/back
+      - ./src/back/services/game_server:/presidents/src/back/services/game_server
+    restart: always
+
+  bot_game_server_1:
+    build:
+      context: ./
+      dockerfile: ./src/back/services/game_server/Dockerfile
+    depends_on:
+      - game_god
+    volumes:
+      - ./src/back/services/game_server:/presidents/src/back/services/game_server
+    restart: always
+  
+  bot_game_server_2:
+    build:
+      context: ./
+      dockerfile: ./src/back/services/game_server/Dockerfile
+    depends_on:
+      - game_god
+    volumes:
+      - ./src/back/services/game_server:/presidents/src/back/services/game_server
+    restart: always
+
+  bot_game_server_3:
+    build:
+      context: ./
+      dockerfile: ./src/back/services/game_server/Dockerfile
+    depends_on:
+      - game_god
+    volumes:
+      - ./src/back/services/game_server:/presidents/src/back/services/game_server
+    restart: always
+  
+  bot_game_server_4:
+    build:
+      context: ./
+      dockerfile: ./src/back/services/game_server/Dockerfile
+    depends_on:
+      - game_god
+    volumes:
+      - ./src/back/services/game_server:/presidents/src/back/services/game_server
     restart: always
 
   hand_play_pinger:
@@ -77,7 +117,7 @@ services:
       - target: 6066
         published: 6067
     volumes:
-      - ./src/back:/presidents/src/back
+      - ./src/back/services/hand_play_pinger:/presidents/src/back/services/hand_play_pinger
     restart: always
 
   bot_farm:
@@ -90,5 +130,6 @@ services:
       - target: 80
         published: 8001
     volumes:
-      - ./src/back:/presidents/src/back
+      - ./src/back/game:/presidents/src/back/game
+      - ./src/back/services/bot_farm:/presidents/src/back/services/bot_farm
     restart: always

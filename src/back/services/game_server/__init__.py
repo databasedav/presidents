@@ -13,13 +13,13 @@ import passlib.context
 from time import time
 from uuid import uuid4
 from typing import List, Tuple
-from asyncio import gather, sleep
 from secrets import token_urlsafe
 from datetime import datetime, timedelta
 from jwt import encode, decode, PyJWTError
 from fastapi import HTTPException, Depends
 from starlette.responses import HTMLResponse
 from starlette.staticfiles import StaticFiles
+from asyncio import gather, sleep, create_task
 from cassandra.cqlengine.query import DoesNotExist
 from starlette.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
@@ -45,7 +45,7 @@ from ..utils.models import (
 from ...data.db import session
 from ...data.db.models import User, Username
 from ..secrets import JWT_SECRET, BOT_KEY
-from ..game_god import GameAction, game_action_processor, Prayer, ear
+
 
 # TODO: cache exceptions?
 # TODO: asap: set max messages on the frontend, fix the auto scroll
@@ -73,7 +73,7 @@ oauth2_scheme = fastapi.security.OAuth2PasswordBearer(tokenUrl="/token")
 
 game_server_sio = socketio.AsyncServer(
     async_mode="asgi",
-    async_handlers=False,  # would prefer to avoid using this and just have bots wait for response
+    # async_handlers=False,  # would prefer to avoid using this and just have bots wait for response
     client_manager=socketio.AsyncRedisManager("redis://socketio_pubsub"),
     cors_allowed_origins="*",
 )
@@ -140,13 +140,16 @@ except RuntimeError:  # development
 #             "redis://game_store", timeout=300
 #         )
 #         logger.info('connected to redis')
-# GameAction, game_action_processor, Prayer, ear = None, None, None, None
+
+# from ..game_god import GameAction, game_action_processor, Prayer, ear
+GameAction, game_action_processor, Prayer, ear = None, None, None, None
 
 @game_server_fast.on_event("startup")
 async def on_startup():
-    # from ..game_god import GameAction as ga, game_action_processor as gap, Prayer as p, ear as e
-    global game_store #, GameAction, game_action_processor, Prayer, ear
-    # GameAction, game_action_processor, Prayer, ear = ga, gap, p, e
+    from ..game_god import GameAction as ga, game_action_processor as gap, Prayer as p, ear as e
+    # global game_store
+    global game_store, GameAction, game_action_processor, Prayer, ear
+    GameAction, game_action_processor, Prayer, ear = ga, gap, p, e
 
     # TODO: azure docker compose doesn't support depends so sets 5
     #       connection timeout
@@ -387,7 +390,7 @@ async def get_games(user_id: str = Depends(authenticated_user)):
 @game_server_sio.event
 async def connect(sid, environ):
     now = time()
-    user_id, username = None, None
+    user_id, username, game_key = None, None, None
     # so bots can join games without authentication
     if (bot_key := environ.get("HTTP_BOT_KEY")) and bot_key == BOT_KEY:
         pass
@@ -410,6 +413,12 @@ async def connect(sid, environ):
         )
     # else key is valid
 
+    # do adding to game as background task so socket connection is
+    # accepted immediately after validation
+    create_task(add_player(game_id, sid, bot_key, game_key, user_id, username))
+
+
+async def add_player(game_id: str, sid: str, bot_key: str, game_key: str, user_id: str, username: str):
     player_added = await ear.ask(
         # TODO: generate game id upstream so events are sent to correct agent
         # key=game_id,
@@ -419,7 +428,7 @@ async def connect(sid, environ):
                 "game_id": game_id,
                 "user_id": user_id or str(uuid4()),
                 "sid": sid,
-                "username": username or "bot",
+                "username": username or 'bot',
             },
         ),
     )
@@ -430,27 +439,29 @@ async def connect(sid, environ):
             game_store.delete(game_key),
             prune_expired_game_keys(game_id),
         )
-    # if not player_added:
-    #     raise ConnectionRefusedError("could not add player to game; try again")
-    # else:
-    logger.info(await game_store.hget(game_id, "num_players"))
-    if int(await game_store.hget(game_id, "num_players")) == 4:
-        # game is paused
-        if not int(await game_store.hget(game_id, "fresh")):
-            assert await ear.ask(
-                # key=game_id,
-                value=Prayer(
-                    prayer="resume_game",
-                    prayer_kwargs={"game_id": game_id},
-                ),
-            )
-        else:
-            assert await ear.ask(
-                # key=game_id,
-                value=Prayer(
-                    prayer="start_game", prayer_kwargs={"game_id": game_id}
-                ),
-            )
+    if not player_added:
+        # TODO: on this error (used to be in the connect listener)
+        #       should disconnect the socket and client should handle
+        #       switching to the game browser on socket disconnect
+        raise ConnectionRefusedError("could not add player to game; try again")
+    else:
+        if int(await game_store.hget(game_id, "num_players")) == 4:
+            # game is paused
+            if not int(await game_store.hget(game_id, "fresh")):
+                assert await ear.ask(
+                    # key=game_id,
+                    value=Prayer(
+                        prayer="resume_game",
+                        prayer_kwargs={"game_id": game_id},
+                    ),
+                )
+            else:
+                assert await ear.ask(
+                    # key=game_id,
+                    value=Prayer(
+                        prayer="start_game", prayer_kwargs={"game_id": game_id}
+                    ),
+                )
 
 
 async def prune_expired_game_keys(game_id: str):
@@ -478,7 +489,7 @@ async def get_game_id(sid: str):
 async def game_action(sid, payload):
     timestamp = datetime.utcnow()
     game_id = await get_game_id(sid)
-    await game_action_processor.cast(
+    return await game_action_processor.ask(
         # key=game_id,
         value=GameAction(
             game_id=game_id,

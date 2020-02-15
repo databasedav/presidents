@@ -2,7 +2,7 @@ from typing import Dict, List
 import aiohttp
 import fastapi
 import logging
-from asyncio import gather
+from asyncio import gather, sleep
 from socketio import AsyncClient
 from ...game import Chamber, Hand
 from itertools import combinations
@@ -29,8 +29,9 @@ async def on_startup():
     # wait for one to finish so agent finishes setting up
     # TODO: the agent in game server should take of this by blocking
     #       until connected, etc.
-    await asyncio.wait([add_bot(game_id)])
-    await gather(*[add_bot(game_id) for _ in range(3)])
+    await gather(*[add_bot(game_id, i) for i in range(1, 5)])  # hit all bot servers to start up reply consumers
+    await sleep(5)  # wait for reply consumers to start up
+    await gather(*[add_game_and_populate() for _ in range(1000)])
 
 
 async def add_game_and_populate():
@@ -38,13 +39,15 @@ async def add_game_and_populate():
     # for _ in range(4):
     #     await add_bot(game_id)
     #     await asyncio.sleep(2)
-    await gather(*[add_bot(game_id) for _ in range(4)])
-
+    await gather(*[add_bot(game_id) for _ in range(3)])
+    # num players takes a sec to update otherwise server will not start game
+    # TODO: this should not be an issue
+    await add_bot(game_id)
 
 async def add_game(
     *,
     name: str = "bots",
-    turn_time: float = 1,
+    turn_time: float = 5,
     reserve_time: float = 2,
     trading_time: float = 1,
     giving_time: float = 1,
@@ -62,23 +65,11 @@ async def add_game(
             },
         )
     )
-    # async with game_server_client.post(
-    #     "http://game_server/create_game",
-    #     json={
-    #         "name": name,
-    #         "turn_time": turn_time,
-    #         "reserve_time": reserve_time,
-    #         "trading_time": trading_time,
-    #         "giving_time": giving_time,
-    #     },
-    # ) as response:
-    #     assert response.status == 201
-    logger.info(game_dict)
     game_bot_dict[game_dict["game_id"]] = list()
     return game_dict
 
 
-async def add_bot(game_id: str):
+async def add_bot(game_id: str, bot_game_server=None):
     bot = Bot()
-    await bot.connect_to_game(game_id)
+    await bot.connect_to_game(game_id, bot_game_server=bot_game_server)
     game_bot_dict[game_id].append(bot)

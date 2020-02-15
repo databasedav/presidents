@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from typing import List, Collection, Optional, Iterator, Iterable, Union, Type
-
 import numpy as np
 from llist import dllistnode
+from random import randrange
 
 from . import Hand, CardNotInHandError, DuplicateCardError, FullHandError
 from .utils import IterNodesDLList, id_desc_dict
@@ -49,15 +49,14 @@ class Chamber:
 
     @property
     def _hand_nodes(self):
-        hand_nodes = list()
         for combo in COMBOS:
-            hand_nodes.extend(list(getattr(self, f"{combo}s")))
-        return hand_nodes
+            for hand_node in getattr(self, f"{combo}s").iter_nodes():
+                yield hand_node
 
     @property
     def _num_hands(self):
         return sum(
-            getattr(self, f"_{desc}").size
+            getattr(self, f"{desc}").size
             for desc in [
                 "doubles",
                 "triples",
@@ -83,7 +82,7 @@ class Chamber:
                 list(card_or_hand), key=lambda card: self._cards[card].size
             )
             for hand_node in self._cards[card_w_least_hands]:
-                hand_pointer_nodes = hand_node.value
+                hand_pointer_nodes = hand_node.hand_pointer_nodes
                 # don't need to check HandNodes storing off-length hands
                 if len(card_or_hand) != len(hand_pointer_nodes):
                     continue
@@ -182,14 +181,8 @@ class Chamber:
         """
         Makes sure hand can be added and returns the hand
         """
-        if hand is not self.hand:
-            assert 1 < len(hand) <= 5, "can only add hands with 2-5 cards"
-            self._check_cards_in(hand)
-            assert all(
-                hand[i] < hand[i + 1]  # type:ignore
-                for i in range(len(hand) - 1)
-            ), "hand must be ordered"
-        hand = hand if isinstance(hand, Hand) else Hand(hand)
+        if not isinstance(hand, Hand):
+            hand = Hand(hand)
         # TODO: this should be a permitted presidents error
         if not hand.is_valid:
             raise HandNotStorableError(f"hand {str(hand)} cannot be stored")
@@ -200,7 +193,8 @@ class Chamber:
 
     def add_hand(self, hand: Collection[int]) -> None:
         hand = self._hand_check(hand)
-        self.deselect_cards(hand)
+        if hand is self.hand:
+            self.deselect_cards(hand)
         self._add_hand_helper(hand, HandNode)
 
     def _add_hand_helper(
@@ -222,7 +216,7 @@ class Chamber:
             hand_pointer_nodes.append(hand_pointer_node)
             # appending node to HandPointerDLList
             self._cards[card].appendnode(hand_pointer_node)
-        getattr(self, f"{id_desc_dict[hand_node._id]}s").add(hand_node)
+        getattr(self, f"{hand.id_str}s").add(hand_node)
 
     def select_card(self, card: int, check: bool = True) -> None:
         if check:
@@ -296,6 +290,13 @@ class Chamber:
         for card in range(52, 0, -1):
             if self._cards[card] is not None:
                 return card
+    
+    def _get_random_card(self) -> int:
+        random_index = randrange(0, self.num_cards)
+        for i, card in enumerate(self):
+            if i == random_index:
+                return card
+
 
 
 class HandPointerDLList(IterNodesDLList):
@@ -333,7 +334,7 @@ class HandNodeDLList(IterNodesDLList):
     def __repr__(self) -> str:
         return "HandNodeDLList"
 
-    def add(hand_node):
+    def add(self, hand_node):
         """
         Adds hand node to list while maintaining order. Insertions done
         right to left.
@@ -360,12 +361,16 @@ class HandNode(dllistnode):
     def __init__(
         self, hand: Hand, hand_pointer_nodes: List[HandPointerNode]
     ) -> None:
-        super().__init__(hand)  # hand object is the value
+        super().__init__(hand)  # hand object is the value  # TODO: don't store hand objects on hand node
         self.hand_pointer_nodes = hand_pointer_nodes
         self._num_cards_selected: int = 0
 
     def __repr__(self) -> str:
         return "HandNode"
+
+    @property
+    def hand(self):
+        return Hand([hand_pointer_node.owner().card for hand_pointer_node in self.hand_pointer_nodes])
 
     def increment_num_selected_cards(self) -> None:
         self._num_cards_selected += 1

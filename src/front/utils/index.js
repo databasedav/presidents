@@ -21,6 +21,7 @@ const EVENTS = [
   "clear_cards",
   "clear_hand_in_play",
   "deselect_card",
+  "increment_hand_just_played_count",
   "message",
   "remove_asking_option",
   "remove_card",
@@ -33,6 +34,7 @@ const EVENTS = [
   "set_gives",
   "set_giving_options",
   "set_hand_in_play",
+  "set_hand_just_played_count",
   "set_names",
   "set_on_turn",
   "set_pass_unlocked",
@@ -44,7 +46,7 @@ const EVENTS = [
   "set_trading",
   "set_unlocked",
   "update_alert_str",
-  "update_current_hand_str"
+  "update_current_hand_str",
 ];
 
 export { create_game_module, EVENTS };

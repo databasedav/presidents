@@ -8,7 +8,7 @@ from functools import reduce
 from operator import iconcat
 import logging
 
-TTL = 1
+TTL = 10
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +60,7 @@ hand_play_topic = hand_play_pinger.topic("hand_plays", value_type=HandPlay)
 @hand_play_pinger.agent(hand_play_topic)
 async def hand_play_processor(hand_plays):
     async for hand_play in hand_plays:
+        logger.info(f'processing hand play {hand_play}')
         game_id = hand_play.game_id
         hand_hash = hand_play.hand_hash
         # if game id still in another hand hash's list, it should be
@@ -78,9 +79,9 @@ async def hand_play_processor(hand_plays):
         async for sid in game_store.isscan(f"{game_id}:sids"):
             aws.append(
                 sio.emit(
-                    "set_same_hand_just_played_count",
+                    "set_hand_just_played_count",
                     {"count": count},
-                    room=sid,
+                    room=sid.decode()  # read in as bytes,
                 )
             )
         og_game_id = game_id
@@ -91,7 +92,10 @@ async def hand_play_processor(hand_plays):
             async for sid in game_store.isscan(f"{game_id}:sids"):
                 aws.append(
                     sio.emit(
-                        "increment_same_hand_just_played_count", {}, room=sid
+                        # TODO: make the number pop on increment
+                        "increment_hand_just_played_count",
+                        {},
+                        room=sid.decode()  # read in as bytes
                     )
                 )
         # game id is newest game to play hand

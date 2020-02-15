@@ -17,22 +17,26 @@ export default {
     state.cards_arr = new Array();
     state.cards_selected_arr.fill(false);
   },
-
+  
   clear_hand_in_play(state, payload) {
     state.hand_in_play = [];
     state.hand_in_play_desc = "";
   },
-
+  
   deselect_asking_option(state, payload) {
     state.asking_options.set(payload.value, false);
     // remove after Vue supports maps
     state.asking_options_selected_arr.splice(payload.value, 1, false);
   },
-
+  
   deselect_card(state, payload) {
     state.cards.set(payload.card, false);
     // remove after Vue supports maps
     state.cards_selected_arr.splice(payload.card, 1, false);
+  },
+  
+  increment_hand_just_played_count (state, payload) {
+    state.hand_just_played_count += 1
   },
 
   message(state, payload) {
@@ -81,34 +85,41 @@ export default {
     // remove after Vue supports maps
     state.asking_options_selected_arr.splice(payload.new_rank, 1, true);
   },
-
+  
   set_cards_remaining(state, payload) {
     state.cards_remaining.splice(payload.spot, 1, payload.cards_remaining);
   },
-
+  
   set_dot_color(state, payload) {
     state.dot_colors.splice(payload.spot, 1, payload.dot_color);
   },
-
+  
   set_giver(state, payload) {
     state.giver = true;
   },
-
+  
   set_gives(state, payload) {
     state.gives = payload.gives;
   },
-
+  
   set_giving_options(state, payload) {
     for (var i in payload.options) {
       state.giving_options_arr.splice(payload.options[i], 1, payload.highlight);
     }
   },
-
+  
   set_hand_in_play(state, payload) {
     state.hand_in_play = payload.hand_in_play;
     state.hand_in_play_desc = payload.hand_in_play_desc;
   },
-
+  
+  set_hand_just_played_count (state, payload) {
+    console.log(payload.count)
+    state.hand_just_played_count = payload.count
+    state.hand_just_played = true
+    setTimeout(() => (state.hand_just_played = false), 10000);
+  },
+  
   set_names(state, payload) {
     state.names = payload.names;
   },
