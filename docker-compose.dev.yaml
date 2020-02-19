@@ -38,18 +38,37 @@ services:
       - target: 6379
         published: 6380
     restart: always
+  
+  bot_socketio_pubsub:
+    image: "redis:6.0-rc-buster"
+    command: sh -c "rm -f /data/dump.rdb && redis-server"
+    ports:
+      - target: 6379
+        published: 6381
+    restart: always
 
-  game_god:
+  game_god_1:
     build:
       context: ./  # runs the Dockerfile as if from workspace dir
       dockerfile: ./src/back/services/game_god/Dockerfile
     depends_on:
-      - game_store
-      - socketio_pubsub
-      - kafka
+      - monitor
     ports:
       - target: 6066
-        published: 6066
+        published: 6067
+    volumes:
+      - ./src/back/services/game_god:/presidents/src/back/services/game_god
+    restart: always
+
+  game_god_2:
+    build:
+      context: ./  # runs the Dockerfile as if from workspace dir
+      dockerfile: ./src/back/services/game_god/Dockerfile
+    depends_on:
+      - monitor
+    ports:
+      - target: 6066
+        published: 6068
     volumes:
       - ./src/back/services/game_god:/presidents/src/back/services/game_god
     restart: always
@@ -59,7 +78,7 @@ services:
       context: ./
       dockerfile: ./src/back/services/game_server/Dockerfile
     depends_on:
-      - game_god
+      - game_god_2
     ports:
       - target: 80
         published: 8000
@@ -72,9 +91,11 @@ services:
       context: ./
       dockerfile: ./src/back/services/game_server/Dockerfile
     depends_on:
-      - game_god
+      - game_god_2
     volumes:
       - ./src/back/services/game_server:/presidents/src/back/services/game_server
+    environment:
+      BOT_SERVER: 'true'
     restart: always
   
   bot_game_server_2:
@@ -82,9 +103,11 @@ services:
       context: ./
       dockerfile: ./src/back/services/game_server/Dockerfile
     depends_on:
-      - game_god
+      - game_god_2
     volumes:
       - ./src/back/services/game_server:/presidents/src/back/services/game_server
+    environment:
+      BOT_SERVER: 'true'
     restart: always
 
   bot_game_server_3:
@@ -92,9 +115,11 @@ services:
       context: ./
       dockerfile: ./src/back/services/game_server/Dockerfile
     depends_on:
-      - game_god
+      - game_god_2
     volumes:
       - ./src/back/services/game_server:/presidents/src/back/services/game_server
+    environment:
+      BOT_SERVER: 'true'
     restart: always
   
   bot_game_server_4:
@@ -102,34 +127,120 @@ services:
       context: ./
       dockerfile: ./src/back/services/game_server/Dockerfile
     depends_on:
-      - game_god
+      - game_god_2
     volumes:
       - ./src/back/services/game_server:/presidents/src/back/services/game_server
+    environment:
+      BOT_SERVER: 'true'
     restart: always
 
-  hand_play_pinger:
+  bot_game_server_5:
     build:
       context: ./
-      dockerfile: ./src/back/services/hand_play_pinger/Dockerfile
+      dockerfile: ./src/back/services/game_server/Dockerfile
     depends_on:
-      - game_server
-    ports:
-      - target: 6066
-        published: 6067
+      - game_god_2
     volumes:
-      - ./src/back/services/hand_play_pinger:/presidents/src/back/services/hand_play_pinger
+      - ./src/back/services/game_server:/presidents/src/back/services/game_server
+    environment:
+      BOT_SERVER: 'true'
+    restart: always
+  
+  bot_game_server_6:
+    build:
+      context: ./
+      dockerfile: ./src/back/services/game_server/Dockerfile
+    depends_on:
+      - game_god_2
+    volumes:
+      - ./src/back/services/game_server:/presidents/src/back/services/game_server
+    environment:
+      BOT_SERVER: 'true'
     restart: always
 
-  bot_farm:
+  bot_game_server_7:
+    build:
+      context: ./
+      dockerfile: ./src/back/services/game_server/Dockerfile
+    depends_on:
+      - game_god_2
+    volumes:
+      - ./src/back/services/game_server:/presidents/src/back/services/game_server
+    environment:
+      BOT_SERVER: 'true'
+    restart: always
+  
+  bot_game_server_8:
+    build:
+      context: ./
+      dockerfile: ./src/back/services/game_server/Dockerfile
+    depends_on:
+      - game_god_2
+    volumes:
+      - ./src/back/services/game_server:/presidents/src/back/services/game_server
+    environment:
+      BOT_SERVER: 'true'
+    restart: always
+
+  monitor:
+    build:
+      context: ./
+      dockerfile: ./src/back/services/monitor/Dockerfile
+    depends_on:
+      - game_store
+      - socketio_pubsub
+      - kafka
+    ports:
+      - target: 6066
+        published: 6066
+    volumes:
+      - ./src/back/services/monitor:/presidents/src/back/services/monitor
+    restart: always
+
+  bot_farm_1:
     build:
       context: ./
       dockerfile: ./src/back/services/bot_farm/Dockerfile
     depends_on:
-      - hand_play_pinger
+      - game_god_2
     ports:
       - target: 80
         published: 8001
     volumes:
       - ./src/back/game:/presidents/src/back/game
       - ./src/back/services/bot_farm:/presidents/src/back/services/bot_farm
+    environment:
+      BOT_FARM_ORDER: 1
+    restart: always
+
+  bot_farm_2:
+    build:
+      context: ./
+      dockerfile: ./src/back/services/bot_farm/Dockerfile
+    depends_on:
+      - game_god_2
+    ports:
+      - target: 80
+        published: 8002
+    volumes:
+      - ./src/back/game:/presidents/src/back/game
+      - ./src/back/services/bot_farm:/presidents/src/back/services/bot_farm
+    environment:
+      BOT_FARM_ORDER: 2
+    restart: always
+
+  bot_farm_3:
+    build:
+      context: ./
+      dockerfile: ./src/back/services/bot_farm/Dockerfile
+    depends_on:
+      - game_god_2
+    ports:
+      - target: 80
+        published: 8003
+    volumes:
+      - ./src/back/game:/presidents/src/back/game
+      - ./src/back/services/bot_farm:/presidents/src/back/services/bot_farm
+    environment:
+      BOT_FARM_ORDER: 3
     restart: always

@@ -9,8 +9,8 @@ import re
 from time import time
 
 from ..game.hand import NotPlayableOnError
-from ..utils import AsyncTimer
-from ..services.hand_play_pinger import HandPlay
+from ..utils import spawn_after
+from ..services.monitor import HandPlay
 
 # from ..server.server import Server
 Server = None
@@ -33,8 +33,8 @@ from datetime import datetime
 # TODO: spectators should get a completely hidden view of the game being
 #       played and maybe if you are friends with another player, you can
 #       see that player's cards and stuff like that
-# TODO: block receiving user events during autoplay, block autoplaying
-#       while user event is being processed
+# TODO: block receiving user events during autoplay
+# TODO: block autoplaying while user event is being processed
 # TODO: in general, make sure certain state has actually changed before
 #       notifying client
 # TODO: ok here is what is gna happen: timer will start server side
@@ -44,11 +44,7 @@ from datetime import datetime
 #       the fact that the player will actually have less time to play
 #       will be handled by the fact that they have reserve time and
 #       also the fact that they should get a better internet connection, bitch
-# TODO: kwargs strat has failed... (this is referring to autoplaying
-#       not happening invisibly to the player)
-# TODO: normalize emit event names with frontend; e.g. pass should be
-#       pass turn and asking click shoud be select asking option
-# TODO: rename selected asking option to selected asking rank
+# TODO: normalize emit event names with frontend
 # TODO: add UI elements for takes and gives remaining
 # TODO: go through all gathers and consider whether doing things
 #       concurrently won't break something
@@ -56,15 +52,22 @@ from datetime import datetime
 #       randomly decide order, e.g. not just
 #       "for sid in spot_sid_bidict.values()"  or "for spot in range(4)"
 # TODO: fix idling on phone bug
-
+# TODO: make base game class async and agnostic to event emittal
+#       implementation
+# TODO: serialize and store full game state at the start of every round
+#       and store all major game state changing actions in a round (e.g.
+#       this includes valid hand plays but excludes card clicks) so when
+#       assertions are failed (or some other unknown bug), reproduction
+#       can be attempted without accessing game actions table
 
 class EmittingGame(Game):
-    def __init__(self, *, name: str, sio, hand_play_processor, **kwargs):
+    def __init__(self, *, name: str, sio, agents: dict, **kwargs):
         super().__init__(**kwargs)
         # TODO: server stuff (including emitting should be entirely handled by the Server, which is an AsyncNamespace)
         self.name = name
         self._sio = sio
-        self._hand_play_processor = hand_play_processor
+        self._events_counter = agents.get('events_counter')
+        self._hand_play_processor = agents.get('hand_play_processor')
         self._chambers: List[EmittingChamber] = [
             EmittingChamber(self._sio) for _ in range(4)
         ]
@@ -878,10 +881,15 @@ class EmittingGame(Game):
         """
         ...
 
+    async def cast_event(self, event):
+        await self._events_counter.cast(event)
+
     async def cast_hand_play(self, hand_hash: int):
         await self._hand_play_processor.cast(
             HandPlay(game_id=self.game_id, hand_hash=hand_hash)
         )
+    
+
 
     # alerting related methods
 

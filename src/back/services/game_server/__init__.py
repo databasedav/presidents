@@ -1,3 +1,4 @@
+import os
 import re
 import aiohttp
 import fastapi
@@ -29,8 +30,7 @@ from starlette.status import (
     HTTP_409_CONFLICT,
 )
 
-from ...utils import main
-from ..utils.models import (
+from .models import (
     Game,
     GameAttrs,
     GameIdUsername,
@@ -42,9 +42,10 @@ from ..utils.models import (
     UsernamePasswordReenterPassword,
     Alert,
 )
-from ...data.db import session
-from ...data.db.models import User, Username
+from ...basedata import session
+from ...basedata.models import User, Username
 from ..secrets import JWT_SECRET, BOT_KEY
+from ..monitor import Event, event_counter
 
 
 # TODO: cache exceptions?
@@ -73,8 +74,9 @@ oauth2_scheme = fastapi.security.OAuth2PasswordBearer(tokenUrl="/token")
 
 game_server_sio = socketio.AsyncServer(
     async_mode="asgi",
-    # async_handlers=False,  # would prefer to avoid using this and just have bots wait for response
-    client_manager=socketio.AsyncRedisManager("redis://socketio_pubsub"),
+    client_manager=socketio.AsyncRedisManager(f"redis://socketio_pubsub"),
+    ping_timeout=300,
+    ping_interval=20,
     cors_allowed_origins="*",
 )
 
@@ -144,9 +146,16 @@ except RuntimeError:  # development
 # from ..game_god import GameAction, game_action_processor, Prayer, ear
 GameAction, game_action_processor, Prayer, ear = None, None, None, None
 
+
 @game_server_fast.on_event("startup")
 async def on_startup():
-    from ..game_god import GameAction as ga, game_action_processor as gap, Prayer as p, ear as e
+    from ..game_god import (
+        GameAction as ga,
+        game_action_processor as gap,
+        Prayer as p,
+        ear as e,
+    )
+
     # global game_store
     global game_store, GameAction, game_action_processor, Prayer, ear
     GameAction, game_action_processor, Prayer, ear = ga, gap, p, e
@@ -325,8 +334,11 @@ async def add_game(payload: GameAttrs):
     # TODO: rate limit
     # TODO: populate game table
     logger.info("game server prays for game creation")
+    prayer_kwargs = payload.dict()
+    prayer_kwargs["game_id"] = game_id = str(uuid4())
     game_dict = await ear.ask(
-        value=Prayer(prayer="add_game", prayer_kwargs=payload.dict())
+        key=game_id,
+        value=Prayer(prayer="add_game", prayer_kwargs=prayer_kwargs),
     )
     if not game_dict:
         return Alert(alert="failed to create game; try again")
@@ -413,22 +425,30 @@ async def connect(sid, environ):
         )
     # else key is valid
 
+    await event_counter.cast("connect")
     # do adding to game as background task so socket connection is
     # accepted immediately after validation
     create_task(add_player(game_id, sid, bot_key, game_key, user_id, username))
 
 
-async def add_player(game_id: str, sid: str, bot_key: str, game_key: str, user_id: str, username: str):
+async def add_player(
+    game_id: str,
+    sid: str,
+    bot_key: str,
+    game_key: str,
+    user_id: str,
+    username: str,
+):
     player_added = await ear.ask(
         # TODO: generate game id upstream so events are sent to correct agent
-        # key=game_id,
+        key=game_id,
         value=Prayer(
             prayer="add_player",
             prayer_kwargs={
                 "game_id": game_id,
                 "user_id": user_id or str(uuid4()),
                 "sid": sid,
-                "username": username or 'bot',
+                "username": username or "bot",
             },
         ),
     )
@@ -449,7 +469,7 @@ async def add_player(game_id: str, sid: str, bot_key: str, game_key: str, user_i
             # game is paused
             if not int(await game_store.hget(game_id, "fresh")):
                 assert await ear.ask(
-                    # key=game_id,
+                    key=game_id,
                     value=Prayer(
                         prayer="resume_game",
                         prayer_kwargs={"game_id": game_id},
@@ -457,7 +477,7 @@ async def add_player(game_id: str, sid: str, bot_key: str, game_key: str, user_i
                 )
             else:
                 assert await ear.ask(
-                    # key=game_id,
+                    key=game_id,
                     value=Prayer(
                         prayer="start_game", prayer_kwargs={"game_id": game_id}
                     ),
@@ -471,9 +491,10 @@ async def prune_expired_game_keys(game_id: str):
 @game_server_sio.event
 async def disconnect(sid):
     assert await ear.ask(
-        # key=await get_game_id(sid),
+        key=await get_game_id(sid),
         value=Prayer(prayer="remove_player", prayer_kwargs={"sid": sid}),
     )
+    await event_counter.cast("disconnect")
 
 
 async def get_game_id(sid: str):
@@ -490,7 +511,7 @@ async def game_action(sid, payload):
     timestamp = datetime.utcnow()
     game_id = await get_game_id(sid)
     return await game_action_processor.ask(
-        # key=game_id,
+        key=game_id,
         value=GameAction(
             game_id=game_id,
             action=payload["action"],

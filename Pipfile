@@ -12,7 +12,6 @@ flake8 = "*"
 jupyterlab = "*"
 
 [packages]
-python-socketio = "*"
 numpy = "*"
 llist = "*"
 bidict = "*"
@@ -31,6 +30,7 @@ protobuf = "*"
 robinhood-aiokafka = "*"
 faust = {extras = ['fast'],version = "*"}
 typing-extensions = "*"
+python-socketio = "*"
 
 [requires]
 python_version = "3.8"

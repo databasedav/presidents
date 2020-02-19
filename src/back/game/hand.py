@@ -249,7 +249,7 @@ class Hand:
     @property
     def id_desc(self) -> str:
         return id_desc_dict[self._id]
-    
+
     # TODO: cache this?
     @property
     def id_str(self) -> str:

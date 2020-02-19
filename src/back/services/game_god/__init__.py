@@ -18,12 +18,14 @@ from google.protobuf.timestamp_pb2 import Timestamp
 
 # from ..secrets import EVENTHUB_HOST, EVENTHUB_USERNAME, EVENTHUB_PASSWORD
 from ...game import EmittingGame
-from ..utils import GAME_ACTION_DICT
-from ...utils import AsyncTimer, main
-from ..utils.models import Game, AddPlayerInfo, Sid, GameId  # , GameAttrs
-from ..utils.game_action_pb2 import GameAction as GameActionProtobuf
-from ..hand_play_pinger import hand_play_processor
+from ...utils import GAME_ACTION_DICT, spawn_after
+from ...utils.game_action_pb2 import GameAction as GameActionProtobuf
+from ..monitor import events_counter, hand_play_processor
 
+AGENTS = {
+    'hand_play_processor': hand_play_processor,
+    'events_counter': events_counter
+}
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +56,7 @@ game_store = None
 # )
 
 game_god = faust.App(
-    "game_god",
-    broker="kafka://kafka:9092",
-    reply_create_topic=True
+    "game_god", broker="kafka://kafka:9092", reply_create_topic=True
 )
 
 
@@ -65,7 +65,9 @@ async def on_started():
     global game_store
     # TODO: azure docker compose doesn't support depends so timeout
     logger.info("connecting to redis")
-    task = asyncio.create_task(aioredis.create_redis_pool("redis://game_store", timeout=120))
+    task = asyncio.create_task(
+        aioredis.create_redis_pool("redis://game_store", timeout=120)
+    )
     game_store = (await asyncio.wait({task}))[0].pop().result()
     assert await game_store.ping()
     logger.info("connected to redis")
@@ -73,6 +75,7 @@ async def on_started():
 
 PRAYER_DICT = {
     "add_game": (
+        "game_id",
         "name",
         "turn_time",
         "reserve_time",
@@ -96,7 +99,9 @@ class Prayer(faust.Record):
     prayer_kwargs: Dict[str, Union[str, float]]
 
 
-prayer_topic = game_god.topic("prayers", value_type=Prayer)
+prayer_topic = game_god.topic(
+    "prayers", value_type=Prayer, partitions=8, internal=True
+)
 
 
 # god's ear (prayer processor)
@@ -124,6 +129,7 @@ async def ear(prayers):
 
 async def add_game(
     *,
+    game_id: str,
     name: str,
     turn_time: float,
     reserve_time: float,
@@ -131,6 +137,7 @@ async def add_game(
     giving_time: float,
 ):
     game_attrs = {
+        "game_id": game_id,
         "name": name,
         "turn_time": turn_time,
         "reserve_time": reserve_time,
@@ -139,11 +146,11 @@ async def add_game(
     }
     game = EmittingGame(
         sio=sio,
-        hand_play_processor=hand_play_processor,
-        timer=AsyncTimer.spawn_after,
+        agents=AGENTS,
+        timer=spawn_after,
         **game_attrs,
     )
-    game_id = str(game.game_id)
+    game_id = game.game_id
     logger.info(f"adding game {game_id} with attributes {game_attrs}")
     try:
         games[game_id] = game
@@ -308,12 +315,14 @@ class ActionField(faust.models.FieldDescriptor[int]):
 
 game_action_topic = game_god.topic(
     "game_actions",
-    # key_type=str,
+    key_type=str,  # key is game id
     value_type=GameAction,
+    partitions=8,
+    internal=True,
 )
 
 
-@game_god.agent(game_action_topic)
+@game_god.agent(game_action_topic, concurrency=50)
 async def game_action_processor(game_actions):
     async for game_action in game_actions:
         logger.info(f"processing game action {game_action}")
@@ -328,10 +337,3 @@ async def game_action_processor(game_actions):
                 f"game action {game_action} failed with exception: {traceback.format_exc()}"
             )
             yield 0
-
-
-# if __name__ == "__main__":
-#     import asyncio
-#     async def s():
-#         await asyncio.sleep(1000000000)
-#     asyncio.run(s())

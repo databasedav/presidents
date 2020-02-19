@@ -1,20 +1,3 @@
-from asyncio import sleep, create_task
-
-
-class AsyncTimer:
-    @classmethod
-    def spawn_after(cls, seconds, callback, *args, **kwargs):
-        """
-        Calls callback with args and kwargs after seconds.
-        """
-
-        async def task():
-            await sleep(seconds)
-            await callback(*args, **kwargs)
-
-        return create_task(task())
-
-
 # maps int action to tuple with str action and kwargs
 GAME_ACTION_DICT = {
     -22: ("ask", {}),

@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "/root/.local/share/virtualenvs/presidents--b5bDiWI/bin/python",
+    "python.pythonPath": "/home/avi/.local/share/virtualenvs/presidents-VuqWQA8n/bin/python",
     "python.testing.pytestArgs": [
         "src"
     ],

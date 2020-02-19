@@ -9,7 +9,9 @@ from itertools import combinations
 from ..secrets import BOT_KEY
 import asyncio
 from ..game_god import Prayer, ear
-from .bot import Bot
+from .bot import Bot, NUM_BOT_SERVERS
+from uuid import uuid4
+import os
 
 
 logger = logging.getLogger(__name__)
@@ -19,30 +21,37 @@ game_bot_dict: Dict[str, List[Bot]] = dict()
 
 # Prayer, ear = None, None
 
+
 @bot_farm.on_event("startup")
 async def on_startup():
     # from ..game_god import Prayer as p, ear as e
     # global Prayer, ear
     # Prayer, ear = p, e
+    await sleep(10)
     logger.info("starting bot farm")
-    game_id = (await add_game())['game_id']
     # wait for one to finish so agent finishes setting up
     # TODO: the agent in game server should take of this by blocking
     #       until connected, etc.
-    await gather(*[add_bot(game_id, i) for i in range(1, 5)])  # hit all bot servers to start up reply consumers
-    await sleep(5)  # wait for reply consumers to start up
-    await gather(*[add_game_and_populate() for _ in range(1000)])
+    await sleep((int(os.getenv("BOT_FARM_ORDER")) - 1) * 10)
+    await gather(
+        *[
+            add_bot((await add_game())["game_id"], i)
+            for i in range(1, NUM_BOT_SERVERS + 1)
+        ]
+    )  # hit all bot servers to start up reply consumers
+    await sleep(10)  # wait for reply consumers to start up
+    # for _ in range(2000):
+    #     await add_game_and_populate()
+    await gather(*[add_game_and_populate() for _ in range(834)])
 
 
 async def add_game_and_populate():
     game_id = (await add_game())["game_id"]
-    # for _ in range(4):
-    #     await add_bot(game_id)
-    #     await asyncio.sleep(2)
     await gather(*[add_bot(game_id) for _ in range(3)])
     # num players takes a sec to update otherwise server will not start game
     # TODO: this should not be an issue
     await add_bot(game_id)
+
 
 async def add_game(
     *,
@@ -52,18 +61,21 @@ async def add_game(
     trading_time: float = 1,
     giving_time: float = 1,
 ):
-    logger.info('bot farm prays for game creation')
+    logger.info("bot farm prays for game creation")
+    game_id = str(uuid4())
     game_dict = await ear.ask(
+        key=game_id,
         value=Prayer(
             prayer="add_game",
             prayer_kwargs={
+                "game_id": game_id,
                 "name": name,
                 "turn_time": turn_time,
                 "reserve_time": reserve_time,
                 "trading_time": trading_time,
                 "giving_time": giving_time,
             },
-        )
+        ),
     )
     game_bot_dict[game_dict["game_id"]] = list()
     return game_dict

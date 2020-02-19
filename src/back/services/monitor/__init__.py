@@ -1,36 +1,52 @@
 import faust
-import aioredis
+from ...utils import get_redis, spawn_after
 import socketio
-import functools
-from asyncio import gather
-from ..utils import AsyncTimer
-from functools import reduce
-from operator import iconcat
 import logging
+from asyncio import gather
+import functools
+import datetime
 
-TTL = 10
+
+TTL = 5
 
 logger = logging.getLogger(__name__)
 
-# consumes hand plays and increments "same hand just played" counts on
-# appropriate games
-hand_play_pinger = faust.App(
-    "hand_play_pinger", broker="kafka://kafka:9092",
-)
+# central monitor
+# TODO: separate in game and out of game monitors
+
+monitor = faust.App("monitor", broker="kafka://kafka:9092")
+
+
+class Event(faust.Record):
+    event: str
+
+
+events_dict = {"connect": 0, "disconnect": 0, 'autoplay': 0}
+
+events_topic = monitor.topic("events", value_type=str)
+
+
+@monitor.agent()
+async def event_counter(events):
+    async for event in events:
+        events_dict[event] += 1
+
+
+@monitor.page("/events")
+async def get_events(web, request):
+    return web.json(events_dict)
+
 
 game_store = None
 sio = socketio.AsyncRedisManager("redis://socketio_pubsub", write_only=True)
 
 
-@hand_play_pinger.task
+@monitor.task
 async def on_started():
     global game_store
-    # TODO: azure docker compose doesn't support depends so timeout
-    logger.info("connecting to redis")
-    game_store = await aioredis.create_redis_pool(
-        "redis://game_store", timeout=120
-    )
-    logger.info("connected to redis")
+    logger.info("monitor connecting to game store")
+    game_store = await get_redis("game_store")
+    logger.info("monitor connected to game store")
 
 
 async def cleanup_game_id_hand_hash(game_id: str, hand_hash: int):
@@ -45,7 +61,7 @@ async def cleanup_game_id_hand_hash(game_id: str, hand_hash: int):
 
 
 expire_game_id_hand_hash = functools.partial(
-    AsyncTimer.spawn_after, TTL, cleanup_game_id_hand_hash
+    spawn_after, TTL, cleanup_game_id_hand_hash
 )
 
 
@@ -54,13 +70,39 @@ class HandPlay(faust.Record):
     hand_hash: int
 
 
-hand_play_topic = hand_play_pinger.topic("hand_plays", value_type=HandPlay)
+hand_play_topic = monitor.topic(
+    "hand_plays",
+    value_type=HandPlay,
+    # TODO: separate process should create kafka topics
+    partitions=2,
+    internal=True,
+)
+
+hands_dict = {i: list() for i in range(1, 6)}
+
+# hands of certain size played per minute shown every 10 seconds
+# i.e. count hands in 10 second windows times 6
+# TODO: have this return subsequent plots
+@monitor.page("/hands")
+async def get_hands(self, request):
+    return self.json(hands_dict)
 
 
-@hand_play_pinger.agent(hand_play_topic)
+from ...game.hand import hand_table
+
+hand_size_table = monitor.Table(
+    "hand_size", default=int, partitions=2
+).tumbling(10, expires=datetime.timedelta(minutes=2))
+
+
+async def hand_size_sink(hand_id):
+    hand_size_table[hand_id // 10] += 1
+
+
+@monitor.agent(hand_play_topic, sink=[hand_size_sink])
 async def hand_play_processor(hand_plays):
     async for hand_play in hand_plays:
-        logger.info(f'processing hand play {hand_play}')
+        logger.info(f"processing hand play {hand_play}")
         game_id = hand_play.game_id
         hand_hash = hand_play.hand_hash
         # if game id still in another hand hash's list, it should be
@@ -81,7 +123,7 @@ async def hand_play_processor(hand_plays):
                 sio.emit(
                     "set_hand_just_played_count",
                     {"count": count},
-                    room=sid.decode()  # read in as bytes,
+                    room=sid.decode(),  # read in as bytes,
                 )
             )
         og_game_id = game_id
@@ -95,7 +137,7 @@ async def hand_play_processor(hand_plays):
                         # TODO: make the number pop on increment
                         "increment_hand_just_played_count",
                         {},
-                        room=sid.decode()  # read in as bytes
+                        room=sid.decode(),  # read in as bytes
                     )
                 )
         # game id is newest game to play hand
@@ -103,3 +145,17 @@ async def hand_play_processor(hand_plays):
         await gather(*aws)  # execute everything concurrently
         # makes sure game id and hand hash are unlinked after a sec
         expire_game_id_hand_hash(og_game_id, hand_hash)
+
+        yield hand_table[hand_hash]
+
+
+@monitor.agent()
+async def hands_dict_updater(updates):
+    async for _ in updates:
+        for i in range(1, 6):
+            hands_dict[i].append(hand_size_table[i].delta(10))
+
+
+@monitor.timer(interval=10)
+async def update_hands_dict():
+    await hands_dict_updater.cast(1)

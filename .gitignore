@@ -37,3 +37,4 @@ static
 test.py
 secrets
 conn.py
+python-socketio

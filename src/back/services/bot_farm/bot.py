@@ -4,19 +4,20 @@ from socketio import AsyncClient
 from itertools import combinations
 from asyncio import gather, sleep
 from random import choice, randrange
+from numpy.random import binomial
 
 from ..secrets import BOT_KEY
 from ...game import Chamber, Hand
 
 logger = logging.getLogger(__name__)
 
-NUM_BOT_SERVERS = 5
+NUM_BOT_SERVERS = 8
 
 # only listens to events that change the state directly visible to bots
 # includes everything visible in front end game vue
 class Bot:
     def __init__(self):
-        self._sio = AsyncClient()
+        self._sio = AsyncClient(request_timeout=300)
         self.chamber = Chamber()
         self.hand_in_play = Hand()
         self.ranks = dict()
@@ -35,7 +36,8 @@ class Bot:
     async def connect_to_game(self, game_id: str, *, bot_game_server=None):
         self._register_event_handlers()
         await self._sio.connect(
-            f"ws://bot_game_server_{bot_game_server or randrange(1, NUM_BOT_SERVERS)}", {"bot_key": BOT_KEY, "game_id": game_id}
+            f"ws://bot_game_server_{bot_game_server or randrange(1, NUM_BOT_SERVERS + 1)}",
+            {"bot_key": BOT_KEY, "game_id": game_id},
         )
 
     def _register_event_handlers(self):
@@ -195,13 +197,25 @@ class Bot:
         chamber = self.chamber
         # TODO: randomly play bomb if have bomb
         if 1 in self.chamber:
-            await self.cards_unlock_play(chamber._cards[1].last.value.value if chamber._cards[1].last else [1])
+            await self.cards_unlock_play(
+                chamber._cards[1].last.value.value
+                if chamber._cards[1].last
+                else [1]
+            )
             return
         elif hand_in_play.is_empty:
             hand_nodes = list(self.chamber._hand_nodes)
-            await self.cards_unlock_play(choice(hand_nodes).hand if hand_nodes else [self.chamber._get_max_card()])
+            await self.cards_unlock_play(
+                choice(hand_nodes).hand
+                if hand_nodes
+                else [self.chamber._get_max_card()]
+            )
             return
         elif hand_in_play.is_single:
+            # usually pass to increase chance of playing multi card hands
+            if binomial(1, 0.85):
+                self.unlock_pass_pass()
+                return
             hand = Hand([self.chamber._get_random_card()])
         else:  # is multi card hand
             if hand_node := getattr(chamber, f"{hand_in_play.id_str}s").last:
@@ -219,7 +233,8 @@ class Bot:
             if success:
                 await func(*args, **kwargs)
             else:
-                logger.error(f'game action {action} failed')
+                logger.error(f"game action {action} failed")
+
         return callback
 
     async def cards_unlock_play(self, cards):
@@ -227,12 +242,17 @@ class Bot:
         cards_to_click = list(self.chamber.hand) + list(cards)
         await gather(*[self.card(card) for card in cards_to_click[:-1]])
         # TODO: replace this mess with a chaining syntax
-        await self.card(cards_to_click[-1], self._on_success_callback_constructor(
-            self.unlock, self._on_success_callback_constructor(self.play)
-        ))
+        await self.card(
+            cards_to_click[-1],
+            self._on_success_callback_constructor(
+                self.unlock, self._on_success_callback_constructor(self.play)
+            ),
+        )
 
     async def unlock_pass_pass(self):
-        await self.unlock_pass(self._on_success_callback_constructor(self.pass_))
+        await self.unlock_pass(
+            self._on_success_callback_constructor(self.pass_)
+        )
 
     async def store_hands(self):
         """

@@ -290,13 +290,12 @@ class Chamber:
         for card in range(52, 0, -1):
             if self._cards[card] is not None:
                 return card
-    
+
     def _get_random_card(self) -> int:
         random_index = randrange(0, self.num_cards)
         for i, card in enumerate(self):
             if i == random_index:
                 return card
-
 
 
 class HandPointerDLList(IterNodesDLList):
@@ -361,7 +360,9 @@ class HandNode(dllistnode):
     def __init__(
         self, hand: Hand, hand_pointer_nodes: List[HandPointerNode]
     ) -> None:
-        super().__init__(hand)  # hand object is the value  # TODO: don't store hand objects on hand node
+        super().__init__(
+            hand
+        )  # hand object is the value  # TODO: don't store hand objects on hand node
         self.hand_pointer_nodes = hand_pointer_nodes
         self._num_cards_selected: int = 0
 
@@ -370,7 +371,12 @@ class HandNode(dllistnode):
 
     @property
     def hand(self):
-        return Hand([hand_pointer_node.owner().card for hand_pointer_node in self.hand_pointer_nodes])
+        return Hand(
+            [
+                hand_pointer_node.owner().card
+                for hand_pointer_node in self.hand_pointer_nodes
+            ]
+        )
 
     def increment_num_selected_cards(self) -> None:
         self._num_cards_selected += 1

@@ -117,7 +117,7 @@ export default {
     console.log(payload.count)
     state.hand_just_played_count = payload.count
     state.hand_just_played = true
-    setTimeout(() => (state.hand_just_played = false), 10000);
+    setTimeout(() => (state.hand_just_played = false), 5100);
   },
   
   set_names(state, payload) {

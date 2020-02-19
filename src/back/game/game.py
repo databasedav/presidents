@@ -60,6 +60,7 @@ class Game:
     def __init__(
         self,
         *,
+        game_id: str = uuid4(),
         timer: Callable = NoopTimer.timer,
         turn_time: float = TURN_TIME,
         reserve_time: float = RESERVE_TIME,
@@ -70,7 +71,7 @@ class Game:
         range_4 = range(4)  # software engineering
 
         # instance related attributes
-        self.game_id = uuid4()
+        self.game_id = game_id
         self.num_players: int = 0
         self._num_consecutive_rounds: int = 0
         self._times_reset: int = 0
@@ -431,7 +432,9 @@ class Game:
             spot: int = self._current_player
             # assert self._timers[spot]
             # both turn and reserve timers stored in timers
-            self._timers[spot].cancel()
+            if not (timer := self._timers[spot]):
+                return  # game has not started TODO: store has started attr?
+            timer.cancel()
             self._timers[spot] = None
 
             if not self._is_using_reserve_time(spot):
