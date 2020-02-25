@@ -14,7 +14,7 @@ except:
         os.getenv("DB_PORT"),
     )
 from cassandra.cqlengine import connection, management
-from .models import User, Username
+from .models import User#, Username
 from uuid import uuid4
 from time import time
 import asyncio

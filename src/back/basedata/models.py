@@ -18,7 +18,7 @@ class User(AioModel):
     __table_name__ = "user"
     __keyspace__ = "presidents"
     user_id = UUID(primary_key=True, partition_key=True, required=True)
-    username = Text(required=True)
+    username = Text(required=True, index=True)  # TODO: maintain separate Username table for this when affordable
     previous_usernames = List(value_type=Text)
     password = Text(required=True)  # hashed
     created = DateTime(required=True)
@@ -27,15 +27,16 @@ class User(AioModel):
     settings = Map(key_type=Text, value_type=Text)
 
 
-class Username(AioModel):
-    """
-    Maintaining this table trivializes name changes.
-    """
+# TODO: will use this table once I can afford it
+# class Username(AioModel):
+#     """
+#     Maintaining this table trivializes name changes.
+#     """
 
-    __table_name__ = "username"
-    __keyspace__ = "presidents"
-    username = Text(primary_key=True, partition_key=True, required=True)
-    user_id = UUID(required=True)
+#     __table_name__ = "username"
+#     __keyspace__ = "presidents"
+#     username = Text(primary_key=True, partition_key=True, required=True)
+#     user_id = UUID(required=True)
 
 
 class GameClicks(AioModel):

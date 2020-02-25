@@ -35,7 +35,6 @@ from .models import (
     GameAttrs,
     GameIdUsername,
     GameKey,
-    Username,
     GameList,
     Token,
     GameId,
@@ -43,7 +42,7 @@ from .models import (
     Alert,
 )
 from ...basedata import session
-from ...basedata.models import User, Username
+from ...basedata.models import User#, Username
 from ..secrets import JWT_SECRET, BOT_KEY
 from ..monitor import Event, events_counter
 
@@ -132,18 +131,6 @@ except RuntimeError:  # development
     pass
 
 
-# async def get_game_store():
-#     global game_store
-#     if game_store:
-#         return game_store
-#     else:
-#         logger.info('connecting to redis')
-#         game_store = await aioredis.create_redis_pool(
-#             "redis://game_store", timeout=300
-#         )
-#         logger.info('connected to redis')
-
-# from ..game_god import GameAction, game_action_processor, Prayer, ear
 GameAction, game_action_processor, Prayer, ear = None, None, None, None
 
 
@@ -194,21 +181,26 @@ async def login_for_access_token(
         }
 
 
+# TODO: remove after affording Username table
+async def get_user_from_username(username: str):
+    return await User.objects().allow_filtering().async_get(username=username)
+
+
 # TODO: process database accesses through stream
 async def get_user_id(username: str):
     """
     returns user id uuid as str
     """
-    return str((await Username.async_get(username=username)).user_id)
+    # return str((await Username.async_get(username=username)).user_id)
+    return str((await get_user_from_username(username)).user_id)
 
 
 async def get_password(*, user_id: str = None, username: str = None):
     if user_id:
         return (await User.async_get(user_id=user_id)).password
     if username:
-        return (
-            await User.async_get(user_id=await get_user_id(username))
-        ).password
+        # return await User.async_get(user_id=await get_user_id(username)).password
+        return (await get_user_from_username(username)).password
 
 
 async def authenticate_user(username: str, password: str):
@@ -237,7 +229,8 @@ async def register(payload: UsernamePasswordReenterPassword):
     username = payload.username
     password = payload.password
     try:
-        await Username.async_get(username=username)
+        # await Username.async_get(username=username)
+        await get_user_from_username(username)
         # username already exists
         raise HTTPException(
             status_code=HTTP_409_CONFLICT, detail="username taken"
@@ -280,7 +273,7 @@ async def add_user(username: str, password: str):
             password=password_context.hash(password),
             created=datetime.utcnow(),
         ),
-        Username.async_create(username=username, user_id=user_id),
+        # Username.async_create(username=username, user_id=user_id),
     )
 
 

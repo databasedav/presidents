@@ -77,6 +77,7 @@ class Game:
         self._given = [set() for _ in range_4]
         self._taken = [set() for _ in range_4]
 
+    # TODO
     def reset(
         self,
         *,
@@ -128,6 +129,10 @@ class Game:
         self._taken = [set() for _ in range_4]
 
         self._times_reset += 1
+
+    # NOTE: this one should have no mention of emitters or the objects
+    #       used to omit, these have to be implemented entirely in a
+    #       sub class
 
     # properties
 

@@ -208,7 +208,7 @@ class EmittingGame(Game):
             self._emit_set_on_turn_handler(spot)
         ]
         if self._hand_in_play is None:  # can play anyhand so can't pass
-            aws.append(self._lock_if_pass_unlocked())
+            aws.append(self._lock_if_pass_unlocked(spot))
         await gather(*aws)
 
     async def _emit_set_on_turn_handler(self, spot: int) -> None:
