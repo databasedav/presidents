@@ -1,56 +1,28 @@
 <template>
-  <v-textarea
-    dark
-    :id="this.id"
-    :value="message"
-    rows="2"
-    no-resize
-    readonly
-    outline
-  >
-  </v-textarea>
+  <v-row justify="center">
+    <v-col cols='11'>
+      <ul class="overflow-x-auto" v-chat-scroll="{always:false}" style="height: 15vh">
+        <li v-for="message in messages">{{ message }}</li>
+      </ul>
+    </v-col>
+  </v-row>
 </template>
 
 <script>
-import { mapState } from "vuex";
 
 export default {
-  data() {
-    return {
-      text_area: HTMLElement
-    };
-  },
 
   props: {
     namespace: String
   },
 
-  mounted() {
-    this.text_area = document.getElementById(this.id);
-    this.text_area.scrollTop = this.text_area.scrollHeight;
-  },
-
-  watch: {
-    text_area() {
-      this.text_area.scrollTop = this.text_area.scrollHeight;
-    }
-  },
-
   computed: {
-    message() {
-      // this.text_area.scrollTop = this.text_area.scrollHeight
-      return this.$store.state[this.namespace].message;
+    messages () {
+      return this.$store.state[this.namespace].messages;
     },
-
-    id() {
-      return "message_box_" + this.namespace;
-    }
   }
 };
 </script>
 
 <style>
-.v-textarea.v-text-field--enclosed textarea {
-  margin-top: 0px !important;
-}
 </style>

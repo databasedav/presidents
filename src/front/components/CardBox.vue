@@ -50,7 +50,9 @@ export default {
 
   computed: {
     cards() {
-      return this.$store.state[this.namespace].cards_arr;
+      var cards = this.$store.state[this.namespace].cards_arr;
+      cards.sort((a, b) => a - b)
+      return cards
     },
 
     cards_selected_arr() {

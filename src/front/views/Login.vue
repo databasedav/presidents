@@ -1,7 +1,7 @@
 <template>
   <v-container>
     <v-row justify="center">
-      presidents
+      <img id='logo' alt='presidents logo' src='../assets/logo.svg' width="80%">
     </v-row>
     <v-snackbar
       v-model="snackbar"

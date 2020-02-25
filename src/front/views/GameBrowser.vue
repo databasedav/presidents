@@ -22,7 +22,7 @@
     >
       <template v-slot:top>
         <v-toolbar flat color="black">
-          <v-toolbar-title>presidents</v-toolbar-title>
+          <v-toolbar-title><img id='logo' alt='presidents logo' src='../assets/logo.svg' width="100%"></v-toolbar-title>
           <v-divider
             class="mx-4"
             inset

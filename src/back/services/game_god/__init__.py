@@ -211,7 +211,6 @@ async def remove_player(*, sid: str):
     """
     Pauses game if not already paused and then removes player.
     """
-    logger.info(f"removing sid {sid} from game")
     try:
         game_id = await game_store.get(sid, encoding="utf-8")
         logger.info(f"removing sid {sid} from game")

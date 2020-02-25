@@ -45,7 +45,7 @@ from .models import (
 from ...basedata import session
 from ...basedata.models import User, Username
 from ..secrets import JWT_SECRET, BOT_KEY
-from ..monitor import Event, event_counter
+from ..monitor import Event, events_counter
 
 
 # TODO: cache exceptions?
@@ -425,10 +425,12 @@ async def connect(sid, environ):
         )
     # else key is valid
 
-    await event_counter.cast("connect")
+    await events_counter.cast("connect")
     # do adding to game as background task so socket connection is
     # accepted immediately after validation
-    create_task(add_player(game_id, sid, bot_key, game_key, user_id, username))
+    # TODO: prevent garbage collection of this task
+    game_server_sio.start_background_task(add_player, game_id, sid, bot_key, game_key, user_id, username)
+    
 
 
 async def add_player(
@@ -494,7 +496,7 @@ async def disconnect(sid):
         key=await get_game_id(sid),
         value=Prayer(prayer="remove_player", prayer_kwargs={"sid": sid}),
     )
-    await event_counter.cast("disconnect")
+    await events_counter.cast("disconnect")
 
 
 async def get_game_id(sid: str):

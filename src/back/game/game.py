@@ -54,7 +54,7 @@ class Game:
 
     TURN_TIME = 30
     RESERVE_TIME = 60
-    TRADING_TIME = 90
+    TRADING_TIME = 120
     GIVING_TIME = 10
 
     def __init__(

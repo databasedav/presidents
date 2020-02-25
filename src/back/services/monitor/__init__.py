@@ -27,7 +27,7 @@ events_topic = monitor.topic("events", value_type=str)
 
 
 @monitor.agent()
-async def event_counter(events):
+async def events_counter(events):
     async for event in events:
         events_dict[event] += 1
 

@@ -77,6 +77,10 @@
         ></ButtonBox>
       </v-col>
     </v-row>
+  
+    <v-row justify="center">
+      <img id='logo' alt='presidents logo' src='../assets/logo.svg' width="25%">
+    </v-row>
   </v-container>
 </template>
 

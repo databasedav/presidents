@@ -15,7 +15,7 @@ export default _ => {
     current_hand_str: "",
     snackbar: false,
     alert: String,
-    message: "",
+    messages: new Array(),
     hand_in_play: [],
     hand_in_play_desc: "",
     on_turn: false,

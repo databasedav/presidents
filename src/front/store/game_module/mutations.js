@@ -40,7 +40,11 @@ export default {
   },
 
   message(state, payload) {
-    state.message += `\n${payload.message}`;
+    state.messages.push(payload.message)
+    if (state.messages.length > 20) {
+      state.messages.shift()
+    }
+    // state.message += `\n${payload.message}`;
   },
 
   remove_asking_option(state, payload) {

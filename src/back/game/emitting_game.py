@@ -202,11 +202,14 @@ class EmittingGame(Game):
             pass
         # TODO this mypy error
         self._current_player = spot = next(self._turn_manager)
-        await gather(
+        aws = [
             self._set_time("turn", self._turn_time, spot, True),
             self._message(f"🎲 it's {self._names[spot]}'s turn"),
-            self._emit_set_on_turn_handler(spot),
-        )
+            self._emit_set_on_turn_handler(spot)
+        ]
+        if self._hand_in_play is None:  # can play anyhand so can't pass
+            aws.append(self._lock_if_pass_unlocked())
+        await gather(*aws)
 
     async def _emit_set_on_turn_handler(self, spot: int) -> None:
         await gather(
