@@ -15,6 +15,9 @@ from ..services.monitor import HandPlay
 # from ..server.server import Server
 Server = None
 
+# TODO: add indicator for received cards
+# TODO: last round positions
+
 from . import (
     Hand,
     DuplicateCardError,
