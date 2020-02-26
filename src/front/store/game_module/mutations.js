@@ -123,6 +123,10 @@ export default {
     state.hand_just_played = true
     setTimeout(() => (state.hand_just_played = false), 5100);
   },
+
+  set_name(state, payload) {
+    state.names.splice(payload.spot, 1, payload.name)
+  },
   
   set_names(state, payload) {
     state.names = payload.names;
@@ -163,18 +167,18 @@ export default {
     switch (payload.which) {
       case "turn":
         state.turn_times.splice(payload.spot, 1, time);
-        state.turn_time_states.splice(payload.spot, 1, payload.start);
+        // state.turn_time_states.splice(payload.spot, 1, payload.start);
         break;
       case "reserve":
         state.reserve_times.splice(payload.spot, 1, time);
-        state.reserve_time_states.splice(payload.spot, 1, payload.start);
+        // state.reserve_time_states.splice(payload.spot, 1, payload.start);
         break;
       case "trading":
         // using reserve time var for trading time and just changing
         // UI icon
         for (let spot = 0; spot < 4; spot += 1) {
           state.reserve_times.splice(spot, 1, time);
-          state.reserve_time_states.splice(spot, 1, payload.start);
+          // state.reserve_time_states.splice(spot, 1, payload.start);
         }
         break;
     }
@@ -193,17 +197,28 @@ export default {
   },
 
   set_timer_state(state, payload) {
+    // if starting timer, first adjust for server/client latency
+    const latency_adjust = time => Math.max(0, time - (Date.now() / 1000 - payload.timestamp)) || 0
     switch (payload.which) {
       case "turn":
+        if (payload.start) {
+          state.turn_times.splice(payload.spot, 1, latency_adjust(state.turn_times[payload.spot]))
+        }
         state.turn_time_states.splice(payload.spot, 1, payload.state);
         break;
       case "reserve":
+        if (payload.start) {
+          state.reserve_times.splice(payload.spot, 1, latency_adjust(state.reserve_times[payload.spot]))
+        }
         state.reserve_time_states.splice(payload.spot, 1, payload.state);
         break;
       case "trading":
         // using reserve time var for trading time and just changing
         // UI icon
         for (let spot = 0; spot < 4; spot += 1) {
+          if (payload.start) {
+            state.reserve_times.splice(spot, 1, latency_adjust(state.reserve_times[spot]))
+          }
           state.reserve_time_states.splice(spot, 1, payload.state);
         }
         break;

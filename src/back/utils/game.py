@@ -1,7 +1,7 @@
 # maps int action to tuple with str action and kwargs
 GAME_ACTION_DICT = {
     -22: ("ask", {}),
-    -21: ("card", {}),
+    # -21: ("card", {}),
     -20: ("give", {}),
     -19: ("lock", {}),
     -18: ("pass", {}),

@@ -1,7 +1,13 @@
+import random
 from uuid import uuid4
 from ..utils import spawn_after
+import numpy as np
+from typing import List, Iterable, Coroutine
+from asyncio import gather,
+from .chamberr import Chamber
 
 # TODO: mypy clean run
+# TODO: handle auto moves silently
 
 class Game:
     """
@@ -128,6 +134,8 @@ class Game:
         self._given = [set() for _ in range_4]
         self._taken = [set() for _ in range_4]
 
+        self._dot_colors = ["red" for _ in range(4)]
+
         self._times_reset += 1
 
     # NOTE: this one should have no mention of emitters or the objects
@@ -161,17 +169,17 @@ class Game:
     def _no_takes_or_gives(self) -> bool:
         return not bool(sum(self._takes) + sum(self._gives))
 
-    def _set_up_testing_base(
+    async def _set_up_testing_base(
         self, *, deck: List[Iterable[int]] = None
     ) -> None:
         """
         Adds players and starts the round.
         """
         assert self.is_empty, "game must be empty to set up testing base"
-        for spot in range(4):
-            self._add_player_to_spot(f"player{spot}", spot)
-        self.start_round(setup=True, deck=deck)
+        await gather(*[self._add_player_to_spot(f"player{spot}", spot) for spot in range(4)])
+        await self.start_round(setup=True, deck=deck)
 
+    # TODO
     def _get_game_to_trading(self) -> None:
         assert self._current_player is not None
         while not self.trading:
@@ -204,31 +212,47 @@ class Game:
         assert self._open_spots
         return random.choice(tuple(self._open_spots))
 
-    def _add_player_to_spot(self, name: str, spot: int) -> None:
+    async def add_player_to_spot(self, name: str, spot: int, **kwargs) -> None:
         assert self._names[spot] is None, f"player already in spot {spot}"
+
         self._open_spots.remove(spot)
-        self._set_name(spot, name)
+        await self._set_name(spot, name)
         self.num_players += 1
 
-    def add_player(self, name: str, **kwargs) -> None:
-        self._add_player_to_spot(
-            name=name, spot=self._rand_open_spot(), **kwargs
-        )
+        if self.is_paused:  # player was added to a game that already started
+            await self._emit_full_state(**kwargs)
+        
+    async def _emit_full_state():
+        # TODO: do so using only _emit...'s
+        ...
 
-    def remove_player(self, spot: int) -> None:
+    async def add_player(self, name: str, **kwargs) -> None:
+        await self.add_player_to_spot(name, self._rand_open_spot(), **kwargs)
+
+    async def remove_player(self, spot: int) -> None:
         self._open_spots.add(spot)
-        self._set_name(spot, None)
+        await self._set_name(spot, None)
         self.num_players -= 1
 
     def _make_shuffled_deck(self) -> np.ndarray:
         return np.sort(np.random.permutation(range(1, 53)).reshape(4, 13))
 
-    def _deal_cards(self, *, deck: List[Iterable[int]] = None) -> None:
-        for spot, cards in enumerate(deck or self._make_shuffled_deck()):
-            chamber: Chamber = self._chambers[spot]
-            chamber.reset()
-            chamber.add_cards(cards)
+    async def _deal_cards(self, *, deck: List[Iterable[int]] = None, **kwargs) -> None:
+        await gather(*[self._assign_cards_to_spot(spot, cards) for spot, cards in enumerate(deck or self._make_shuffled_deck())])
 
+    async def _assign_cards_to_spot(self, spot: int, cards: Iterable[int], **kwargs) -> None:
+        chamber: Chamber = self._chambers[spot]
+        await chamber.reset()
+        await chamber.add_cards(cards)
+        await gather(self._emit_set_spot(spot, **kwargs), self._emit_set_num_cards_remaining(spot, chamber.num_cards))
+
+    async def _emit_set_spot(self, spot, **kwargs) -> None:
+        pass
+
+    async def _emit_set_num_cards_remaining(self, spot: int, num_cards_remaining:int, **kwargs) -> None:
+        pass
+
+    # TODO: remove testing from this pattern
     def _make_and_set_turn_manager(self, testing: bool = False) -> None:
         decks = self._get_decks_from_chambers(testing)
         # get which deck has the 3 of clubs
@@ -237,33 +261,55 @@ class Game:
 
     # game flow related methods
 
-    # TODO
-    def _setup_round(self, *, deck: List[Iterable[int]] = None):
+    async def _setup_round(self, *, deck: List[Iterable[int]] = None) -> None:
         assert self.num_players == 4, "four players required to start round"
-        self._deal_cards(deck=deck)
+        await self._deal_cards(deck=deck)
 
-    def start_round(
+    async def start_round(
         self,
         *,
         setup: bool,
         deck: List[Iterable[int]] = None,
-        testing: bool = False,
     ) -> None:
         if setup:
-            self._setup_round(deck=deck)
+            await self._setup_round(deck=deck)
         self._num_consecutive_rounds += 1
         self._make_and_set_turn_manager(testing)
-        for spot in range(4):
-            self._set_time("reserve", self._reserve_time, spot)
-        self._message(f"🏁 round {self._num_consecutive_rounds} has begun")
-        self._next_player()
+        await gather(
+            *[self._set_time('reserve', self._reserve_time, spot) for spot in range(4)],
+            self._message(f"🏁 round {self._num_consecutive_rounds} has begun"),
+            self._next_player()
+        )
 
-    def _next_player(self) -> None:
-        self._current_player = next(self._turn_manager)  # TODO this mypy error
-        self._set_time("turn", self._turn_time, self._current_player, True)
-        self._message(f"🎲 it's {self._names[self._current_player]}'s turn")
+    async def _next_player(self) -> None:
+        self._set_on_turn(self._current_player, False)
+        self._current_player = spot = next(self._turn_manager)
+        aws = [
+            self._set_time("turn", self._turn_time, spot, True),
+            self._message(f"🎲 it's {self._names[spot]}'s turn"),
+            self._set_on_turn(spot, True)
+        ]
+        if self._hand_in_play is None:  # can play anyhand so can't pass
+            aws.append(self._lock_if_pass_unlocked(spot))
+        await gather(*aws)
 
-    def _set_time(
+    async def _set_on_turn(self, spot: int, on_turn: bool) -> None:
+        aws = [self._emit_set_on_turn(spot, on_turn)]
+        if on_turn:
+            aws.append(self._set_dot_color(spot, 'green'))
+        await gather(*aws)
+
+    async def _set_dot_color(self, spot: int, dot_color: str) -> None:
+        self._dot_colors[spot] = color
+        await self._emit_set_dot_color(spot, dot_color)
+
+    async def _emit_set_on_turn(self, spot: int, on_turn: bool) -> None:
+        pass
+
+    async def _emit_set_dot_color(self, spot, dot_color: str) -> None:
+        pass
+
+    async def _set_time(
         self, which: str, seconds: float, spot: int = None, start: bool = False
     ):
         """
@@ -272,6 +318,7 @@ class Game:
         by default. Spot must be given if setting turn times.
         """
         assert which in ["turn", "reserve", "trading"]
+
         if which == "turn":
             assert spot is not None
             self._turn_times[spot] = seconds
@@ -282,10 +329,16 @@ class Game:
             assert spot is None
             self._trading_time_remaining = seconds
 
-        if start:
-            self._start_timer(which, spot)
+        await self._emit_set_time(which, seconds, spot)
 
-    def _start_timer(self, which: str, spot: int = None) -> None:
+        if start:
+            await self._start_timer(which, spot)
+
+        
+    async def _emit_set_time(self, which: str, seconds: float, spot: int):
+        pass
+
+    async def _start_timer(self, which: str, spot: int = None) -> None:
         """
         Uses the remaining time.
         """
@@ -294,7 +347,7 @@ class Game:
         if which == "turn":
             assert spot is not None
             self._turn_time_use_starts[spot] = now
-            self._timers[spot] = self._timer(
+            self._timers[spot] = spawn_after(
                 self._turn_times[spot],
                 self._handle_playing_timeout
                 if not self.trading
@@ -304,19 +357,21 @@ class Game:
         elif which == "reserve":
             assert spot is not None
             self._reserve_time_use_starts[spot] = now
-            self._timers[spot] = self._timer(
+            self._timers[spot] = spawn_after(
                 self._reserve_times[spot], self._handle_playing_timeout, spot
             )
         elif which == "trading":
             self._trading_time_start = now
-            self._trading_timer = self._timer(
+            self._trading_timer = spawn_after(
                 self._trading_time_remaining, self._handle_trading_timeout
             )
+        
+        await self._emit_set_timer_state(which, True, spot, now)
 
-    def _set_timer_state(self, *args):
-        pass  # this does something in EmittingGame
+    async def _emit_set_timer_state(self, which: str, state: bool, spot: int, timestamp: datetime = None) -> None:
+        pass
 
-    def _stop_timer(
+    async def _stop_timer(
         self, which: str, spot: int = None, *, cancel: bool = True
     ) -> None:
         """
@@ -330,7 +385,7 @@ class Game:
         """
         now: datetime = datetime.utcnow()
         assert which in ["turn", "reserve", "trading"]
-        self._set_timer_state(which, False, spot)
+        self._emit_set_timer_state(which, False, spot)
         if which == "turn":
             assert spot is not None
             # if a timeout handler is calling this, cancelling the timer
@@ -343,7 +398,7 @@ class Game:
             # desired behavior (also the timer won't be garbage
             # collected while it is doing handling)
             self._timers[spot] = None
-            self._set_time("turn", 0, spot)
+            await self._set_time("turn", 0, spot)
             self._turn_time_use_starts[spot] = None
         elif which == "reserve":
             assert spot is not None
@@ -353,7 +408,7 @@ class Game:
             time_used = (
                 now - self._reserve_time_use_starts[spot]
             ).total_seconds()
-            self._set_time(
+            await self._set_time(
                 # need the max statement since this function is used during
                 # reserve time timeouts
                 "reserve",
@@ -366,10 +421,10 @@ class Game:
             if cancel and self._trading_timer is not None:
                 self._trading_timer.cancel()
             self._trading_timer = None
-            self._set_time("trading", self._trading_time)
+            await self._set_time("trading", self._trading_time)
             self._trading_time_start = None
 
-    def _pause_timers(self) -> None:
+    async def pause(self) -> None:
         """
         Pausing all timers is different from stopping them; pausing only 
         occurs when there is some issue that requires the game to be
@@ -394,7 +449,7 @@ class Game:
                     now - self._turn_time_use_starts[spot]
                 ).total_seconds()
                 self._turn_time_use_starts[spot] = None
-                self._set_time(
+                await self._set_time(
                     "turn", self._turn_times[spot] - time_used, spot
                 )
                 self._paused_timers.append(self._start_timer("turn", spot))
@@ -403,7 +458,7 @@ class Game:
                     now - self._reserve_time_use_starts[spot]
                 ).total_seconds()
                 self._reserve_time_use_starts[spot] = None
-                self._set_time(
+                await self._set_time(
                     "reserve", self._reserve_times[spot] - time_used, spot
                 )
                 self._paused_timers.append(self._start_timer("reserve", spot))
@@ -411,7 +466,7 @@ class Game:
             self._trading_timer.cancel()
             self._trading_timer = None
             time_used = (now - self._trading_time_start).total_seconds()
-            self._set_time("trading", self._trading_time_remaining - time_used)
+            await self._set_time("trading", self._trading_time_remaining - time_used)
             self._trading_time_start = None
             self._paused_timers.append(self._start_timer("trading"))
 
@@ -430,72 +485,68 @@ class Game:
                 )
                 self._turn_time_use_starts[spot] = None
                 self._paused_timers.append(self._start_timer("turn", spot))
+        
+        await self._emit_set_paused(True)
 
-    def _resume_timers(self) -> None:
-        for timer in self._paused_timers:
-            timer()
+    async def _emit_set_paused(self, paused: bool) -> None:
+        pass
+
+    async def resume(self) -> None:
+        await gather(*self._paused_timers, self._emit_set_paused(False))  
         self._paused_timers.clear()
 
-    def _handle_playing_timeout(self, spot: int) -> None:
+    async def _handle_playing_timeout(self, spot: int) -> None:
         """
         Handles turn time and reserve time timing out.
         """
         if not self._is_using_reserve_time(spot):  # was using turn time
-            self._stop_timer("turn", spot, cancel=False)
+            await self._stop_timer("turn", spot, cancel=False)
             reserve_time: float = self._reserve_times[spot]
             if reserve_time:
                 # start reserve time
-                self._set_time("reserve", reserve_time, spot, True)
+                await self._set_time("reserve", reserve_time, spot, True)
             else:
-                self._auto_play_or_pass(spot)
+                await self._auto_play_or_pass(spot)
         else:  # was using reserve time
-            self._stop_timer("reserve", spot, cancel=False)
-            self._auto_play_or_pass(spot)
+            await gather(
+                self._stop_timer("reserve", spot, cancel=False),
+                self._auto_play_or_pass(spot)
+            )
 
-    def _handle_giving_timeout(self, spot) -> None:
-        self._stop_timer("turn", spot, cancel=False)
-        self._auto_give(spot)
+    async def _handle_giving_timeout(self, spot) -> None:
+        await gather(
+            self._stop_timer("turn", spot, cancel=False),
+            self._auto_give(spot)
+        )
 
-    def _handle_trading_timeout(self) -> None:
-        # TODO:
-        # account for the number of cards the askers have remaining to
-        # give and then SILENTLY do all the operations that snatch and
-        # exchange the appropriate cards from the appropriate players
+    async def _handle_trading_timeout(self) -> None:
         if not self._no_takes_or_gives:
-            self._auto_trade()
-        self._set_trading(False, cancel=False)
+            await self._auto_trade()
+        await self._set_trading(False, cancel=False)
 
-    def _auto_play_or_pass(self, spot: int) -> None:
-        """
-        For EmittingGame, client cannot see the server auto playing for
-        them, besides any non-played currently selected cards being
-        individually reselected at the end. Accomplishes this by
-        explicitly calling base class methods.
-
-        TODO: the above actually doesn't work; need solution for doing
-              things without the client seeing it.
-        """
+    async def _auto_play_or_pass(self, spot: int) -> None:
         assert self._current_player == spot, f"it is not spot {spot}'s turn"
 
+        # pass if can
         if self._hand_in_play not in [base_hand, None]:
-            self.maybe_unlock_pass_turn(spot)
-            self.maybe_pass_turn(spot)  # locks pass
+            await self.maybe_unlock_pass_turn(spot)
+            await self.maybe_pass_turn(spot)  # locks pass
             return
 
         chamber: Chamber = self._chambers[spot]
-        currently_selected_cards: List[int] = chamber.hand.to_list()
+        currently_selected_cards: List[int] = list(chamber.hand)
         if currently_selected_cards:  # not empty list
-            chamber.deselect_selected()
+            await chamber.deselect_selected()
 
         # min card will be 1 if playing on base hand
-        self.add_or_remove_card(spot, chamber._get_min_card())
-        self.maybe_unlock_play(spot)
-        self.maybe_play_current_hand(spot, timestamp=datetime.utcnow())
+        await self.add_or_remove_card(spot, chamber._get_min_card())
+        await self.maybe_unlock_play(spot)
+        await self.maybe_play_current_hand(spot, timestamp=datetime.utcnow())
 
         # reselect spot's selected cards
         for card in currently_selected_cards:  # could be empty list
             try:
-                self.add_or_remove_card(spot, card)
+                await self.add_or_remove_card(spot, card)
             # one of the selected cards was auto played
             except PresidentsError:
                 pass
@@ -506,18 +557,18 @@ class Game:
         trade, 
         """
         chamber: Chamber = self._chambers[spot]
-        currently_selected_cards: List[int] = chamber.hand.to_list()
+        currently_selected_cards: List[int] = list(chamber.hand)
         if currently_selected_cards:
-            chamber.deselect_selected()
+            await chamber.deselect_selected()
 
-        self.add_or_remove_card(spot, min(self._giving_options[spot]))
-        self.maybe_unlock_give(spot)
-        self.give_card(spot, auto_trading=auto_trading)
+        await self.add_or_remove_card(spot, min(self._giving_options[spot]))
+        await self.maybe_unlock_give(spot)
+        await self.give_card(spot, auto_trading=auto_trading)
 
         # reselect giver's selected cards
         for card in currently_selected_cards:  # could be empty list
             try:
-                self.add_or_remove_card(spot, card)
+                await self.add_or_remove_card(spot, card)
             # one of the selected cards was auto given
             except CardNotInChamberError:
                 pass
@@ -530,23 +581,23 @@ class Game:
                 continue
 
             chamber: Chamber = self._chambers[spot]
-            currently_selected_cards: List[int] = chamber.hand.to_list()
+            currently_selected_cards: List[int] = list(chamber.hand)
             if currently_selected_cards:  # not empty list
-                chamber.deselect_selected()
+                await chamber.deselect_selected()
 
             for _ in range(self._gives[spot]):  # give before u take
                 # get the lowest card that can be given
                 for card in chamber:
                     if card not in self._taken[spot]:
                         break
-                self.add_or_remove_card(spot, card)
-                self.maybe_unlock_give(spot)
-                self.give_card(spot, auto_trading=True)
+                await self.add_or_remove_card(spot, card)
+                await self.maybe_unlock_give(spot)
+                await self.give_card(spot, auto_trading=True)
 
             # reselect asker's selected cards
             for card in currently_selected_cards:  # could be empty list
                 try:
-                    self.add_or_remove_card(spot, card)
+                    await self.add_or_remove_card(spot, card)
                 # one of the selected cards was auto given
                 except CardNotInChamberError:
                     pass
@@ -556,15 +607,17 @@ class Game:
             if self._has_takes(spot):
                 asked_spot: int = self._get_opposing_position_spot(spot)
                 asked_chamber: Chamber = self._chambers[asked_spot]
-                asked_currently_selected_cards = asked_chamber.hand.to_list()
+                asked_currently_selected_cards = list(asked_chamber.hand)
                 if asked_currently_selected_cards:
-                    asked_chamber.deselect_selected()
+                    await asked_chamber.deselect_selected()
             else:
                 continue
 
             if self._is_waiting(spot):
-                self._stop_timer("turn", asked_spot)
-                self._auto_give(asked_spot, auto_trading=True)
+                await gather(
+                    self._stop_timer("turn", asked_spot),
+                    self._auto_give(asked_spot, auto_trading=True)
+                )
 
             for _ in range(self._takes[spot]):
                 # iterate through ranks, highest to lowest, asking if
@@ -573,57 +626,64 @@ class Game:
                     if self._is_already_asked(spot, value):
                         continue
 
-                    self.maybe_set_selected_asking_option(spot, value)
-                    self.maybe_unlock_ask(spot)
-                    self.ask_for_card(spot)
+                    await self.maybe_set_selected_asking_option(spot, value)
+                    await self.maybe_unlock_ask(spot)
+                    await self.ask_for_card(spot)
                     if not self._is_waiting(spot):  # asked doesn't have rank
                         continue
                     else:  # have asked give lowest allowed card to asker
-                        self.add_or_remove_card(
+                        await self.add_or_remove_card(
                             asked_spot, min(self._giving_options[asked_spot])
                         )
-                        self.maybe_unlock_give(asked_spot)
-                        self.give_card(asked_spot, auto_trading=True)
+                        await self.maybe_unlock_give(asked_spot)
+                        await self.give_card(asked_spot, auto_trading=True)
                         break
 
             # reselect asked's selected cards
             for card in asked_currently_selected_cards:  # could be empty list
                 try:
-                    self.add_or_remove_card(asked_spot, card)
+                    await self.add_or_remove_card(asked_spot, card)
                 # one of the selected cards was auto given
                 except CardNotInChamberError:
                     pass
 
         assert self._no_takes_or_gives
 
-    def _player_finish(self, spot: int) -> None:
+    async def _player_finish(self, spot: int) -> None:
         assert self._chambers[
             spot
         ].is_empty, "only players with no cards remaining can finish"
+        await self._set_dot_color(spot, "purple")
         self._positions.append(self._current_player)
         self._turn_manager.remove(self._current_player)
         num_unfinished_players = self._num_unfinished_players
         if num_unfinished_players == 3:
-            self._set_president(spot)
-            self._message(f"🏆 {self._names[spot]} is president 🥇")
-            self._next_player()
-        elif num_unfinished_players == 2:
-            self._set_vice_president(spot)
-            self._message(f"🏆 {self._names[spot]} is vice president 🥈")
-            self._next_player()
-        else:  # num_unfinished
-            self._set_vice_asshole(spot)
-            self._current_player = next(self._turn_manager)
-            self._set_asshole(self._current_player)
-            self._positions.append(self._current_player)
-            self._message(
-                f"🏆 {self._names[spot]} is vice asshole 🥉 and {self._names[self._current_player]} is asshole 💩"
+            await gather(
+                self._set_president(spot),
+                self._message(f"🏆 {self._names[spot]} is president 🥇"),
+                self._next_player(),
             )
-            self._set_trading(True)
+        elif num_unfinished_players == 2:
+            await gather(
+                self._set_vice_president(spot),
+                self._message(f"🏆 {self._names[spot]} is vice president 🥈"),
+                self._next_player(),
+            )
+        else:  # num_unfinished
+            await self._set_vice_asshole(spot)
+            self._current_player = next(self._turn_manager)
+            await self._set_asshole(self._current_player)
+            self._positions.append(self._current_player)
+            await gather(
+                self._message(
+                    f"🏆 {self._names[spot]} is vice asshole 🥉 and {self._names[self._current_player]} is asshole 💩"
+                ),
+                self._set_trading(True),
+            )
 
     # card control related methods
 
-    def add_or_remove_card(self, spot: int, card: int) -> None:
+    async def add_or_remove_card(self, spot: int, card: int) -> None:
         if not self.trading and self._is_finished(spot):
             raise PresidentsError(
                 "you have already finished this round", permitted=False
@@ -631,9 +691,9 @@ class Game:
         chamber: Chamber = self._chambers[spot]
         # EAFP is a magnitude faster than LBYL here
         try:
-            chamber.select_card(card)
+            await chamber.select_card(card)
             if self._is_asking(spot):
-                self._set_selected_asking_option(spot, None)
+                await self._set_selected_asking_option(spot, None)
             self._lock_if_unlocked(spot)
         except CardNotInChamberError:
             raise PresidentsError("you don't have this card", permitted=False)
@@ -1129,8 +1189,14 @@ class Game:
 
     # setters
 
-    def _set_name(self, spot: int, name: str) -> None:
+    async def _set_name(self, spot: int, name: str) -> None:
         self._names[spot] = name
+        await self._emit_set_name(spot, name)
+    
+    # emitters
+
+    async def _emit_set_name(self, spot: int, name: str) -> None:
+        pass
 
     def _set_hand_in_play(self, hand: Hand) -> None:
         self._hand_in_play = hand

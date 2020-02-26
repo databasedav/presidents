@@ -6,7 +6,7 @@ from socketio import AsyncServer
 from asyncio import gather
 import inspect
 import re
-from time import time
+from time import mktime
 
 from ..game.hand import NotPlayableOnError
 from ..utils import spawn_after
@@ -21,10 +21,11 @@ from . import (
     FullHandError,
     CardNotInChamberError,
     EmittingChamber,
-    Game,
+    # Game,
     base_hand,
     PresidentsError,
 )
+from .gamee import Game
 
 from datetime import datetime
 
@@ -60,10 +61,12 @@ from datetime import datetime
 #       assertions are failed (or some other unknown bug), reproduction
 #       can be attempted without accessing game actions table
 
-class EmittingGame(Game):
+class PySockGame(Game):
+    """
+    Game that emits events using a python-socketio server.
+    """
     def __init__(self, *, name: str, sio, agents: dict, **kwargs):
         super().__init__(**kwargs)
-        # TODO: server stuff (including emitting should be entirely handled by the Server, which is an AsyncNamespace)
         self.name = name
         self._sio = sio
         self._events_counter = agents.get('events_counter')
@@ -73,7 +76,6 @@ class EmittingGame(Game):
         ]
         self._spot_sid_bidict: bidict = bidict()
         self._user_ids: List[str] = [None for _ in range(4)]
-        self._dot_colors = ["red" for _ in range(4)]
         self.num_spectators: int = 0  # TODO
 
     # properties
@@ -86,130 +88,38 @@ class EmittingGame(Game):
 
     def set_sio(self, sio) -> None:
         self._sio = sio
-        for spot in range(4):
-            self._chambers[spot].set_sio(sio)
+        for chamber in self._chambers:
+            chamber.set_sio(sio)
 
-    async def _add_player_to_spot(
+    async def add_player_to_spot(
         self, name: str, spot: int, sid: str, user_id: str
     ) -> None:
-        """
-        NOTE: logic copy/pasted from base; must update manually
-              manages sids, user ids, and set name must be awaited
-        """
-        assert self._names[spot] is None, f"player already in spot {spot}"
-
+        super().add_player_to_spot(name, spot, sid=sid)
         self._spot_sid_bidict[spot] = sid
         self._chambers[spot].set_sid(sid)
         self._user_ids[spot] = user_id
 
-        self._open_spots.remove(spot)
-        await self._set_name(spot=spot, name=name)
-        self.num_players += 1
-
-        if self.is_paused:  # player was added to a game that already started
-            await self.emit_full_state(sid)
-
-        # TODO TODO: THIS SHOULD NOT BE HERE. (JUST FOR TESTING)
-        # TODO: add pre game chatting screen with timer to start game
-        #       once 4 bois have joined
-        # if self.num_players == 4:
-        #     await self.start_round(
-        #         setup=True
-        #     )  # , deck=[[1], [2], [3], [4]], testing=True)
-
     async def remove_player(self, sid: str) -> None:
-        """
-        NOTE: logic copy/pasted from base; must update manually
-              manages sids and set name must be awaited
-        """
         spot: int = self._get_spot(sid)
-        self._open_spots.add(spot)
-        await self._set_name(spot=spot, name=None)
-        self.num_players -= 1
+        await super().remove_player(spot)
         self._spot_sid_bidict.pop(spot)
         self._chambers[spot].set_sid(None)
         self._user_ids[spot] = None
+    
+    async def _emit_set_spot(self, spot: int, sid: str) -> None:
+        await self._emit('set_spot', {'spot': spot}, room=sid)
 
-    async def _deal_cards(self, *, deck: List[Iterable[int]] = None) -> None:
-        """
-        Deals cards to all players.
-        """
-        await gather(
-            *[
-                self._deal_cards_indiv(spot, sid, cards)
-                for (spot, sid), cards in zip(
-                    self._spot_sid_bidict.items(),
-                    deck or self._make_shuffled_deck(),
-                )
-            ]
-        )
-
-    async def _deal_cards_indiv(
-        self, spot: int, sid: str, cards: Iterable[int]
-    ):
-        """
-        Deals cards to an individual player; for utilizing concurrency
-        with asyncio.gather.
-        """
-        chamber = self._chambers[spot]
-        await chamber.reset()
-        chamber.set_sid(sid)
-        # this isn't in the gather because the cards remaining event is
-        # emitted before all the cards have been async added
-        await chamber.add_cards(cards)
-        await gather(
-            self._emit("set_spot", {"spot": spot}, room=sid),
-            self._emit_to_players(
-                "set_cards_remaining",
-                {"spot": spot, "cards_remaining": chamber.num_cards},
-            ),
-        )
-
-    # game flow related methods
-
-    async def start_round(
-        self,
-        *,
-        setup: bool,
-        deck: List[Iterable[int]] = None,
-        testing: bool = False,
-    ) -> None:
-        """
-        NOTE: logic copy/pasted from base; must update manually;
-              for a gather loop
-        """
-        if setup:
-            await self._setup_round(deck=deck)
-        self._num_consecutive_rounds += 1
-        self._make_and_set_turn_manager(testing)
-        await gather(
-            *[
-                self._set_time("reserve", self._reserve_time, spot)
-                for spot in range(4)
-            ],
-            self._message(f"🏁 round {self._num_consecutive_rounds} has begun"),
-            self._next_player(),
-        )
-
-    async def _next_player(self) -> None:
-        try:  # current player is no longer on turn
-            await self._emit(
-                "set_on_turn",
-                {"on_turn": False},
-                room=self._current_player_sid,
-            )
-        except KeyError:  # self._current_player is None on round start
+    async def _emit_set_num_cards_remaining(self, spot: int, num_cards_remaining: int) -> None:
+        await self._emit_to_players('set_num_cards_remaining', {'spot': spot, 'num_cards_remaining': num_cards_remaining})
+    
+    async def _emit_set_on_turn(self, spot: int, on_turn: bool) -> None:
+        try:
+            await self._emit('set_on_turn', {'on_turn': on_turn}, room=self._get_sid(spot))
+        except KeyError:  # current player is None at round start
             pass
-        # TODO this mypy error
-        self._current_player = spot = next(self._turn_manager)
-        aws = [
-            self._set_time("turn", self._turn_time, spot, True),
-            self._message(f"🎲 it's {self._names[spot]}'s turn"),
-            self._emit_set_on_turn_handler(spot)
-        ]
-        if self._hand_in_play is None:  # can play anyhand so can't pass
-            aws.append(self._lock_if_pass_unlocked(spot))
-        await gather(*aws)
+    
+    async def _emit_set_dot_color(self, spot: int, dot_color: str) -> None:
+        await self._emit_to_players("set_dot_color", {"spot": spot, "dot_color": dot_color})
 
     async def _emit_set_on_turn_handler(self, spot: int) -> None:
         await gather(
@@ -219,88 +129,28 @@ class EmittingGame(Game):
             self._set_dot_color(spot, "green"),
         )
 
-    async def _set_time(
-        self, which: str, seconds: float, spot: int = None, start: bool = False
-    ) -> None:
-        kwargs = {
-            "which": which,
-            "time": seconds * 1000,
-            "start": start,
-            # this item accounts for server/client latency
-            "timestamp": time(),  # seconds since epoch
-        }
+    async def _emit_set_time(self, which: str, seconds: float, spot: int) -> None:
+        payload = {'which': which, 'time': seconds * 1000}
         if spot:
-            kwargs["spot"] = spot
-        await self._emit_to_players("set_time", kwargs)
-        super()._set_time(which, seconds, spot, False)
-        # done like this because the "start" item from above takes care
-        # of emitting the start state
-        if start:
-            super()._start_timer(which, spot)
+            payload['spot'] = spot
+        await self._emit_to_players('set_time', payload)
 
-    async def _start_timer(self, which: str, spot: int = None) -> None:
-        await self._set_timer_state(which, True, spot)
-        super()._start_timer(which, spot)
-
-    async def _set_timer_state(
-        self, which: str, state: bool, spot: int = None
+    async def _emit_set_timer_state(
+        self, which: str, state: bool, spot: int, timestamp: datetime
     ) -> None:
-        """
-        Helper for timer state emittal to avoid copy paste logic for
-        stop_timer.
-        """
-        payload = {"which": which, "state": state}
+        payload = {
+            "which": which,
+            "state": state,
+        }
+        if state:
+            # accounts for server/client latency
+            payload['timestamp'] = mktime(timestamp.timetuple())
         if spot:
             payload["spot"] = spot
         await self._emit_to_players("set_timer_state", payload)
 
-    async def pause(self) -> None:
-        await gather(
-            self._pause_timers(),
-            self._emit_to_players("set_paused", {"paused": True}),
-        )
-
-    async def resume(self) -> None:
-        await gather(
-            self._emit_to_players("set_paused", {"paused": False}),
-            self._resume_timers(),
-        )
-
-    async def _resume_timers(self) -> None:
-        await gather(*self._paused_timers)
-        self._paused_timers.clear()
-
-    async def _player_finish(self, spot: int) -> None:
-        assert self._chambers[
-            spot
-        ].is_empty, "only players with no cards remaining can finish"
-        await self._set_dot_color(spot, "purple")
-        self._positions.append(self._current_player)
-        self._turn_manager.remove(self._current_player)
-        num_unfinished_players = self._num_unfinished_players
-        if num_unfinished_players == 3:
-            await gather(
-                self._set_president(spot),
-                self._message(f"🏆 {self._names[spot]} is president 🥇"),
-                self._next_player(),
-            )
-        elif num_unfinished_players == 2:
-            await gather(
-                self._set_vice_president(spot),
-                self._message(f"🏆 {self._names[spot]} is vice president 🥈"),
-                self._next_player(),
-            )
-        else:  # num_unfinished
-            await self._set_vice_asshole(spot)
-            self._current_player = next(self._turn_manager)
-            await self._set_asshole(self._current_player)
-            self._positions.append(self._current_player)
-            await gather(
-                self._message(
-                    f"🏆 {self._names[spot]} is vice asshole 🥉 and {self._names[self._current_player]} is asshole 💩"
-                ),
-                self._set_trading(True),
-            )
+    async def _emit_set_paused(self, paused: bool) -> None:
+        await self._emit_to_players('set_paused', {'paused': paused})
 
     async def emit_full_state(self, sid: str):
         """
@@ -773,13 +623,8 @@ class EmittingGame(Game):
 
     # setters
 
-    async def _set_name(self, **kwargs) -> None:
-        super()._set_name(**kwargs)
-        # TODO: make this emit single name plus the spot after vue 3 :)
-        await self._emit_to_players(
-            "set_names",
-            {"names": ["" if name is None else name for name in self._names]},
-        )
+    async def _emit_set_name(self, spot: int, name: str) -> None:
+        await self._emit_to_players("set_name", {'spot': spot, 'name': name or ''})
 
     async def _set_hand_in_play(self, hand: Hand) -> None:
         if hand.is_empty or not hand.is_valid:
@@ -825,11 +670,10 @@ class EmittingGame(Game):
         super()._add_to_already_asked(spot, value)
         # await self._emit('remove_asking_option', {'value': value}, self._get_sid(spot))
 
-    async def _set_dot_color(self, spot: int, dot_color: str) -> None:
+    async def _emit_set_dot_color(self, spot: int, dot_color: str) -> None:
         await self._emit_to_players(
             "set_dot_color", {"spot": spot, "dot_color": dot_color}
         )
-        self._dot_colors[spot] = dot_color
 
     # emitters
 
@@ -883,6 +727,7 @@ class EmittingGame(Game):
         Emits to players and spectators
         """
         ...
+
 
     async def cast_event(self, event):
         await self._events_counter.cast(event)
