@@ -26,7 +26,7 @@ from . import (
     base_hand,
     PresidentsError,
 )
-from .gamee import Game
+from .game import Game
 
 from datetime import datetime
 
@@ -34,28 +34,17 @@ from datetime import datetime
 #       or not to remove them
 # TODO: spectators should get a completely hidden view of the game being
 #       played and maybe if you are friends with another player, you can
-#       see that player's cards and stuff like that
+#       see that player's cards and stuff like that ?
 # TODO: block receiving user events during autoplay
-# TODO: block autoplaying while user event is being processed
-# TODO: in general, make sure certain state has actually changed before
-#       notifying client
-# TODO: ok here is what is gna happen: timer will start server side
-#       w 0 delay and then the on_turn acks will be stored in the db
-#       for analysis, the timer start time will be sent to the front
-#       end so it can determine how much time the player actually has
-#       the fact that the player will actually have less time to play
-#       will be handled by the fact that they have reserve time and
-#       also the fact that they should get a better internet connection, bitch
+# TODO: block autoplaying while user event is being processed; simply
+#       block further user events from being processed and then schedule
+#       autoplay to run
 # TODO: normalize emit event names with frontend
 # TODO: add UI elements for takes and gives remaining
-# TODO: go through all gathers and consider whether doing things
-#       concurrently won't break something
 # TODO: whenever concurrently emitting same event to multiple spots,
 #       randomly decide order, e.g. not just
 #       "for sid in spot_sid_bidict.values()"  or "for spot in range(4)"
 # TODO: fix idling on phone bug
-# TODO: make base game class async and agnostic to event emittal
-#       implementation
 # TODO: serialize and store full game state at the start of every round
 #       and store all major game state changing actions in a round (e.g.
 #       this includes valid hand plays but excludes card clicks) so when
@@ -64,16 +53,16 @@ from datetime import datetime
 
 class PySockGame(Game):
     """
-    Game that emits events using a python-socketio server.
+    Game that emits events using python-socketio.
     """
-    def __init__(self, *, name: str, sio, agents: dict, **kwargs):
+    def __init__(self, *, name: str, sock, agents: dict, **kwargs):
         super().__init__(**kwargs)
         self.name = name
-        self._sio = sio
+        self._sock = sock
         self._events_counter = agents.get('events_counter')
         self._hand_play_processor = agents.get('hand_play_processor')
         self._chambers: List[EmittingChamber] = [
-            EmittingChamber(self._sio) for _ in range(4)
+            EmittingChamber(self._sock) for _ in range(4)
         ]
         self._spot_sid_bidict: bidict = bidict()
         self._user_ids: List[str] = [None for _ in range(4)]
@@ -87,10 +76,10 @@ class PySockGame(Game):
 
     # setup related methods
 
-    def set_sio(self, sio) -> None:
-        self._sio = sio
+    def set_sock(self, sio) -> None:
+        self._sock = sio
         for chamber in self._chambers:
-            chamber.set_sio(sio)
+            chamber.set_sock(sio)
 
     async def add_player_to_spot(
         self, name: str, spot: int, sid: str, user_id: str
@@ -271,7 +260,7 @@ class PySockGame(Game):
     # emitters
 
     async def _emit(self, *args, **kwargs) -> None:
-        await self._sio.emit(*args, **kwargs)
+        await self._sock.emit(*args, **kwargs)
 
     async def _emit_to_players(self, *args, **kwargs):
         """
@@ -321,14 +310,9 @@ class PySockGame(Game):
         """
         ...
 
-
     async def cast_event(self, event):
         await self._events_counter.cast(event)
 
-    async def _emit_hand_play(self, hand_hash: int):
-        await self._hand_play_processor.cast(
-            HandPlay(game_id=self.game_id, hand_hash=hand_hash)
-        )
 
     async def _emit_alert(self, spot: int, alert: str) -> None:
         await self._emit("alert", {"alert": alert}, room=self._get_sid(spot))

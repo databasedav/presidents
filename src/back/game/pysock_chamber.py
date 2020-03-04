@@ -19,29 +19,32 @@ class PySockChamber(Chamber):
     """
     def __init__(self, sio, cards: np.ndarray = None) -> None:
         super().__init__(cards)
-        self._sio = sio
+        self._sock = sio
         self._sid: str = None
 
     async def _emit(self, *args, **kwargs):
-        await self._sio.emit(*args, room=self._sid, **kwargs)
+        await self._sock.emit(*args, room=self._sid, **kwargs)
 
     # async def reset(self) -> None:
     #     super().reset()
-    #     self.set_sio(None)
+    #     self.set_sock(None)
     #     self.set_sid(None)
 
     async def _emit_clear_cards(self):
         await self._emit('clear_cards', {})
 
-    def set_sio(self, sio) -> None:
-        self._sio = sio
+    def set_sock(self, sio) -> None:
+        self._sock = sio
         for hand_node in self.hand_nodes:
-            hand_node.set_sio(sio)
+            hand_node.set_sock(sio)
 
     def set_sid(self, sid: str) -> None:
         self._sid = sid
         for hand_node in self.hand_nodes:
             hand_node.set_sid(sid)
+
+    async def add_hand(self, hand):
+        super().add_hand(hand, hand_node_class=PySockHandNode, sock=self._sock)
 
     async def _emit_add_card(self, card: int) -> None:
         await self._emit("add_card", {"card": card})
@@ -79,22 +82,22 @@ class PySockChamber(Chamber):
     def _hand_payload(self, hand: Hand) -> Dict[str, Union[int, List[int], str]]:
         return {'hash': hash(hand), 'cards': list(hand), 'id_str': hand.id_str}
 
-class EmittingHandNode(HandNode):
+class PySockHandNode(HandNode):
     def __init__(
-        self, hand_pointer_nodes: List[HandPointerNode], *, sio
+        self, hand_pointer_nodes: List[HandPointerNode], *, sock
     ) -> None:
         super().__init__(hand_pointer_nodes)
-        self._sio = sio
+        self._sock = sock
         self._sid: str = None
 
     def __repr__(self):
         return "EmittingHandNode"  # TODO
 
     async def _emit(self, *args, **kwargs) -> None:
-        await self._sio.emit(*args, {"id": self._sid}, room=self._sid, **kwargs)
+        await self._sock.emit(*args, {"id": self._sid}, room=self._sid, **kwargs)
 
-    def set_sio(self, sio) -> None:
-        self._sio = sio
+    def set_sock(self, sio) -> None:
+        self._sock = sio
 
     def set_sid(self, sid: str) -> None:
         self._sid = sid

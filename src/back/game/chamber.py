@@ -4,10 +4,12 @@ from typing import List, Collection, Optional, Iterator, Iterable, Union, Type
 import numpy as np
 from llist import dllistnode
 from random import randrange
+from asyncio import gather
 
 from . import Hand, CardNotInHandError, DuplicateCardError, FullHandError
 from .utils import IterNodesDLList, id_desc_dict
 
+from asyncio import gather
 
 # TODO: make high quality representation of what is going on
 
@@ -47,24 +49,6 @@ class Chamber:
         self.straights: HandNodeDLList = HandNodeDLList()
         self.bombs: HandNodeDLList = HandNodeDLList()
 
-    @property
-    def _hand_nodes(self):
-        for combo in COMBOS:
-            for hand_node in getattr(self, f"{combo}s").iter_nodes():
-                yield hand_node
-
-    @property
-    def _num_hands(self):
-        return sum(
-            getattr(self, f"{desc}").size
-            for desc in [
-                "doubles",
-                "triples",
-                "fullhouses",
-                "straights",
-                "bombs",
-            ]
-        )
 
     def __contains__(self, card_or_hand: Union[int, Collection[int]]) -> bool:
         # card
@@ -105,6 +89,29 @@ class Chamber:
         for card in range(1, 53):
             if card in self:
                 yield card
+    
+    def __reversed__(self) -> Iterator[int]:
+        for card in range(52, 0, -1):
+            if card in self:
+                yield card
+
+    @property
+    def hand_nodes(self):
+        for combo in COMBOS:
+            for hand_node in getattr(self, f"{combo}s").iter_nodes():
+                yield hand_node
+
+    @property
+    def hands(self):
+        for hand_node in self.hand_nodes:
+            yield hand_node.hand
+
+    @property
+    def _num_hands(self):
+        return sum(
+            getattr(self, f"{combo}").size
+            for combo in COMBOS
+        )
 
     # TODO: should be simple but meaningful
     def __repr__(self) -> str:
@@ -114,27 +121,47 @@ class Chamber:
     def is_empty(self) -> bool:
         return self.num_cards == 0
 
-    def reset(self) -> None:
+    async def reset(self) -> None:
         self.hand.reset()
         self._cards.fill(None)
         self.num_cards = 0
+        self.clear_hands()
+        await gather(self._emit_clear_cards(), self._emit_current_hand_str())
+
+    def clear_hands(self) -> None:
+        self._reset_card_dllists()
         for combo in COMBOS:
             getattr(self, f"{combo}s").clear()
 
-    # check argument should not be used outside of this class; is there
-    # any way to enforce this? TODO
-    def add_card(self, card: int, *, check: bool = True) -> None:
+    async def _emit_clear_cards(self) -> None:
+        pass
+
+    async def _emit_current_hand_str(self) -> None:
+        pass
+
+    async def add_card(self, card: int, *, check: bool = True, emit: bool = True) -> None:
         if check:
             self._check_card_not_in(card)
         self._cards[card] = HandPointerDLList(card)
         self.num_cards += 1
 
-    def add_cards(self, cards) -> None:
-        self._check_cards_not_in(cards)
-        for card in cards:
-            self.add_card(card, check=False)  # already checked
+        if emit:
+            # TODO: minimize the int casts
+            await self._emit_add_card(int(card))
 
-    def remove_card(self, card: int, *, check: bool = True) -> None:
+    async def add_cards(self, cards: Iterable[int]) -> None:
+        self._check_cards_not_in(cards)
+        # already checked
+        await gather(*[self.add_card(card, check=False, emit=False) for card in cards])
+        await self._emit_add_cards(cards)
+
+    async def _emit_add_card(self, card: int) -> None:
+        pass
+
+    async def _emit_add_cards(self, cards: Iterable[int]):
+        pass
+
+    async def remove_card(self, card: int, *, check: bool = True, emit: bool = True) -> None:
         """
         Here it is important to note that we do not need to deselect the
         card before we remove it because all the hand nodes that contain
@@ -172,15 +199,29 @@ class Chamber:
         self._cards[card] = None
         self.num_cards -= 1
 
-    def remove_cards(self, cards: Iterable[int]):
+        if emit:
+            await gather(
+                self._emit_remove_card(int(card)),
+                self._emit_update_current_hand_str()
+            )
+    
+
+    async def _emit_remove_card(self, card: int) -> None:
+        pass
+
+    async def _emit_remove_cards(self, cards: Iterable[int]) -> None:
+        pass
+    
+    async def _emit_update_current_hand_str(self) -> None:
+        pass
+
+    async def remove_cards(self, cards: Iterable[int]):
         self._check_cards_in(cards)
-        for card in cards:
-            self.remove_card(card, check=False)  # already checked
+        # already checked
+        await gather(*[self.remove_card(card, check=False, emit=False) for card in cards])
+        await gather(self._emit_remove_cards(cards), self._emit_update_current_hand_str())
 
     def _hand_check(self, hand) -> Hand:
-        """
-        Makes sure hand can be added and returns the hand
-        """
         if not isinstance(hand, Hand):
             hand = Hand(hand)
         # TODO: this should be a permitted presidents error
@@ -191,24 +232,20 @@ class Chamber:
             raise HandAlreadyStoredError(f"hand {str(hand)} already stored")
         return hand
 
-    def add_hand(self, hand: Collection[int]) -> None:
+    async def add_hand(
+        self,
+        hand: Collection[int],
+        *,
+        hand_node_class: Type[HandNode] = HandNode,
+        **kwargs
+    ) -> None:
         hand = self._hand_check(hand)
         if hand is self.hand:
-            self.deselect_cards(hand)
-        self._add_hand_helper(hand, HandNode)
+            # TODO: this behavior should be controllable as a player setting
+            await self.deselect_cards(hand)
 
-    def _add_hand_helper(
-        self, hand, hand_node_class: HandNode, **hnc_kwargs
-    ) -> None:
-        """
-        Helper so maintaining emitting add hand is easier as the only
-        difference is creating an emitting hand node with the server fed
-        in.
-        """
         hand_pointer_nodes: List[HandPointerNode] = list()
-        hand_node: HandNode = hand_node_class(
-            hand, hand_pointer_nodes, **hnc_kwargs
-        )
+        hand_node: HandNode = hand_node_class(hand_pointer_nodes, **kwargs)
         for card in hand:
             hand_pointer_node: HandPointerNode = HandPointerNode(hand_node)
             # appending pointer to list of HandPointerNodes living on
@@ -218,7 +255,15 @@ class Chamber:
             self._cards[card].appendnode(hand_pointer_node)
         getattr(self, f"{hand.id_str}s").add(hand_node)
 
-    def select_card(self, card: int, check: bool = True) -> None:
+        await self._emit_add_hand(hand)
+        
+    async def _emit_add_hand(self, hand: Hand) -> None:
+        pass
+
+    async def _emit_add_hands(self, hands: Iterable[Hand]) -> None:
+        pass
+
+    async def select_card(self, card: int, *, check: bool = True, emit: bool = True) -> None:
         if check:
             self._check_card_in(card)
         self.hand.add(card)
@@ -226,40 +271,53 @@ class Chamber:
         # it, via the class' own __iter__ (which iterates through the
         # values, not the nodes) gives us each HandNode which contains
         # the card passed to the function
-        for hand_node in self._cards[card]:
-            hand_node.increment_num_selected_cards()
+        await gather(*[hand_node.increment_num_selected_cards() for hand_node in self._cards[card]])
 
-    def select_cards(self, cards: Iterable[int]) -> None:
+        if emit:
+            await gather(self._emit_select_card(card), self._emit_update_current_hand_str())
+
+    async def _emit_select_card(self, card: int) -> None:
+        pass
+
+    async def _emit_select_cards(self, cards: Iterable[int]) -> None:
+        pass
+
+    async def select_cards(self, cards: Iterable[int]) -> None:
         self._check_cards_in(cards)
-        for card in cards:
-            try:
-                self.select_card(card, check=False)  # already checked
-            # this is an assertion because multiple card selections
-            # should be checked beforehand; same for deselection below
-            except (DuplicateCardError, FullHandError):
-                raise AssertionError("bad select cards call")
+        try:
+            await gather(*[self.select_card(card, check=False, emit=False) for card in cards])
+        # this is an assertion because multiple card selections
+        # should be checked beforehand; same for deselection below
+        except (DuplicateCardError, FullHandError):
+            raise AssertionError("bad select cards call")
+        await gather(self._emit_select_cards(cards), self._emit_update_current_hand_str())
 
-    def deselect_card(self, card: int, check: bool = True) -> None:
+    async def deselect_card(self, card: int, check: bool = True, emit: bool = True) -> None:
         if check:
             self._check_card_in(card)
         self.hand.remove(card)
         for hand_node in self._cards[card]:
             hand_node.decrement_num_selected_cards()
+        
+        if emit:
+            await gather(self._emit_deselect_card(card), self._emit_update_current_hand_str())
 
-    def deselect_cards(self, cards: Iterable[int]) -> None:
+    async def _emit_deselect_card(self, card: int) -> None:
+        pass
+
+    async def deselect_cards(self, cards: Iterable[int]) -> None:
         self._check_cards_in(cards)
-        for card in cards:
-            try:
-                self.deselect_card(card, check=False)  # already checked
-            except CardNotInHandError:
-                raise AssertionError("bad deselect cards call")
+        try:
+            await gather(*[self.deselect_card(card, check=False, emit=False) for card in cards])
+        except CardNotInHandError:
+            raise AssertionError("bad deselect cards call")
+        await gather(self._emit_deselect_cards(cards), self._emit_update_current_hand_str())
 
-    def deselect_selected(self) -> None:
-        self.deselect_cards(self.hand)
+    async def _emit_deselect_cards(self, cards: Iterable[int]) -> None:
+        pass
 
-    def clear_hands(self) -> None:
-        self._reset_card_dllists()
-        self._hands.clear()
+    async def deselect_selected(self) -> None:
+        await self.deselect_cards(self.hand)
 
     def _reset_card_dllists(self) -> None:
         for card in self:
@@ -281,21 +339,42 @@ class Chamber:
         for card in cards:
             self._check_card_not_in(card)
 
-    # TODO: store these as attributes
-    def _get_min_card(self) -> int:
+    # TODO: store these as attributes ?
+    def get_min_card(self) -> int:
         for card in self:
             return card
 
-    def _get_max_card(self) -> int:
-        for card in range(52, 0, -1):
-            if self._cards[card] is not None:
-                return card
+    def get_max_card(self) -> int:
+        for card in reversed(self):
+            return card
 
-    def _get_random_card(self) -> int:
+    def get_random_card(self) -> int:
         random_index = randrange(0, self.num_cards)
         for i, card in enumerate(self):
             if i == random_index:
                 return card
+
+    def get_min_hand(self) -> Hand:
+        for hand in self.hands:
+            return hand
+
+    def get_max_hand(self) -> Hand:
+        # TODO
+        ...
+
+    def get_random_hand(self) -> Hand:
+        random_index = randrange(0, self._num_hands)
+        for i, hand in enumerate(self.hands):
+            if i == random_index:
+                return hand
+
+    async def emit_state(self) -> None:
+        await gather(
+            self._emit_add_cards(self.cards),
+            self._emit_select_cards(self.hand),
+            self._emit_update_current_hand_str(),
+            self._emit_add_hands(list(self.hands))
+        )
 
 
 class HandPointerDLList(IterNodesDLList):
@@ -326,7 +405,6 @@ class HandNodeDLList(IterNodesDLList):
     right to left for constant time insertions made by bots who
     construct combos from lowest to greatest cards.
     """
-
     def __init__(self, id_: int = None):
         self._id = id_
 
@@ -356,15 +434,16 @@ class HandNode(dllistnode):
     cards in the hand; increments/decrements the number of cards
     selected in each hand as they are selected in the chamber.
     """
-
     def __init__(
-        self, hand: Hand, hand_pointer_nodes: List[HandPointerNode]
+        self, hand_pointer_nodes: List[HandPointerNode], **kwargs
     ) -> None:
-        super().__init__(
-            hand
-        )  # hand object is the value  # TODO: don't store hand objects on hand node
-        self.hand_pointer_nodes = hand_pointer_nodes
+        super().__init__(hand_pointer_nodes)
+        self.hand_pointer_nodes = self.value  # for readability
         self._num_cards_selected: int = 0
+        self._hash = hash(self.hand)
+
+    def __hash__(self) -> int:
+        return self._hash
 
     def __repr__(self) -> str:
         return "HandNode"
@@ -378,11 +457,21 @@ class HandNode(dllistnode):
             ]
         )
 
-    def increment_num_selected_cards(self) -> None:
-        self._num_cards_selected += 1
+    async def _emit_select_hand(self) -> None:
+        pass
 
-    def decrement_num_selected_cards(self) -> None:
+    async def _emit_deselect_hand(self) -> None:
+        pass
+
+    async def increment_num_selected_cards(self) -> None:
+        self._num_cards_selected += 1
+        if self._num_cards_selected == 1:
+            await self._emit_select_hand()
+
+    async def decrement_num_selected_cards(self) -> None:
         self._num_cards_selected -= 1
+        if self._num_cards_selected == 0:
+            await self._emit_deselect_hand()
 
 
 class CardAlreadyInChamberError(RuntimeError):
