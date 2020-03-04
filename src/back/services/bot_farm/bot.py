@@ -196,7 +196,7 @@ class Bot:
         hand_in_play = self.hand_in_play
         chamber = self.chamber
         # TODO: randomly play bomb if have bomb
-        if 1 in self.chamber:
+        if 1 in chamber:
             await self.cards_unlock_play(
                 chamber._cards[1].last.value.value
                 if chamber._cards[1].last
@@ -204,12 +204,7 @@ class Bot:
             )
             return
         elif hand_in_play.is_empty:
-            hand_nodes = list(self.chamber._hand_nodes)
-            await self.cards_unlock_play(
-                choice(hand_nodes).hand
-                if hand_nodes
-                else [self.chamber._get_max_card()]
-            )
+            await self.cards_unlock_play(chamber._get_random_hand() or [self.chamber._get_max_card()])
             return
         elif hand_in_play.is_single:
             # usually pass to increase chance of playing multi card hands

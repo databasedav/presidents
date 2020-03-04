@@ -321,7 +321,7 @@ game_action_topic = game_god.topic(
 )
 
 
-@game_god.agent(game_action_topic, concurrency=50)
+@game_god.agent(game_action_topic)#, concurrency=50)
 async def game_action_processor(game_actions):
     async for game_action in game_actions:
         logger.info(f"processing game action {game_action}")

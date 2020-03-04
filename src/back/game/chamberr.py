@@ -49,24 +49,6 @@ class Chamber:
         self.straights: HandNodeDLList = HandNodeDLList()
         self.bombs: HandNodeDLList = HandNodeDLList()
 
-    @property
-    def _hand_nodes(self):
-        for combo in COMBOS:
-            for hand_node in getattr(self, f"{combo}s").iter_nodes():
-                yield hand_node
-
-    @property
-    def _num_hands(self):
-        return sum(
-            getattr(self, f"{desc}").size
-            for desc in [
-                "doubles",
-                "triples",
-                "fullhouses",
-                "straights",
-                "bombs",
-            ]
-        )
 
     def __contains__(self, card_or_hand: Union[int, Collection[int]]) -> bool:
         # card
@@ -107,6 +89,29 @@ class Chamber:
         for card in range(1, 53):
             if card in self:
                 yield card
+    
+    def __reversed__(self) -> Iterator[int]:
+        for card in range(52, 0, -1):
+            if card in self:
+                yield card
+
+    @property
+    def hand_nodes(self):
+        for combo in COMBOS:
+            for hand_node in getattr(self, f"{combo}s").iter_nodes():
+                yield hand_node
+
+    @property
+    def hands(self):
+        for hand_node in self.hand_nodes:
+            yield hand_node.hand
+
+    @property
+    def _num_hands(self):
+        return sum(
+            getattr(self, f"{combo}").size
+            for combo in COMBOS
+        )
 
     # TODO: should be simple but meaningful
     def __repr__(self) -> str:
@@ -255,6 +260,9 @@ class Chamber:
     async def _emit_add_hand(self, hand: Hand) -> None:
         pass
 
+    async def _emit_add_hands(self, hands: Iterable[Hand]) -> None:
+        pass
+
     async def select_card(self, card: int, *, check: bool = True, emit: bool = True) -> None:
         if check:
             self._check_card_in(card)
@@ -332,20 +340,41 @@ class Chamber:
             self._check_card_not_in(card)
 
     # TODO: store these as attributes ?
-    def _get_min_card(self) -> int:
+    def get_min_card(self) -> int:
         for card in self:
             return card
 
-    def _get_max_card(self) -> int:
-        for card in range(52, 0, -1):
-            if self._cards[card] is not None:
-                return card
+    def get_max_card(self) -> int:
+        for card in reversed(self):
+            return card
 
-    def _get_random_card(self) -> int:
+    def get_random_card(self) -> int:
         random_index = randrange(0, self.num_cards)
         for i, card in enumerate(self):
             if i == random_index:
                 return card
+
+    def get_min_hand(self) -> Hand:
+        for hand in self.hands:
+            return hand
+
+    def get_max_hand(self) -> Hand:
+        # TODO
+        ...
+
+    def get_random_hand(self) -> Hand:
+        random_index = randrange(0, self._num_hands)
+        for i, hand in enumerate(self.hands):
+            if i == random_index:
+                return hand
+
+    async def emit_state(self) -> None:
+        await gather(
+            self._emit_add_cards(self.cards),
+            self._emit_select_cards(self.hand),
+            self._emit_update_current_hand_str(),
+            self._emit_add_hands(list(self.hands))
+        )
 
 
 class HandPointerDLList(IterNodesDLList):
@@ -409,8 +438,12 @@ class HandNode(dllistnode):
         self, hand_pointer_nodes: List[HandPointerNode], **kwargs
     ) -> None:
         super().__init__(hand_pointer_nodes)
-        self.hand_pointer_nodes = self.value
+        self.hand_pointer_nodes = self.value  # for readability
         self._num_cards_selected: int = 0
+        self._hash = hash(self.hand)
+
+    def __hash__(self) -> int:
+        return self._hash
 
     def __repr__(self) -> str:
         return "HandNode"

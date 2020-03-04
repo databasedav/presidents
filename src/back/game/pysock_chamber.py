@@ -1,16 +1,12 @@
 from __future__ import annotations
 
-from . import Hand, HandNode, HandPointerNode
-
 from socketio import AsyncServer
-from typing import Dict, List, Any, Optional, Iterable
+from typing import Dict, List, Any, Optional, Iterable, Union
 import numpy as np
-from .chamberr import Chamber
-
+from .chamberr import Chamber, HandNode, HandPointerNode
+from .hand import Hand
 
 from asyncio import gather
-
-# from ..server.server import Server
 
 
 # TODO: make repr's more meaningful
@@ -39,12 +35,12 @@ class PySockChamber(Chamber):
 
     def set_sio(self, sio) -> None:
         self._sio = sio
-        for hand_node in self._hand_nodes:
+        for hand_node in self.hand_nodes:
             hand_node.set_sio(sio)
 
     def set_sid(self, sid: str) -> None:
         self._sid = sid
-        for hand_node in self._hand_nodes:
+        for hand_node in self.hand_nodes:
             hand_node.set_sid(sid)
 
     async def _emit_add_card(self, card: int) -> None:
@@ -75,15 +71,13 @@ class PySockChamber(Chamber):
         await self._emit("update_current_hand_str", {"str": str(self.hand)})
 
     async def _emit_add_hand(self, hand: Hand) -> None:
-        await self._emit(
-            'add_hand',
-            {
-                "id": xxhash.xxh64().intdigest(),
-                "cards": hand.to_list(),
-                "id_desc": hand.id_desc,
-            }
-        )
+        await self._emit('add_hand', self._hand_payload(hand))
 
+    async def _emit_add_hands(self, hands: Iterable[Hand]) -> None:
+        await self._emit('add_hands', {'hands': [self._hand_payload(hand) for hand in hands]})
+
+    def _hand_payload(self, hand: Hand) -> Dict[str, Union[int, List[int], str]]:
+        return {'hash': hash(hand), 'cards': list(hand), 'id_str': hand.id_str}
 
 class EmittingHandNode(HandNode):
     def __init__(
@@ -91,7 +85,6 @@ class EmittingHandNode(HandNode):
     ) -> None:
         super().__init__(hand_pointer_nodes)
         self._sio = sio
-        self._id = None  # TODO: random number or string (which one is better?)
         self._sid: str = None
 
     def __repr__(self):
@@ -107,7 +100,7 @@ class EmittingHandNode(HandNode):
         self._sid = sid
 
     async def _emit_select_hand(self) -> None:
-        await self._emit('select_hand')
+        await self._emit('select_hand', {'hash': hash(self)})
 
     async def _emit_deselect_hand(self) -> None:
-        await self._emit('deselect_hand')
+        await self._emit('deselect_hand', {'hash': hash(self)})
