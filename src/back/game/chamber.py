@@ -6,7 +6,7 @@ from llist import dllistnode
 from random import randrange
 from asyncio import gather
 
-from . import Hand, CardNotInHandError, DuplicateCardError, FullHandError
+from .hand import Hand, CardNotInHandError, DuplicateCardError, FullHandError
 from .utils import IterNodesDLList, id_desc_dict
 
 from asyncio import gather
@@ -236,7 +236,7 @@ class Chamber:
         self,
         hand: Collection[int],
         *,
-        hand_node_class: Type[HandNode] = HandNode,
+        hand_node_class = None,
         **kwargs
     ) -> None:
         hand = self._hand_check(hand)
@@ -245,7 +245,7 @@ class Chamber:
             await self.deselect_cards(hand)
 
         hand_pointer_nodes: List[HandPointerNode] = list()
-        hand_node: HandNode = hand_node_class(hand_pointer_nodes, **kwargs)
+        hand_node: HandNode = (hand_node_class or HandNode)(hand_pointer_nodes, **kwargs)
         for card in hand:
             hand_pointer_node: HandPointerNode = HandPointerNode(hand_node)
             # appending pointer to list of HandPointerNodes living on

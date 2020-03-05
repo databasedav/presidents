@@ -31,6 +31,7 @@ robinhood-aiokafka = "*"
 faust = {extras = ['fast'],version = "*"}
 typing-extensions = "*"
 python-socketio = "*"
+pytest-asyncio = "*"
 
 [requires]
 python_version = "3.8"

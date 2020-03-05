@@ -16,17 +16,10 @@ from ..services.monitor import HandPlay
 # TODO: add indicator for received cards
 # TODO: last round positions
 
-from . import (
-    Hand,
-    DuplicateCardError,
-    FullHandError,
-    CardNotInChamberError,
-    EmittingChamber,
-    # Game,
-    base_hand,
-    PresidentsError,
-)
-from .game import Game
+from .game import Game, base_hand, PresidentsError
+from .hand import Hand, DuplicateCardError, FullHandError
+from .chamber import CardNotInChamberError
+from .pysock_chamber import PySockChamber
 
 from datetime import datetime
 

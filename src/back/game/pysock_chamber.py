@@ -3,7 +3,7 @@ from __future__ import annotations
 from socketio import AsyncServer
 from typing import Dict, List, Any, Optional, Iterable, Union
 import numpy as np
-from .chamberr import Chamber, HandNode, HandPointerNode
+from .chamber import Chamber, HandNode, HandPointerNode
 from .hand import Hand
 
 from asyncio import gather
