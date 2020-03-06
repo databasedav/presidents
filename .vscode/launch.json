@@ -30,11 +30,13 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "pytest server browser",
+            "name": "test game",
             "type": "python",
             "request": "launch",
             "args": [
-                "${workspaceFolder}/src/back/tests/test_server_browser.py"
+                "${workspaceFolder}/src/back/tests/test_game.py",
+                "--disable-warnings",
+                "-vv"
             ],
             "module": "pytest", //"src.back.tests.test_server_browser",
             "console": "integratedTerminal"

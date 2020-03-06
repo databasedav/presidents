@@ -92,10 +92,6 @@ class Game:
         self._given: List[Set[int]] = [set() for _ in range_4]
         self._taken: List[Set[int]] = [set() for _ in range_4]
 
-    def reset(self):
-        ...  # TODO
-        self._times_reset += 1
-
     @property
     def _no_takes_or_gives(self) -> bool:
         return not bool(sum(self._takes) + sum(self._gives))
@@ -134,10 +130,14 @@ class Game:
         await self.start_round(setup=True, deck=deck)
 
     async def _get_player_to_finish(self, spot: int) -> None:
-        assert self._current_player is not None, 'must start round first'
-        while self._current_player != spot:
-            ...
+        # TODO: this is actually a lil hard cuz doing them sequentially
+        # assert self._current_player is not None, 'must start round first'
+        # finisher: int = spot
 
+        # while (spot := self._current_player) != finisher:
+        #     await self._maybe_unlock_pass(spot)
+        #     await self._maybe_pass(spot)
+        ...
 
     async def _get_game_to_trading(self) -> None:
         assert self._current_player is not None, 'must start round first'
@@ -161,7 +161,31 @@ class Game:
                 await self._maybe_unlock_pass(spot)
                 await self._maybe_pass(spot)
 
+    async def _cancel_timers(self) -> None:
+        """
+        blocks while cancelling timers
+        """
+        for timer in self._timers:
+            if timer:
+                timer.cancel()
+        for timer in self._timers:
+            if timer:
+                try:
+                    await timer
+                except:
+                    pass
+        if timer := self._trading_timer:
+            timer.cancel()
+            try:
+                await timer
+            except:
+                pass
+
     # setup related methods
+
+    def reset(self):
+        ...  # TODO
+        self._times_reset += 1
 
     def _rand_open_spot(self) -> int:
         """
@@ -234,7 +258,7 @@ class Game:
         return np.sort(np.random.permutation(range(1, 53)).reshape(4, 13))
 
     async def _deal_cards(self, *, deck: List[Iterable[int]] = None) -> None:
-        await gather(*[self._assign_cards_to_spot(spot, cards) for spot, cards in enumerate(deck or self._make_shuffled_deck())])
+        await gather(*[self._assign_cards_to_spot(spot, cards) for spot, cards in enumerate(deck if deck is not None else self._make_shuffled_deck())])
 
     async def _assign_cards_to_spot(self, spot: int, cards: Iterable[int]) -> None:
         chamber: Chamber = self._chambers[spot]
@@ -250,14 +274,14 @@ class Game:
 
     # TODO: remove testing from this pattern
     def _make_and_set_turn_manager(self, testing: bool = False) -> None:
-        decks = self._get_decks_from_chambers()
+        decks = self._get_deck_from_chambers()
         # get which deck has the 3 of clubs
         toc_index = np.where(decks == 1)[0][0]
         self._turn_manager = TurnManager(toc_index)
 
     # game flow related methods
 
-    async def _setup_round(self, *, deck: List[Iterable[int]] = None) -> None:
+    async def _set_up_round(self, *, deck: List[Iterable[int]] = None) -> None:
         assert self.num_players == 4, "four players required to start round"
         await self._deal_cards(deck=deck)
 
@@ -268,7 +292,7 @@ class Game:
         deck: List[Iterable[int]] = None,
     ) -> None:
         if setup:
-            await self._setup_round(deck=deck)
+            await self._set_up_round(deck=deck)
         self._num_consecutive_rounds += 1
         self._make_and_set_turn_manager()
         await gather(
@@ -988,7 +1012,7 @@ class Game:
                 *[self._set_dot_color(spot, "red") for spot in range_4],
                 self._emit_set_on_turn(self._current_player, False),
                 self._clear_hand_in_play(),
-                self._setup_round(),
+                self._set_up_round(),
                 self._set_time("trading", self._trading_time, start=True),
                 self._message("💱 trading has begun"),
             )
@@ -1277,7 +1301,7 @@ class Game:
         await self._lock_if_pass_unlocked(spot)
 
     async def _message(self, message: str) -> None:
-        print(message)
+        # print(message)
         await self._emit_message(message)
 
     async def _emit_message(self, message: str) -> None:
@@ -1291,7 +1315,7 @@ class Game:
     def _get_opposing_position_spot(self, spot: int) -> int:
         return self._positions[3 - self._get_position(spot)]
 
-    def _get_decks_from_chambers(self):
+    def _get_deck_from_chambers(self):
         # TODO: disable this when custom deck size or some other way to
         #       handle custom deck sizes
         assert all(chamber.num_cards == 13 for chamber in self._chambers)

@@ -1,10 +1,18 @@
 import uuid
 import pytest
+import uvloop
+import asyncio
+import numpy as np
 
-from ..game import Game, base_hand, Chamber
+from ..game import Game, base_hand, Chamber, TestGame
 
 
-def test_constructor():
+# use uvloop
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+pytestmark = pytest.mark.asyncio
+
+
+async def test_constructor():
     game: Game = Game()
     # instance related attributes
     assert game.game_id is not None
@@ -100,12 +108,15 @@ def test_constructor():
     assert all(len(given) == 0 for given in game._given)
     assert all(len(taken) == 0 for taken in game._taken)
 
+@pytest.fixture
+async def testing_base_game():
+    game: Game = Game()
+    game._set_up_testing_base()
+    return game
 
-def test_reset():
+async def test_reset():
     ...  # TODO
 
-
-@pytest.mark.asyncio
 async def test_no_takes_or_gives():
     game: Game = Game()
     await game._set_up_testing_base()
@@ -114,12 +125,99 @@ async def test_no_takes_or_gives():
     assert not game._no_takes_or_gives
     await game._auto_trade()
     assert game._no_takes_or_gives
+    await game._cancel_timers()  # TODO: figure out how to avoid this ?
 
-
-@pytest.mark.asyncio
 async def test_num_unfinished_players():
     game: Game = Game()
     await game._set_up_testing_base()
+    assert game._num_unfinished_players == 4
+    for num_finished in range(1, 4):
+        while len(game._positions) < num_finished:
+            await game._auto_play_or_pass(game._current_player)
+        assert game._num_unfinished_players == 4 - num_finished
+    # after 3rd player finishes, trading begins, attr is not reset
+    assert game._num_unfinished_players == 1
+    await game._cancel_timers()
+
+async def test_is_empty():
+    game: Game = Game()
+    assert game.is_empty
+    await game._set_up_testing_base()
+    assert not game.is_empty
+    await game._cancel_timers()
+
+async def test_is_full():
+    game: Game = Game()
+    assert not game.is_full
+    await game._set_up_testing_base()
+    assert game.is_full
+    await game._cancel_timers()
+
+async def test_is_paused():
+    game: Game = Game()
+    await game._set_up_testing_base()
+    assert not game.is_paused
+    await game.pause()
+    assert game.is_paused
+
+async def test_is_started():
+    game: Game = Game()
+    assert not game.is_started
+    await game._set_up_testing_base()
+    assert game.is_started
+    await game._cancel_timers()
+
+async def test_set_up_testing_base():
+    game: Game = Game()
+    deck = game._make_shuffled_deck()
+    await game._set_up_testing_base(deck=deck)
+    assert all(f'player{spot}' == name for spot, name in enumerate(game._names))
+    assert np.array_equal(game._get_deck_from_chambers(), deck)
+    assert game.is_started
+    await game._cancel_timers()
     
+async def test_get_player_to_finish():
+    ...  # TODO
+
+async def test_get_game_to_trading():
+    game: Game = Game()
+    await game._set_up_testing_base()
+    assert not game.trading
+    await game._get_game_to_trading()
+    assert game.trading
+    await game._cancel_timers()
+
+async def test_cancel_timers():
+    game: Game = Game()
+    await game._set_up_testing_base()
+    assert not game._timers[game._current_player].cancelled()
+    await game._cancel_timers()
+    assert game._timers[game._current_player].cancelled()
+
+async def test_reset():
+    ...  # TODO
+
+async def test_rand_open_spot():
+    game: Game = Game()
+    counts = [0 for _ in range(4)]
+    for _ in range(1000):  # stats
+        counts[game._rand_open_spot()] += 1
+    # TODO: calculate the prob of this failing
+    assert all(225 <= count <= 275 for count in counts)
+
+async def test_add_player_to_spot():
+    game: TestGame = TestGame()
+    await game.add_player_to_spot('player0', 0)
+    assert 0 not in game._open_spots
+    assert game._names[0] == 'player0'
+    assert 'set_spot' in map(lambda x: x[0], game._emits)
+    assert game.num_players == 1
+
+    game = TestGame()
+    await game._set_up_testing_base()
+    await game.remove_player(0)
+    await game.pause()
+    await game.add_player_to_spot('player0', 0)
+    assert 'state' in map(lambda x: x[0], game._emits)
 
 
