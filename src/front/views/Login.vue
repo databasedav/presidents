@@ -83,6 +83,7 @@
                 v-model="password"
                 label="password"
                 :rules="password_rules"
+                :hint="'>= 8 characters'"
                 icon
                 :append-icon="show_register_password ? 'mdi-eye' : 'mdi-eye-off'"
                 :type="show_register_password ? 'text' : 'password'"
