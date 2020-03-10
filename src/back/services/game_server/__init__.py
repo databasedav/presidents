@@ -117,20 +117,6 @@ password_context = passlib.context.CryptContext(
 #       reads
 
 
-# https://github.com/tiangolo/fastapi/issues/130#issuecomment-491379252
-try:
-    game_server_fast.mount(
-        "/assets",
-        StaticFiles(
-            directory=pkg_resources.resource_filename(
-                __name__, "static/assets"
-            )
-        ),
-    )
-except RuntimeError:  # development
-    pass
-
-
 GameAction, game_action_processor, Prayer, ear = None, None, None, None
 
 

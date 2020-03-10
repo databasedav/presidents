@@ -117,25 +117,25 @@ export default {
     testing_sid_index: Number
   },
 
-  data () {
-    return {
-      // TODO: this is here because watcher fires twice for some reason
-      //       remove and find out why;
-      //       also watcher should not be used to fire this?
-      joined: false
-    };
-  },
+  // data () {
+  //   return {
+  //     // TODO: this is here because watcher fires twice for some reason
+  //     //       remove and find out why;
+  //     //       also watcher should not be used to fire this?
+  //     joined: false
+  //   };
+  // },
 
-  watch: {
-    game_id: {
-      handler: function (game_id) {
-        if (!this.joined && game_id) {
-          this.joined = true
-          this.$store.dispatch('join_game', {game_id: game_id, testing: this.testing, testing_username: 'abcd'[this.testing_sid_index-1]})
-        }
-      },
-    }
-  },
+  // watch: {
+  //   game_id: {
+  //     handler: function (game_id) {
+  //       if (!this.joined && game_id) {
+  //         this.joined = true
+  //         this.$store.dispatch('join_game', {game_id: game_id, testing: this.testing, testing_username: 'abcd'[this.testing_sid_index-1]})
+  //       }
+  //     },
+  //   }
+  // },
 
   methods: {
     card_click (card) {

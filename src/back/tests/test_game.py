@@ -220,4 +220,3 @@ async def test_add_player_to_spot():
     await game.add_player_to_spot('player0', 0)
     assert 'state' in map(lambda x: x[0], game._emits)
 
-

@@ -12,6 +12,5 @@ module.exports = {
       }
     },
   },
-  outputDir: 'src/back/services/game_server/static',
-  assetsDir: 'assets'
+  outputDir: 'src/front/static'
 }

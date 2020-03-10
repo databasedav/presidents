@@ -166,7 +166,7 @@ export default {
 
     refresh () {
       const self = this
-      axios.get('/get_games', {
+      axios.get('https://presidentsdotcom.azurewebsites.net/get_games', {
         headers: {
           Authorization: `Bearer ${sessionStorage.token}`
         }
@@ -178,7 +178,7 @@ export default {
     create_game () {
       const self = this
       this.create_game_loading = true
-      axios.post('/create_game', {name: self.name}, {
+      axios.post('https://presidentsdotcom.azurewebsites.net/create_game', {name: self.name}, {
         headers: {
           Authorization: `Bearer ${sessionStorage.token}`
         }
@@ -203,12 +203,12 @@ export default {
     join_game (game_id) {
       const self = this
       this.join_game_loading = true
-      axios.put('/join_game', {game_id: game_id}, {
+      axios.put('https://presidentsdotcom.azurewebsites.net/join_game', {game_id: game_id}, {
         headers: {
           Authorization: `Bearer ${sessionStorage.token}`
         }
       }).then(response => {
-        const socket = io('/', {  // first arg is the namespace
+        const socket = io('https://presidentsdotcom.azurewebsites.net', {
           path: '/socket.io',
           forceNew: true,
           reconnection: false,  // TODO: users should be prompted to reconnect on server crash

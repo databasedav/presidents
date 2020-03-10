@@ -1,9 +1,12 @@
-from python:3.8-buster
-copy . /presidents
+from python:3.8-slim
 workdir /presidents
-run chmod +x ./wait-for-it.sh
+copy src/back src/back
+copy Pipfile Pipfile
+copy Pipfile.lock Pipfile.lock
+copy --chown=1 wait-for-it.sh wait-for-it.sh
+run apt update
+run apt install build-essential -y
 run pip install pipenv
 # https://stackoverflow.com/a/55610857
-run pipenv install --deploy --ignore-pipfile --dev
-# copy conn.py /root/.local/share/virtualenvs/presidents--b5bDiWI/lib/python3.8/site-packages/aiokafka/conn.py
+run pipenv install --deploy --ignore-pipfile
 cmd pipenv run faust -A src.back.services.game_god:game_god -L uvloop --color -l info worker

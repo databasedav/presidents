@@ -189,13 +189,18 @@ export default {
       form_data.set('password', this.password)
       const self = this
       this.login_loading = true
-      axios.post('/token', form_data).then(response => {
+      axios.post('https://presidentsdotcom.azurewebsites.net/token', form_data).then(response => {
         sessionStorage.token = response.data.access_token
         self.$store.username = self.username
         router.push({ name: 'game browser' })
       }).catch(error => {
-        self.alert = error.response.data.detail
-        self.snackbar = true
+        if (error.response) {
+          console.log(error.response)
+          self.alert = error.response.data.detail  // failure
+          self.snackbar = true
+        } else {
+          console.log(error)
+        }
       }).finally(_ => {
         self.login_loading = false
       })
@@ -205,7 +210,7 @@ export default {
       // TODO: snap to 
       const self = this
       this.register_loading = true
-      axios.post('/register', {
+      axios.post('https://presidentsdotcom.azurewebsites.net/register', {
         username: self.username,
         password: self.password,
         reenter_password: self.reenter_password
@@ -219,7 +224,7 @@ export default {
           self.alert = error.response.data.detail  // failure
           self.snackbar = true
         } else {
-          console.log(error.response)
+          console.log(error)
         }
       }).finally(_ => {
         self.register_loading = false

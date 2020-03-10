@@ -17,7 +17,7 @@ from faust.models.fields import StringField
 from google.protobuf.timestamp_pb2 import Timestamp
 
 # from ..secrets import EVENTHUB_HOST, EVENTHUB_USERNAME, EVENTHUB_PASSWORD
-from ...game import EmittingGame
+from ...game import PySockGame
 from ...utils import GAME_ACTION_DICT, spawn_after
 from ...utils.game_action_pb2 import GameAction as GameActionProtobuf
 from ..monitor import events_counter, hand_play_processor
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 # )
 games = dict()  # from game id to game object
 
-sio = socketio.AsyncRedisManager("redis://socketio_pubsub", write_only=True)
+sock = socketio.AsyncRedisManager("redis://socketio_pubsub", write_only=True)
 game_store = None
 
 
@@ -144,10 +144,8 @@ async def add_game(
         "trading_time": trading_time,
         "giving_time": giving_time,
     }
-    game = EmittingGame(
-        sio=sio,
-        agents=AGENTS,
-        timer=spawn_after,
+    game = PySockGame(
+        sock=sock,
         **game_attrs,
     )
     game_id = game.game_id
