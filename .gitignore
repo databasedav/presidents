@@ -27,7 +27,6 @@ __pycache__
 
 playground.py
 playground.ipynb
-*.lock
 .pytest_cache
 config.py
 test.ipynb
@@ -36,5 +35,3 @@ secrets.py
 static
 test.py
 secrets
-conn.py
-python-socketio

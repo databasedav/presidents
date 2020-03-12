@@ -8,9 +8,6 @@ import aioredis
 import pydantic
 import socketio
 import aiocassandra
-import pkg_resources
-import passlib.context
-
 from time import time
 from uuid import uuid4
 from typing import List, Tuple
@@ -145,13 +142,6 @@ async def on_startup():
     logger.info("upgrading cqlengine")
     aiocassandra.aiosession(session)
     logger.info("upgraded cqlengine")
-
-
-@game_server_fast.get("/")
-def root():
-    return HTMLResponse(
-        pkg_resources.resource_string(__name__, "static/index.html")
-    )
 
 
 @game_server_fast.post("/token", response_model=Token)

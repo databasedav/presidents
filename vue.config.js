@@ -4,10 +4,10 @@ module.exports = {
   ],
   devServer: {
     proxy: {
-      ...['/token', '/register', "/create_game", "/join_game", '/get_games'].reduce((acc, ctx) => ({...acc, [ctx]: {target: 'http://0.0.0.0:8000', changeOrigin: true}}), {}),
+      ...['https://presidentsdotcom.azurewebsites.net/token', 'https://presidentsdotcom.azurewebsites.net/register', "https://presidentsdotcom.azurewebsites.net/create_game", "https://presidentsdotcom.azurewebsites.net/join_game", 'https://presidentsdotcom.azurewebsites.net/get_games'].reduce((acc, ctx) => ({...acc, [ctx]: {target: 'http://0.0.0.0:80', changeOrigin: true}}), {}),
       "/socket.io": {
         ws: true,
-        target: "http://0.0.0.0:8000",
+        target: "http://0.0.0.0:80",
         changeOrigin: true
       }
     },
