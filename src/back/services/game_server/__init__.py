@@ -3,6 +3,7 @@ import re
 import aiohttp
 import fastapi
 import logging
+import passlib
 import uvicorn
 import aioredis
 import pydantic
@@ -21,6 +22,7 @@ from asyncio import gather, sleep, create_task
 from cassandra.cqlengine.query import DoesNotExist
 from starlette.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
+from socketio.exceptions import ConnectionRefusedError
 from starlette.status import (
     HTTP_401_UNAUTHORIZED,
     HTTP_406_NOT_ACCEPTABLE,
